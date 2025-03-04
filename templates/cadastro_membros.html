@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Membros - Ministério de Louvor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body class="bg-dark text-white">
+    <header>
+        <div class="navbar">
+            <button class="sidebar-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="logo">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="Ministério de Louvor" class="logo-img">
+            </div>
+        </div>
+    </header>
+
+    <!-- Menu Lateral -->
+    <nav class="sidebar">
+        <ul>
+            <li><a href="{{ url_for('index') }}" class="nav-link"><i class="fas fa-home"></i> Início</a></li>
+            <li><a href="{{ url_for('membros') }}" class="nav-link"><i class="fas fa-users"></i> Membros</a></li>
+            <li><a href="{{ url_for('feedback') }}" class="nav-link"><i class="fas fa-comments"></i> Suporte e Feedback</a></li>
+            <li><a href="{{ url_for('escalas') }}" class="nav-link"><i class="fas fa-calendar"></i> Escalas</a></li>
+            <li><a href="#" class="nav-link"><i class="fas fa-bullhorn"></i> Avisos</a></li>
+            <li><a href="{{ url_for('cultos') }}" class="nav-link"><i class="fas fa-church"></i> Cultos</a></li>
+            <li><a href="{{ url_for('painel_administrativo') }}" class="nav-link active"><i class="fas fa-cog"></i> Painel Administrativo</a></li>
+            <li><a href="{{ url_for('cadastro_membros') }}" class="nav-link"><i class="fas fa-user-plus"></i> Cadastro de Membros</a></li>
+            <li><a href="{{ url_for('logout') }}" class="nav-link"><i class="fas fa-sign-out-alt"></i> Sair</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <section class="hero">
+            <h1 class="animate-text">Cadastro de Membros</h1>
+        </section>
+
+        <section class="members-section">
+            <h2 class="section-title"><i class="fas fa-user-plus"></i> Adicionar Novo Membro</h2>
+            <div class="admin-form">
+                <form id="addMemberForm" class="form-compact">
+                    <div class="form-group">
+                        <label for="memberName" class="form-label">Nome</label>
+                        <input type="text" class="form-control" id="memberName" name="name" required placeholder="Nome do membro">
+                    </div>
+                    <div class="form-group">
+                        <label for="memberEmail" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="memberEmail" name="email" required placeholder="seu@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="memberPhone" class="form-label">Telefone</label>
+                        <input type="tel" class="form-control" id="memberPhone" name="phone" required placeholder="(65) 99905-0152">
+                    </div>
+                    <div class="form-group">
+                        <label for="memberInstrument" class="form-label">Instrumento</label>
+                        <select class="form-control" id="memberInstrument" name="instrument" required>
+                            <option value="">Selecione</option>
+                            <option value="Guitarrista">Guitarrista</option>
+                            <option value="Violonista">Violonista</option>
+                            <option value="Bateirista">Bateirista</option>
+                            <option value="Cantor">Cantor</option>
+                            <option value="Tecladista">Tecladista</option>
+                            <option value="Baixista">Baixista</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="memberPassword" class="form-label">Senha</label>
+                        <input type="password" class="form-control" id="memberPassword" name="password" value="123456" readonly placeholder="123456">
+                        <small class="text-muted">Padrão: 123456. Alterável no perfil.</small>
+                    </div>
+                    <button type="submit" class="btn btn-danger">Cadastrar</button>
+                </form>
+                <div id="feedbackNotification"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Barra Inferior -->
+    <nav class="bottom-nav">
+        <a href="{{ url_for('index') }}" class="nav-item">
+            <i class="fas fa-home"></i>
+            <span>Início</span>
+        </a>
+        <a href="{{ url_for('membros') }}" class="nav-item">
+            <i class="fas fa-users"></i>
+            <span>Membros</span>
+        </a>
+        <a href="{{ url_for('feedback') }}" class="nav-item">
+            <i class="fas fa-comments"></i>
+            <span>Suporte e Feedback</span>
+        </a>
+        <a href="{{ url_for('escalas') }}" class="nav-item">
+            <i class="fas fa-calendar"></i>
+            <span>Escalas</span>
+        </a>
+    </nav>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Função para abrir/fechar o menu lateral
+            function toggleSidebar() {
+                const sidebar = document.querySelector('.sidebar');
+                sidebar.classList.toggle('open');
+            }
+
+            // Adiciona evento ao botão do menu lateral
+            document.querySelector('.sidebar-toggle').addEventListener('click', toggleSidebar);
+            document.querySelector('.sidebar-toggle').addEventListener('touchstart', toggleSidebar); // Suporte a toque
+
+            // Mascarar o campo de telefone no formato (00) 00000-0000
+            $('#memberPhone').mask('(00) 00000-0000');
+
+            // Validar email antes de enviar
+            function validateEmail(email) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                return emailRegex.test(email);
+            }
+
+            // Adicionar membro via AJAX com validações
+            document.getElementById('addMemberForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const name = document.getElementById('memberName').value.trim();
+                const email = document.getElementById('memberEmail').value.trim();
+                const phone = document.getElementById('memberPhone').value.trim().replace(/\D/g, ''); // Remove caracteres não numéricos
+                const instrument = document.getElementById('memberInstrument').value;
+                const password = "123456"; // Senha padrão fixa
+
+                // Validações
+                if (!name) {
+                    showNotification('O nome é obrigatório.', 'error');
+                    return;
+                }
+                if (!email || !validateEmail(email)) {
+                    showNotification('Por favor, insira um email válido.', 'error');
+                    return;
+                }
+                if (!phone || phone.length !== 11) { // Verifica se o telefone tem 11 dígitos (ex.: 65999050152)
+                    showNotification('Por favor, insira um telefone válido com 11 dígitos (ex.: 65999050152).', 'error');
+                    return;
+                }
+                if (!instrument || instrument === "") {
+                    showNotification('Por favor, selecione um instrumento.', 'error');
+                    return;
+                }
+
+                fetch('/add_member', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name, phone: phone, instrument: instrument, email: email, password: password })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Erro ao comunicar com o servidor');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    showNotification(data.message, data.success ? 'success' : 'error');
+                    if (data.success) {
+                        document.getElementById('addMemberForm').reset();
+                        setTimeout(() => hideNotification(), 5000); // Remove notificação após 5 segundos
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao cadastrar membro:', error);
+                    showNotification('Erro ao cadastrar membro. Pode haver um problema com o banco de dados. Entre em contato com o administrador.', 'error');
+                });
+            });
+
+            // Função para mostrar notificação moderna
+            function showNotification(message, type) {
+                const notification = document.getElementById('feedbackNotification');
+                notification.innerHTML = `
+                    <div class="notification ${type === 'success' ? 'notification-success' : 'notification-error'}">
+                        <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+                        <span>${message}</span>
+                        <button class="notification-close" onclick="hideNotification()">×</button>
+                    </div>
+                `;
+                notification.querySelector('.notification').classList.add('show');
+            }
+
+            // Função para esconder notificação
+            function hideNotification() {
+                const notification = document.getElementById('feedbackNotification');
+                const notifElement = notification.querySelector('.notification');
+                if (notifElement) {
+                    notifElement.classList.remove('show');
+                    setTimeout(() => notification.innerHTML = '', 500); // Remove completamente após a animação
+                }
+            }
+        });
+    </script>
+</body>
+</html>

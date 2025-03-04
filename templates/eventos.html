@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eventos - Ministério de Louvor</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 1200px;
+        }
+        .card {
+            margin-bottom: 1.5rem;
+            border: 1px solid #e3e6f0;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+        }
+        .card-header {
+            background-color: #343a40;
+            color: white;
+            font-weight: bold;
+        }
+        .form-control:focus {
+            box-shadow: none;
+            border-color: #86b7fe;
+        }
+        .btn-primary {
+            background-color: #4e73df;
+            border-color: #4e73df;
+        }
+        .btn-primary:hover {
+            background-color: #2e59d9;
+            border-color: #2653d4;
+        }
+        .navbar-brand {
+            font-weight: bold;
+            color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <a class="navbar-brand" href="{{ url_for('index') }}">Ministério de Louvor</a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}">Voltar ao Painel de Membros</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('painel_do_administrador') }}">Voltar ao Painel do Administrador</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mt-5">
+        <div class="card">
+            <div class="card-header text-center">Eventos</div>
+            <div class="card-body">
+                <div id="eventosContainer">
+                    <!-- Lista de eventos será carregada aqui -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/get_eventos')
+                .then(response => response.json())
+                .then(data => {
+                    const eventosContainer = document.getElementById('eventosContainer');
+                    if (data.length === 0) {
+                        eventosContainer.innerHTML = '<p class="text-center">Nenhum evento cadastrado.</p>';
+                    } else {
+                        data.forEach(evento => {
+                            const eventDiv = document.createElement('div');
+                            eventDiv.className = 'col-md-4 mb-4';
+                            eventDiv.innerHTML = `
+                                <div class="card">
+                                    <div class="card-header bg-dark text-white">${evento.nome}</div>
+                                    <div class="card-body">
+                                        <p><strong>Data:</strong> ${new Date(evento.data).toLocaleDateString()}</p>
+                                        <p><strong>Horário:</strong> ${evento.horario}</p>
+                                        <p><strong>Local:</strong> ${evento.local}</p>
+                                        <p>${evento.descricao}</p>
+                                    </div>
+                                </div>
+                            `;
+                            eventosContainer.appendChild(eventDiv);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar os eventos:', error);
+                    document.getElementById('eventosContainer').innerHTML = '<p class="text-center text-danger">Erro ao carregar os eventos.</p>';
+                });
+        });
+    </script>
+</body>
+</html>

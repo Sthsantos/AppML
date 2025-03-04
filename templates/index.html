@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Painel do Ministério de Louvor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Firebase para notificações push (opcional, comente se não usar) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging.js"></script>
+</head>
+<body>
+    <!-- Cabeçalho Fixo -->
+    <header>
+        <div class="navbar">
+            <button class="sidebar-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="logo">Ministério de Louvor</div>
+            <div class="user-info">
+                {% if current_user %}
+                    <span>{{ current_user.name if current_user.name else current_user.email.split('@')[0] }}</span>
+                    <a href="{{ url_for('logout') }}" class="logout-icon"><i class="fas fa-sign-out-alt"></i></a>
+                {% else %}
+                    <span>Usuário</span>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <!-- Menu Lateral -->
+    <nav class="sidebar">
+        <ul>
+            <li><a href="{{ url_for('index') }}" class="nav-link active"><i class="fas fa-home"></i> Início</a></li>
+            <li><a href="{{ url_for('membros') }}" class="nav-link"><i class="fas fa-users"></i> Membros</a></li>
+            <li><a href="{{ url_for('feedback') }}" class="nav-link"><i class="fas fa-comments"></i> Suporte e Feedback</a></li>
+            <li><a href="{{ url_for('escalas') }}" class="nav-link"><i class="fas fa-calendar"></i> Escalas</a></li>
+            <li><a href="#" class="nav-link"><i class="fas fa-bullhorn"></i> Avisos</a></li>
+            <li><a href="{{ url_for('cultos') }}" class="nav-link"><i class="fas fa-church"></i> Cultos</a></li>
+            {% if current_user.is_admin %}
+                <li><a href="{{ url_for('painel_administrativo') }}" class="nav-link"><i class="fas fa-cog"></i> Painel Administrativo</a></li>
+                <li><a href="{{ url_for('cadastro_membros') }}" class="nav-link"><i class="fas fa-user-plus"></i> Cadastro de Membros</a></li>
+            {% endif %}
+            <li><a href="{{ url_for('logout') }}" class="nav-link"><i class="fas fa-sign-out-alt"></i> Sair</a></li>
+        </ul>
+    </nav>
+
+    <!-- Conteúdo Principal -->
+    <main>
+        <section class="hero">
+            <h1 class="animate-text">
+                {% if current_user %}
+                    Bem-vindo, {{ current_user.name if current_user.name else current_user.email.split('@')[0] }}!
+                {% else %}
+                    Bem-vindo ao Ministério de Louvor!
+                {% endif %}
+            </h1>
+        </section>
+
+        <!-- Comunicados (Avisos) -->
+        <section class="announcements">
+            <h2 class="section-title"><i class="fas fa-bullhorn"></i> Avisos</h2>
+            <div class="announcement-list" id="announcements">
+                <!-- Avisos inseridos dinamicamente -->
+            </div>
+        </section>
+
+        <!-- Recursos Rápidos (Features) -->
+        <section class="features">
+            <div class="feature-grid">
+                <a href="{{ url_for('feedback') }}" class="feature-card">
+                    <i class="fas fa-comments feature-icon"></i>
+                    <h3>Suporte e Feedback</h3>
+                    <p>Envie sugestões ou reporte problemas.</p>
+                </a>
+                <a href="{{ url_for('escalas') }}" class="feature-card">
+                    <i class="fas fa-calendar feature-icon"></i>
+                    <h3>Escalas</h3>
+                    <p>Veja suas escalas para os próximos cultos.</p>
+                </a>
+                <a href="{{ url_for('membros') }}" class="feature-card">
+                    <i class="fas fa-users feature-icon"></i>
+                    <h3>Membros</h3>
+                    <p>Gerencie os membros do ministério.</p>
+                </a>
+                <a href="{{ url_for('cultos') }}" class="feature-card">
+                    <i class="fas fa-church feature-icon"></i>
+                    <h3>Cultos</h3>
+                    <p>Gerencie e acompanhe os cultos da igreja.</p>
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <!-- Barra Inferior -->
+    <nav class="bottom-nav">
+        <a href="{{ url_for('index') }}" class="nav-item active">
+            <i class="fas fa-home"></i>
+            <span>Início</span>
+        </a>
+        <a href="{{ url_for('membros') }}" class="nav-item">
+            <i class="fas fa-users"></i>
+            <span>Membros</span>
+        </a>
+        <a href="{{ url_for('feedback') }}" class="nav-item">
+            <i class="fas fa-comments"></i>
+            <span>Suporte e Feedback</span>
+        </a>
+        <a href="{{ url_for('escalas') }}" class="nav-item">
+            <i class="fas fa-calendar"></i>
+            <span>Escalas</span>
+        </a>
+        {% if current_user.is_admin %}
+            <a href="{{ url_for('cadastro_membros') }}" class="nav-item">
+                <i class="fas fa-user-plus"></i>
+                <span>Cadastrar Membros</span>
+            </a>
+        {% endif %}
+    </nav>
+
+    <!-- Notificação de Erro (se necessário) -->
+    <div id="errorNotification"></div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Função para abrir/fechar o menu lateral
+            function toggleSidebar() {
+                const sidebar = document.querySelector('.sidebar');
+                sidebar.classList.toggle('open');
+            }
+
+            // Adiciona evento ao botão do menu lateral
+            const sidebarToggle = document.querySelector('.sidebar-toggle');
+            if (sidebarToggle) {
+                sidebarToggle.addEventListener('click', toggleSidebar);
+                sidebarToggle.addEventListener('touchstart', toggleSidebar); // Suporte a toque
+            }
+
+            // Carrega dados do usuário e lida com erros
+            fetch('/get_user_data')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Erro ao carregar dados do usuário');
+                    }
+                    return response.json();
+                })
+                .then(user => {
+                    // Atualiza o título e o user-info com o nome do usuário
+                    const memberName = user.name || user.email.split('@')[0];
+                    document.querySelector('.hero h1').textContent = `Bem-vindo, ${memberName}!`;
+                    const userInfoSpan = document.querySelector('.user-info span');
+                    if (userInfoSpan) {
+                        userInfoSpan.textContent = memberName;
+                    }
+
+                    // Carrega avisos do servidor
+                    fetch('/get_announcements')
+                        .then(response => response.json())
+                        .then(announcements => {
+                            const announcementsList = document.getElementById('announcements');
+                            if (announcements.length === 0) {
+                                announcementsList.innerHTML = '<p class="no-announcements">Nenhum aviso disponível.</p>';
+                            } else {
+                                announcements.forEach(function(announcement) {
+                                    const div = document.createElement('div');
+                                    div.classList.add('announcement-item');
+                                    div.innerHTML = `<p>${announcement.text}</p>`;
+                                    announcementsList.appendChild(div);
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Erro ao carregar avisos:', error);
+                            showNotification('Erro ao carregar avisos. Tente novamente.', 'error');
+                        });
+
+                    // Carrega as escalas do usuário logado (não exibidas diretamente, mas disponíveis)
+                    fetch('/get_user_scales')
+                        .then(response => response.json())
+                        .then(scales => {
+                            // Lógica para exibir escalas, se necessário
+                        })
+                        .catch(error => {
+                            console.error('Erro ao carregar escalas:', error);
+                            showNotification('Erro ao carregar escalas. Tente novamente.', 'error');
+                        });
+
+                    // Carrega calendário de cultos (não exibidos diretamente, mas disponíveis)
+                    fetch('/get_cult_calendar')
+                        .then(response => response.json())
+                        .then(cultsCalendar => {
+                            // Lógica para exibir o calendário, se necessário
+                        })
+                        .catch(error => {
+                            console.error('Erro ao carregar calendário de cultos:', error);
+                            showNotification('Erro ao carregar calendário de cultos. Tente novamente.', 'error');
+                        });
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar os dados:', error);
+                    showNotification('Erro ao carregar os dados do usuário. Entre em contato com o administrador.', 'error');
+                    // Mantém o título genérico em caso de erro
+                    document.querySelector('.hero h1').textContent = 'Bem-vindo ao Ministério de Louvor!';
+                    const userInfoSpan = document.querySelector('.user-info span');
+                    if (userInfoSpan) {
+                        userInfoSpan.textContent = 'Usuário';
+                    }
+                });
+
+            // Função para mostrar notificação moderna
+            function showNotification(message, type) {
+                const notification = document.getElementById('errorNotification');
+                notification.innerHTML = `
+                    <div class="notification ${type === 'success' ? 'notification-success' : 'notification-error'}">
+                        <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+                        <span>${message}</span>
+                        <button class="notification-close" onclick="hideNotification()">×</button>
+                    </div>
+                `;
+                notification.querySelector('.notification').classList.add('show');
+            }
+
+            // Função para esconder notificação
+            function hideNotification() {
+                const notification = document.getElementById('errorNotification');
+                const notifElement = notification.querySelector('.notification');
+                if (notifElement) {
+                    notifElement.classList.remove('show');
+                    setTimeout(() => notification.innerHTML = '', 500); // Remove completamente após a animação
+                }
+            }
+
+            // Configuração opcional de Firebase para notificações push (comente se não usar)
+            const firebaseConfig = {
+                apiKey: "AIzaSyBao-CekS4U-YyEKF8sZqzWbq1m9NqRK1s",
+                authDomain: "appcondominio-2fcac.firebaseapp.com",
+                projectId: "appcondominio-2fcac",
+                storageBucket: "appcondominio-2fcac.appspot.com",
+                messagingSenderId: "454281232654",
+                appId: "1:454281232654:web:647583086f3d4ed730175f",
+                measurementId: "G-SN7T6D7FTE"
+            };
+
+            firebase.initializeApp(firebaseConfig);
+            const messaging = firebase.messaging();
+
+            function registerPush() {
+                messaging.requestPermission()
+                    .then(() => messaging.getToken({ vapidKey: "SUBSTITUA_PELO_VAPID_KEY" }))
+                    .then((token) => {
+                        console.log('Token FCM:', token);
+                        fetch('/register_token', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ token: token })
+                        }).then(response => response.text())
+                            .then(text => console.log('Token registrado:', text))
+                            .catch(err => console.error('Erro ao enviar token:', err));
+                    })
+                    .catch((err) => console.error('Erro ao registrar push:', err));
+            }
+
+            messaging.onMessage((payload) => {
+                console.log('Notificação recebida em foreground:', payload);
+                showNotification(payload.notification.body, 'success');
+            });
+
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then((reg) => {
+                        console.log('Service Worker registrado', reg);
+                        registerPush();
+                    })
+                    .catch((err) => console.error('Erro ao registrar Service Worker', err));
+            }
+        });
+    </script>
+</body>
+</html>
