@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Repertório - Ministério de Louvor</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #F5F5F5;
+            --text-color: #212121;
+            --navbar-bg: #D32F2F;
+            --navbar-text: white;
+            --sidebar-bg: #212121;
+            --sidebar-text: white;
+            --card-bg: white;
+            --shadow: rgba(0, 0, 0, 0.1);
+            --hover-bg: #D32F2F;
+            --scale-bg: #fafafa;
+            --scale-border: #eee;
+            --muted-text: #666;
+            --bottom-nav-bg: #212121;
+            --notification-bg: #fff3e0;
+            --notification-border: #ff9800;
+            --notice-bg: #e8f5e9;
+            --notice-border: #c8e6c9;
+            --btn-bg: #D32F2F;
+            --btn-hover: #B71C1C;
+        }
+        body.dark-theme {
+            --bg-color: #121212;
+            --text-color: #E0E0E0;
+            --navbar-bg: #D32F2F;
+            --navbar-text: #E0E0E0;
+            --sidebar-bg: #1E1E1E;
+            --sidebar-text: #E0E0E0;
+            --card-bg: #1E1E1E;
+            --shadow: rgba(255, 255, 255, 0.1);
+            --hover-bg: #B71C1C;
+            --scale-bg: #2E2E2E;
+            --scale-border: #444;
+            --muted-text: #999;
+            --bottom-nav-bg: #1E1E1E;
+            --notification-bg: #ff9800;
+            --notification-border: #ffb300;
+            --notice-bg: #2e7d32;
+            --notice-border: #4caf50;
+            --btn-bg: #D32F2F;
+            --btn-hover: #B71C1C;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Roboto', sans-serif;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            overflow-x: hidden;
+            transition: background-color 0.3s, color 0.3s;
+            padding-bottom: 60px;
+        }
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background-color: var(--navbar-bg);
+            color: var(--navbar-text);
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+            box-shadow: 0 2px 10px var(--shadow);
+        }
+        .sidebar-toggle {
+            background: none;
+            border: none;
+            color: var(--navbar-text);
+            font-size: 20px;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        .sidebar-toggle:hover {
+            transform: scale(1.1);
+        }
+        .logo {
+            font-size: 1.5em;
+            font-weight: 700;
+            flex-grow: 1;
+            text-align: center;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .user-info span {
+            font-size: 1em;
+            font-weight: 500;
+        }
+        .user-profile-pic {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid var(--navbar-text);
+            transition: border-color 0.3s;
+        }
+        .logout-icon, .theme-toggle {
+            color: var(--navbar-text);
+            font-size: 20px;
+            text-decoration: none;
+            transition: color 0.3s;
+            cursor: pointer;
+        }
+        .logout-icon:hover, .theme-toggle:hover {
+            color: #E0E0E0;
+        }
+        .sidebar {
+            position: fixed;
+            top: 60px;
+            left: -250px;
+            width: 250px;
+            height: calc(100% - 60px);
+            background-color: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            transition: left 0.3s ease;
+            z-index: 999;
+        }
+        .sidebar.open {
+            left: 0;
+        }
+        .sidebar ul {
+            list-style: none;
+            padding: 20px;
+        }
+        .sidebar ul li {
+            margin: 15px 0;
+        }
+        .sidebar ul li a {
+            color: var(--sidebar-text);
+            text-decoration: none;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .sidebar ul li a:hover {
+            background-color: var(--hover-bg);
+        }
+        .sidebar ul li a i {
+            font-size: 1.2em;
+        }
+        main {
+            margin-top: 60px;
+            padding: 20px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .management-section {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px var(--shadow);
+            margin-top: 20px;
+        }
+        h2 {
+            font-size: 1.6em;
+            color: var(--navbar-bg);
+            margin-bottom: 15px;
+            font-weight: 700;
+            text-align: center;
+        }
+        .form-container {
+            margin-bottom: 20px;
+        }
+        .form-container form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .form-container input, .form-container button {
+            padding: 10px;
+            font-size: 1em;
+            border: 1px solid var(--scale-border);
+            border-radius: 5px;
+        }
+        .form-container button {
+            background-color: var(--btn-bg);
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .form-container button:hover {
+            background-color: var(--btn-hover);
+        }
+        .song-list {
+            margin-top: 20px;
+        }
+        .song-item {
+            padding: 15px;
+            border: 1px solid var(--scale-border);
+            border-radius: 5px;
+            background-color: var(--scale-bg);
+            margin-bottom: 10px;
+        }
+        .song-item h3 {
+            font-size: 1.2em;
+            color: var(--text-color);
+            margin-bottom: 5px;
+        }
+        .song-item p {
+            margin: 5px 0;
+            font-size: 1em;
+        }
+        .song-item a {
+            color: var(--btn-bg);
+            text-decoration: none;
+        }
+        .song-item a:hover {
+            text-decoration: underline;
+        }
+        .song-item form {
+            display: inline;
+        }
+        .song-item button {
+            padding: 5px 10px;
+            margin-right: 10px;
+            background-color: var(--btn-bg);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .song-item button:hover {
+            background-color: var(--btn-hover);
+        }
+        .no-songs {
+            text-align: center;
+            font-size: 1em;
+            color: var(--muted-text);
+            padding: 20px 0;
+        }
+        .bottom-nav {
+            display: flex;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: var(--bottom-nav-bg);
+            padding: 10px 0;
+            box-shadow: 0 -2px 10px var(--shadow);
+            z-index: 1000;
+        }
+        .bottom-nav a {
+            flex: 1;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            text-align: center;
+            padding: 5px;
+            font-size: 0.9em;
+            transition: background-color 0.3s;
+        }
+        .bottom-nav a.active, .bottom-nav a:hover {
+            background-color: var(--hover-bg);
+        }
+        .bottom-nav a i {
+            display: block;
+            font-size: 1.5em;
+            margin-bottom: 5px;
+        }
+        .bottom-nav a span {
+            display: block;
+        }
+        .flash-messages {
+            margin: 20px 0;
+            position: relative;
+            z-index: 1100;
+        }
+        .flash-message {
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1em;
+            min-height: 50px;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            border: 1px solid var(--shadow);
+            opacity: 1;
+            animation: slideIn 0.5s ease-in-out;
+        }
+        .flash-message.success {
+            background-color: var(--notice-bg);
+            color: #2E7D32 !important;
+            border: 1px solid var(--notice-border);
+        }
+        .flash-message.success span {
+            color: #2E7D32 !important;
+        }
+        .flash-message.error {
+            background-color: #FFEBEE;
+            color: #C62828;
+            border: 1px solid #EF9A9A;
+        }
+        .flash-message i {
+            font-size: 1.2em;
+            color: inherit;
+        }
+        body.dark-theme .flash-message.success {
+            color: #FFFFFF !important;
+        }
+        body.dark-theme .flash-message.success span {
+            color: #FFFFFF !important;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @media (max-width: 768px) {
+            .navbar { padding: 10px 15px; }
+            .logo { font-size: 1.2em; }
+            .user-info span { font-size: 0.9em; }
+            .user-profile-pic { width: 25px; height: 25px; }
+            .sidebar { top: 50px; height: calc(100% - 50px); width: 200px; }
+            main { padding: 15px; }
+            h2 { font-size: 1.4em; }
+            .song-item { padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="navbar">
+            <button class="sidebar-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="logo">Ministério de Louvor</div>
+            <div class="user-info">
+                {% if user_data['profile_pic'] %}
+                    <img src="{{ url_for('static', filename='uploads/' + user_data['profile_pic']) }}" alt="Foto de Perfil" class="user-profile-pic">
+                {% else %}
+                    <img src="{{ url_for('static', filename='default-profile-pic.jpg') }}" alt="Foto de Perfil Padrão" class="user-profile-pic">
+                {% endif %}
+                <span>{{ name }}</span>
+                <a href="#" class="theme-toggle" onclick="toggleTheme()">
+                    <i class="fas fa-moon"></i>
+                </a>
+                <a href="{{ url_for('logout') }}" class="logout-icon"><i class="fas fa-sign-out-alt"></i></a>
+            </div>
+        </div>
+    </header>
+
+    <nav class="sidebar">
+        <ul>
+            <li><a href="{{ url_for('visualizar_escalas') }}"><i class="fas fa-calendar"></i> Visualizar Escalas</a></li>
+            <li><a href="{{ url_for('historico_escalas') }}"><i class="fas fa-history"></i> Histórico</a></li>
+            <li><a href="{{ url_for('criar_escala') }}"><i class="fas fa-plus-circle"></i> Criar Escala</a></li>
+            <li><a href="{{ url_for('cadastrar_membro') }}"><i class="fas fa-user-plus"></i> Cadastrar Membro</a></li>
+            <li><a href="{{ url_for('lista_membros') }}"><i class="fas fa-users"></i> Lista de Membros</a></li>
+            <li><a href="{{ url_for('cadastrar_aviso') }}"><i class="fas fa-bullhorn"></i> Cadastrar Aviso</a></li>
+            <li><a href="{{ url_for('gerenciar_avisos') }}"><i class="fas fa-edit"></i> Gerenciar Avisos</a></li>
+            <li><a href="{{ url_for('gerenciar_repertorio_global') }}"><i class="fas fa-music"></i> Gerenciar Repertório</a></li>
+            <li><a href="{{ url_for('comunicar_equipe') }}"><i class="fas fa-bullhorn"></i> Comunicar</a></li>
+            <li><a href="{{ url_for('enviar_notificacoes') }}"><i class="fas fa-bell"></i> Notificações</a></li>
+            <li><a href="{{ url_for('relatorios') }}"><i class="fas fa-chart-bar"></i> Relatórios</a></li>
+            <li><a href="{{ url_for('repertorio') }}"><i class="fas fa-list"></i> Repertório</a></li>
+            <li><a href="{{ url_for('perfil') }}"><i class="fas fa-user"></i> Perfil</a></li>
+            <li><a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Sair</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash-message {{ category }}">
+                            {% if category == 'success' %}
+                                <i class="fas fa-check-circle"></i>
+                            {% elif category == 'error' %}
+                                <i class="fas fa-times-circle"></i>
+                            {% endif %}
+                            <span>{{ message }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="management-section">
+            <h2>Gerenciar Repertório Global</h2>
+            <div class="form-container">
+                <form action="{{ url_for('gerenciar_repertorio_global') }}" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="action" value="create">
+                    <input type="text" name="title" placeholder="Título da Música" required>
+                    <input type="text" name="tone" placeholder="Tom (opcional)">
+                    <input type="text" name="minister" placeholder="Ministro (opcional)">
+                    <input type="url" name="youtube_link" placeholder="Link do YouTube (opcional)">
+                    <input type="url" name="spotify_link" placeholder="Link do Spotify (opcional)">
+                    <input type="file" name="file" accept=".mp3,.mp4,.wav,.ogg,.m4a">
+                    <button type="submit">Adicionar Música</button>
+                </form>
+            </div>
+
+            <div class="song-list">
+                {% if songs %}
+                    {% for song in songs %}
+                        <div class="song-item">
+                            <h3>{{ song['title'] }}</h3>
+                            <p><strong>Tom:</strong> {{ song['tone'] or '-' }}</p>
+                            <p><strong>Ministro:</strong> {{ song['minister'] or '-' }}</p>
+                            <p><strong>YouTube:</strong> 
+                                {% if song['youtube_link'] %}
+                                    <a href="{{ song['youtube_link'] }}" target="_blank">{{ song['youtube_link'] }}</a>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </p>
+                            <p><strong>Spotify:</strong> 
+                                {% if song['spotify_link'] %}
+                                    <a href="{{ song['spotify_link'] }}" target="_blank">{{ song['spotify_link'] }}</a>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </p>
+                            <p><strong>Arquivo:</strong> 
+                                {% if song['file_path'] %}
+                                    <a href="{{ url_for('static', filename='uploads/songs/' + song['file_path'].split('/')[-1]) }}" target="_blank">Download</a>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </p>
+                            <form action="{{ url_for('gerenciar_repertorio_global') }}" method="POST" style="display:inline;">
+                                <input type="hidden" name="action" value="edit">
+                                <input type="hidden" name="song_id" value="{{ song['id'] }}">
+                                <input type="text" name="title" value="{{ song['title'] }}" required>
+                                <input type="text" name="tone" value="{{ song['tone'] or '' }}">
+                                <input type="text" name="minister" value="{{ song['minister'] or '' }}">
+                                <input type="url" name="youtube_link" value="{{ song['youtube_link'] or '' }}">
+                                <input type="url" name="spotify_link" value="{{ song['spotify_link'] or '' }}">
+                                <input type="file" name="file" accept=".mp3,.mp4,.wav,.ogg,.m4a">
+                                <button type="submit">Editar</button>
+                            </form>
+                            <form action="{{ url_for('gerenciar_repertorio_global') }}" method="POST" style="display:inline;">
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="song_id" value="{{ song['id'] }}">
+                                <button type="submit" onclick="return confirm('Tem certeza que deseja excluir esta música?');">Excluir</button>
+                            </form>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="no-songs">Nenhuma música cadastrada no repertório.</p>
+                {% endif %}
+            </div>
+        </div>
+    </main>
+
+    <nav class="bottom-nav">
+        <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">
+            <i class="fas fa-home"></i>
+            <span>Início</span>
+        </a>
+        <a href="{{ url_for('visualizar_escalas') }}" class="{% if request.endpoint == 'visualizar_escalas' %}active{% endif %}">
+            <i class="fas fa-calendar"></i>
+            <span>Escalas</span>
+        </a>
+        <a href="{{ url_for('historico_escalas') }}" class="{% if request.endpoint == 'historico_escalas' %}active{% endif %}">
+            <i class="fas fa-history"></i>
+            <span>Histórico</span>
+        </a>
+        <a href="{{ url_for('perfil') }}" class="{% if request.endpoint == 'perfil' %}active{% endif %}">
+            <i class="fas fa-user"></i>
+            <span>Perfil</span>
+        </a>
+    </nav>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            sidebar.classList.toggle('open');
+        }
+
+        function toggleTheme() {
+            const body = document.body;
+            const themeToggle = document.querySelector('.theme-toggle i');
+            body.classList.toggle('dark-theme');
+            const isDark = body.classList.contains('dark-theme');
+            themeToggle.classList.toggle('fa-moon', !isDark);
+            themeToggle.classList.toggle('fa-sun', isDark);
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme');
+            const themeToggle = document.querySelector('.theme-toggle i');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-theme');
+                themeToggle.classList.remove('fa-moon');
+                themeToggle.classList.add('fa-sun');
+            }
+        });
+    </script>
+</body>
+</html>

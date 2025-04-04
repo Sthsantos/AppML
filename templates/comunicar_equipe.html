@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comunicar com Equipe - Ministério de Louvor</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.js"></script>
+    <style>
+        :root {
+            --bg-color: #F5F5F5;
+            --text-color: #212121;
+            --navbar-bg: #D32F2F;
+            --navbar-text: white;
+            --sidebar-bg: #212121;
+            --sidebar-text: white;
+            --card-bg: white;
+            --shadow: rgba(0, 0, 0, 0.1);
+            --hover-bg: #D32F2F;
+            --scale-bg: #fafafa;
+            --scale-border: #eee;
+            --muted-text: #666;
+            --bottom-nav-bg: #212121;
+            --notification-bg: #fff3e0;
+            --notification-border: #ff9800;
+            --notice-bg: #e8f5e9;
+            --notice-border: #c8e6c9;
+            --btn-bg: #D32F2F;
+            --btn-hover: #B71C1C;
+            --input-border: #ccc;
+            --btn-back-bg: #212121;
+            --btn-back-hover: #424242;
+            --members-bg: #fafafa;
+            --members-border: #eee;
+            --checkbox-accent: #D32F2F;
+        }
+        body.dark-theme {
+            --bg-color: #121212;
+            --text-color: #E0E0E0;
+            --navbar-bg: #D32F2F;
+            --navbar-text: #E0E0E0;
+            --sidebar-bg: #1E1E1E;
+            --sidebar-text: #E0E0E0;
+            --card-bg: #1E1E1E;
+            --shadow: rgba(255, 255, 255, 0.1);
+            --hover-bg: #B71C1C;
+            --scale-bg: #2E2E2E;
+            --scale-border: #444;
+            --muted-text: #999;
+            --bottom-nav-bg: #1E1E1E;
+            --notification-bg: #ff9800;
+            --notification-border: #ffb300;
+            --notice-bg: #2e7d32;
+            --notice-border: #4caf50;
+            --btn-bg: #D32F2F;
+            --btn-hover: #B71C1C;
+            --input-border: #666;
+            --btn-back-bg: #1E1E1E;
+            --btn-back-hover: #333;
+            --members-bg: #2E2E2E;
+            --members-border: #444;
+            --checkbox-accent: #D32F2F;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Roboto', sans-serif;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            overflow-x: hidden;
+            transition: background-color 0.3s, color 0.3s;
+            padding-bottom: 60px; /* Espaço para o menu inferior */
+        }
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background-color: var(--navbar-bg);
+            color: var(--navbar-text);
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+            box-shadow: 0 2px 10px var(--shadow);
+        }
+        .sidebar-toggle {
+            background: none;
+            border: none;
+            color: var(--navbar-text);
+            font-size: 20px;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        .sidebar-toggle:hover {
+            transform: scale(1.1);
+        }
+        .logo {
+            font-size: 1.5em;
+            font-weight: 700;
+            flex-grow: 1;
+            text-align: center;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .user-info span {
+            font-size: 1em;
+            font-weight: 500;
+        }
+        .logout-icon, .theme-toggle {
+            color: var(--navbar-text);
+            font-size: 20px;
+            text-decoration: none;
+            transition: color 0.3s;
+            cursor: pointer;
+        }
+        .logout-icon:hover, .theme-toggle:hover {
+            color: #E0E0E0;
+        }
+        .sidebar {
+            position: fixed;
+            top: 60px;
+            left: -250px;
+            width: 250px;
+            height: calc(100% - 60px);
+            background-color: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            transition: left 0.3s ease;
+            z-index: 999;
+        }
+        .sidebar.open {
+            left: 0;
+        }
+        .sidebar ul {
+            list-style: none;
+            padding: 20px;
+        }
+        .sidebar ul li {
+            margin: 15px 0;
+        }
+        .sidebar ul li a {
+            color: var(--sidebar-text);
+            text-decoration: none;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .sidebar ul li a:hover {
+            background-color: var(--hover-bg);
+        }
+        .sidebar ul li a i {
+            font-size: 1.2em;
+        }
+        main {
+            margin-top: 60px;
+            padding: 20px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .section {
+            background-color: var(--card-bg);
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px var(--shadow);
+            transition: background-color 0.3s;
+        }
+        h2 {
+            font-size: 1.6em;
+            color: var(--navbar-bg);
+            margin-bottom: 15px;
+            font-weight: 700;
+            text-align: center;
+        }
+        h3 {
+            font-size: 1.2em;
+            color: var(--text-color);
+            margin: 15px 0 10px;
+            font-weight: 500;
+        }
+        textarea {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid var(--input-border);
+            border-radius: 5px;
+            font-size: 1em;
+            min-height: 100px;
+            resize: vertical;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            transition: border-color 0.3s;
+        }
+        textarea:focus {
+            border-color: var(--btn-bg);
+            outline: none;
+        }
+        .members {
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            border: 1px solid var(--members-border);
+            border-radius: 5px;
+            background-color: var(--members-bg);
+            margin-bottom: 15px;
+        }
+        label {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            font-size: 1em;
+            color: var(--text-color);
+        }
+        input[type="checkbox"] {
+            width: auto;
+            margin-right: 10px;
+            accent-color: var(--checkbox-accent);
+        }
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--btn-bg);
+            color: #FFFFFF;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: var(--btn-hover);
+        }
+        .back {
+            background-color: var(--btn-back-bg);
+            text-align: center;
+            display: block;
+            margin-top: 15px;
+            text-decoration: none;
+            padding: 12px;
+            border-radius: 5px;
+            color: var(--sidebar-text);
+            transition: background-color 0.3s;
+        }
+        .back:hover {
+            background-color: var(--btn-back-hover);
+        }
+        .flash-messages {
+            margin: 20px 0;
+        }
+        .flash-message {
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1em;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            border: 1px solid var(--shadow);
+        }
+        .flash-message.success {
+            background-color: var(--notice-bg);
+            color: #2E7D32;
+            border: 1px solid var(--notice-border);
+        }
+        .flash-message.error {
+            background-color: #FFEBEE;
+            color: #C62828;
+            border: 1px solid #EF9A9A;
+        }
+        .flash-message i {
+            font-size: 1.2em;
+        }
+        .bottom-nav {
+            display: flex;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: var(--bottom-nav-bg);
+            padding: 10px 0;
+            box-shadow: 0 -2px 10px var(--shadow);
+            z-index: 1000;
+        }
+        .bottom-nav a {
+            flex: 1;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            text-align: center;
+            padding: 5px;
+            font-size: 0.9em;
+            transition: background-color 0.3s;
+        }
+        .bottom-nav a.active, .bottom-nav a:hover {
+            background-color: var(--hover-bg);
+        }
+        .bottom-nav a i {
+            display: block;
+            font-size: 1.5em;
+            margin-bottom: 5px;
+        }
+        .bottom-nav a span {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @media (max-width: 768px) {
+            .navbar { padding: 10px 15px; }
+            .logo { font-size: 1.2em; }
+            .user-info span { font-size: 0.9em; }
+            .sidebar { top: 50px; height: calc(100% - 50px); width: 200px; }
+            main { padding: 15px; }
+            .section { padding: 15px; }
+            h2 { font-size: 1.4em; }
+            .members { max-height: 150px; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="navbar">
+            <button class="sidebar-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="logo">Ministério de Louvor</div>
+            <div class="user-info">
+                <span>{{ name }}</span>
+                <a href="#" class="theme-toggle" onclick="toggleTheme()">
+                    <i class="fas fa-moon"></i>
+                </a>
+                <a href="{{ url_for('logout') }}" class="logout-icon"><i class="fas fa-sign-out-alt"></i></a>
+            </div>
+        </div>
+    </header>
+
+    <nav class="sidebar">
+        <ul>
+            <li><a href="{{ url_for('index') }}"><i class="fas fa-home"></i> Início</a></li>
+            <li><a href="{{ url_for('visualizar_escalas') }}"><i class="fas fa-calendar"></i> Visualizar Escalas</a></li>
+            <li><a href="{{ url_for('historico_escalas') }}"><i class="fas fa-history"></i> Histórico</a></li>
+            {% if is_admin %}
+            <li><a href="{{ url_for('criar_escala') }}"><i class="fas fa-plus-circle"></i> Criar Escala</a></li>
+            <li><a href="{{ url_for('cadastrar_membro') }}"><i class="fas fa-user-plus"></i> Cadastrar Membro</a></li>
+            <li><a href="{{ url_for('lista_membros') }}"><i class="fas fa-users"></i> Lista de Membros</a></li>
+            <li><a href="{{ url_for('cadastrar_aviso') }}"><i class="fas fa-bullhorn"></i> Cadastrar Aviso</a></li>
+            <li><a href="{{ url_for('gerenciar_avisos') }}"><i class="fas fa-edit"></i> Gerenciar Avisos</a></li>
+            <li><a href="{{ url_for('comunicar_equipe') }}"><i class="fas fa-bullhorn"></i> Comunicar</a></li>
+            <li><a href="{{ url_for('enviar_notificacoes') }}"><i class="fas fa-bell"></i> Notificações</a></li>
+            <li><a href="{{ url_for('relatorios') }}"><i class="fas fa-chart-bar"></i> Relatórios</a></li>
+            {% endif %}
+            <li><a href="{{ url_for('perfil') }}"><i class="fas fa-user"></i> Perfil</a></li>
+            <li><a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Sair</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <div class="section">
+            <h2>Comunicar com Equipe</h2>
+            <form method="POST">
+                <textarea name="message" placeholder="Digite sua mensagem aqui" required></textarea>
+                <h3>Selecione os Membros</h3>
+                <div class="members">
+                    {% for member in members %}
+                        <label>
+                            <input type="checkbox" name="members" value="{{ member['id'] }}"> 
+                            {{ member['name'] }} ({{ member['role'] }} - {{ member['contact'] or 'Sem e-mail' }})
+                        </label>
+                    {% endfor %}
+                </div>
+                <button type="submit" class="btn">Enviar Mensagem</button>
+            </form>
+            <a href="{{ url_for('index') }}" class="btn back">Voltar</a>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-messages">
+                        {% for category, message in messages %}
+                            <div class="flash-message {{ category }}">
+                                {% if category == 'success' %}
+                                    <i class="fas fa-check-circle"></i>
+                                {% elif category == 'error' %}
+                                    <i class="fas fa-times-circle"></i>
+                                {% endif %}
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+        </div>
+    </main>
+
+    <nav class="bottom-nav">
+        <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">
+            <i class="fas fa-home"></i>
+            <span>Início</span>
+        </a>
+        <a href="{{ url_for('visualizar_escalas') }}" class="{% if request.endpoint == 'visualizar_escalas' %}active{% endif %}">
+            <i class="fas fa-calendar"></i>
+            <span>Escalas</span>
+        </a>
+        <a href="{{ url_for('comunicar_equipe') }}" class="{% if request.endpoint == 'comunicar_equipe' %}active{% endif %}">
+            <i class="fas fa-bullhorn"></i>
+            <span>Comunicar</span>
+        </a>
+        <a href="{{ url_for('historico_escalas') }}" class="{% if request.endpoint == 'historico_escalas' %}active{% endif %}">
+            <i class="fas fa-history"></i>
+            <span>Histórico</span>
+        </a>
+    </nav>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            sidebar.classList.toggle('open');
+        }
+
+        function toggleTheme() {
+            const body = document.body;
+            const themeToggle = document.querySelector('.theme-toggle i');
+            body.classList.toggle('dark-theme');
+            const isDark = body.classList.contains('dark-theme');
+            themeToggle.classList.toggle('fa-moon', !isDark);
+            themeToggle.classList.toggle('fa-sun', isDark);
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme');
+            const themeToggle = document.querySelector('.theme-toggle i');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-theme');
+                themeToggle.classList.remove('fa-moon');
+                themeToggle.classList.add('fa-sun');
+            }
+
+            const socket = io.connect('http://' + document.domain + ':' + location.port);
+            socket.on('connect', () => {
+                socket.emit('connect');
+            });
+
+            socket.on('notification', (data) => {
+                const notificationContainer = document.createElement('div');
+                notificationContainer.className = 'notification-container';
+                notificationContainer.style.position = 'fixed';
+                notificationContainer.style.top = '70px';
+                notificationContainer.style.right = '20px';
+                notificationContainer.style.zIndex = '2000';
+                notificationContainer.style.width = '300px';
+                document.body.appendChild(notificationContainer);
+                const notification = document.createElement('div');
+                notification.className = 'notification';
+                notification.style.backgroundColor = 'var(--notification-bg)';
+                notification.style.border = '2px solid var(--notification-border)';
+                notification.style.padding = '15px';
+                notification.style.marginBottom = '10px';
+                notification.style.borderRadius = '5px';
+                notification.style.boxShadow = '0 4px 10px var(--shadow)';
+                notification.style.color = 'var(--text-color)';
+                notification.innerHTML = `
+                    <h4>${data.title}</h4>
+                    <p>${data.message}</p>
+                    <p><strong>Evento:</strong> ${data.event || 'Comunicação'} | <strong>Data:</strong> ${data.date || 'Agora'}</p>
+                `;
+                notificationContainer.appendChild(notification);
+                setTimeout(() => {
+                    notification.style.transition = 'opacity 0.5s';
+                    notification.style.opacity = '0';
+                    setTimeout(() => notification.remove(), 500);
+                }, 5000);
+            });
+        });
+    </script>
+</body>
+</html>
