@@ -76,7 +76,7 @@
             line-height: 1.6;
             overflow-x: hidden;
             transition: background-color 0.3s, color 0.3s;
-            padding-bottom: 70px; /* Aumentado para acomodar bottom-nav maior */
+            padding-bottom: 70px;
         }
         .navbar {
             display: flex;
@@ -96,9 +96,9 @@
             background: none;
             border: none;
             color: var(--navbar-text);
-            font-size: 1.5rem; /* Aumentado para mobile */
+            font-size: 1.5rem;
             cursor: pointer;
-            padding: 10px; /* Área de toque maior */
+            padding: 10px;
         }
         .sidebar-toggle:hover {
             transform: scale(1.1);
@@ -117,7 +117,7 @@
         .user-info span {
             font-size: 0.9rem;
             font-weight: 500;
-            display: none; /* Ocultado em mobile por padrão */
+            display: none;
         }
         .user-profile-pic {
             width: 30px;
@@ -128,8 +128,8 @@
         }
         .logout-icon, .theme-toggle {
             color: var(--navbar-text);
-            font-size: 1.5rem; /* Aumentado para mobile */
-            padding: 10px; /* Área de toque maior */
+            font-size: 1.5rem;
+            padding: 10px;
             cursor: pointer;
         }
         .logout-icon:hover, .theme-toggle:hover {
@@ -139,7 +139,7 @@
             position: fixed;
             top: 60px;
             left: -100%;
-            width: 80%; /* Ajustado para ocupar mais espaço em mobile */
+            width: 80%;
             height: calc(100% - 60px);
             background-color: var(--sidebar-bg);
             color: var(--sidebar-text);
@@ -171,7 +171,7 @@
             background-color: var(--hover-bg);
         }
         .sidebar ul li a i {
-            font-size: 1.5rem; /* Ícones maiores em mobile */
+            font-size: 1.5rem;
         }
         main {
             margin-top: 60px;
@@ -188,21 +188,18 @@
             font-weight: 700;
         }
         .features {
-            display: flex;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
             gap: 10px;
-            justify-content: center;
             margin-top: 15px;
         }
         .feature-link {
             text-decoration: none;
-            flex: 1 1 45%; /* 2 por linha em mobile */
-            min-width: 140px;
             height: 100px;
         }
         .feature {
             background-color: var(--card-bg);
-            padding: 15px;
+            padding: 10px;
             border-radius: 8px;
             text-align: center;
             box-shadow: 0 4px 10px var(--shadow);
@@ -211,17 +208,18 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            transition: transform 0.3s;
         }
         .feature:hover {
             transform: translateY(-5px);
         }
         .feature i {
-            font-size: 2rem; /* Ícones maiores */
+            font-size: 1.8rem;
             color: var(--navbar-bg);
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
         .feature h3 {
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             color: var(--text-color);
             font-weight: 500;
             margin: 0;
@@ -290,7 +288,7 @@
             color: var(--sidebar-text);
             text-decoration: none;
             text-align: center;
-            padding: 10px 5px; /* Mais área de toque */
+            padding: 10px 5px;
             font-size: 0.8rem;
             transition: background-color 0.3s;
         }
@@ -299,7 +297,7 @@
         }
         .bottom-nav a i {
             display: block;
-            font-size: 1.8rem; /* Ícones maiores */
+            font-size: 1.8rem;
             margin-bottom: 5px;
         }
         .bottom-nav a span {
@@ -391,20 +389,14 @@
                 font-size: 1.8rem;
             }
             .sidebar {
-                width: 100%; /* Ocupa tela inteira em mobile */
+                width: 100%;
             }
             .sidebar ul li a {
                 font-size: 1.1rem;
                 padding: 15px;
             }
             .features {
-                flex-direction: column;
-                align-items: center;
-            }
-            .feature-link {
-                flex: 1 1 100%;
-                max-width: 100%;
-                height: 80px;
+                grid-template-columns: repeat(2, 1fr); /* 2 itens por linha */
             }
             .hero h1 {
                 font-size: 1.3rem;
@@ -418,11 +410,28 @@
             }
         }
         @media (max-width: 480px) {
+            .features {
+                grid-template-columns: repeat(2, 1fr); /* Mantém 2 por linha */
+            }
+            .feature-link {
+                height: 80px;
+            }
+            .feature i {
+                font-size: 1.5rem;
+            }
+            .feature h3 {
+                font-size: 0.7rem;
+            }
             .bottom-nav a i {
                 font-size: 1.5rem;
             }
             .bottom-nav a span {
                 font-size: 0.7rem;
+            }
+        }
+        @media (min-width: 769px) {
+            .features {
+                grid-template-columns: repeat(3, 1fr); /* 3 itens por linha em telas maiores */
             }
         }
     </style>
