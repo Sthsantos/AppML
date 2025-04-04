@@ -11,16 +11,22 @@ from werkzeug.utils import secure_filename
 import firebase_admin
 from firebase_admin import credentials, messaging
 import logging
+import json
 
 # Configurar logging para depuração
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# Inicializar Firebase Admin com o arquivo de credenciais
-cred_path = os.getenv('FIREBASE_CRED_PATH', 'firebase-adminsdk.json')
-if not os.path.exists(cred_path):
-    raise FileNotFoundError(f"Arquivo de credenciais Firebase não encontrado em: {cred_path}")
-cred = credentials.Certificate(cred_path)
+# Inicializar Firebase Admin com credenciais flexíveis
+cred_path = os.getenv('FIREBASE_CRED_PATH')
+if not cred_path:
+    cred_json = os.getenv('FIREBASE_CREDENTIALS')
+    if cred_json:
+        cred = credentials.Certificate(json.loads(cred_json))
+    else:
+        cred = credentials.Certificate('firebase-adminsdk.json')
+else:
+    cred = credentials.Certificate(cred_path)
 firebase_admin.initialize_app(cred)
 
 app = Flask(__name__)
@@ -1097,6 +1103,6 @@ def test_push():
 if __name__ == '__main__':
     try:
         init_db()
-        socketio.run(app, debug=True, host='0.0.0.0', port=5000)
+        socketio.run(app, host='0.0.0.0', port=5000)
     except Exception as e:
         logger.error(f"Erro ao iniciar o aplicativo: {e}")
