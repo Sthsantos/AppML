@@ -7,11 +7,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.js"></script>
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.4.0/firebase-messaging.js"></script>
     <script>
-        // Configuração do Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyCEL3aK4qVP6XTWjJqRs307-9TDxxr0ERs",
             authDomain: "ministerio-de-louvor-62fcf.firebaseapp.com",
@@ -78,13 +76,13 @@
             line-height: 1.6;
             overflow-x: hidden;
             transition: background-color 0.3s, color 0.3s;
-            padding-bottom: 60px;
+            padding-bottom: 70px; /* Aumentado para acomodar bottom-nav maior */
         }
         .navbar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 20px;
+            padding: 10px 15px;
             background-color: var(--navbar-bg);
             color: var(--navbar-text);
             position: fixed;
@@ -98,15 +96,15 @@
             background: none;
             border: none;
             color: var(--navbar-text);
-            font-size: 20px;
+            font-size: 1.5rem; /* Aumentado para mobile */
             cursor: pointer;
-            transition: transform 0.3s;
+            padding: 10px; /* Área de toque maior */
         }
         .sidebar-toggle:hover {
             transform: scale(1.1);
         }
         .logo {
-            font-size: 1.5em;
+            font-size: 1.2rem;
             font-weight: 700;
             flex-grow: 1;
             text-align: center;
@@ -114,11 +112,12 @@
         .user-info {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
         .user-info span {
-            font-size: 1em;
+            font-size: 0.9rem;
             font-weight: 500;
+            display: none; /* Ocultado em mobile por padrão */
         }
         .user-profile-pic {
             width: 30px;
@@ -126,13 +125,11 @@
             border-radius: 50%;
             object-fit: cover;
             border: 1px solid var(--navbar-text);
-            transition: border-color 0.3s;
         }
         .logout-icon, .theme-toggle {
             color: var(--navbar-text);
-            font-size: 20px;
-            text-decoration: none;
-            transition: color 0.3s;
+            font-size: 1.5rem; /* Aumentado para mobile */
+            padding: 10px; /* Área de toque maior */
             cursor: pointer;
         }
         .logout-icon:hover, .theme-toggle:hover {
@@ -141,8 +138,8 @@
         .sidebar {
             position: fixed;
             top: 60px;
-            left: -250px;
-            width: 250px;
+            left: -100%;
+            width: 80%; /* Ajustado para ocupar mais espaço em mobile */
             height: calc(100% - 60px);
             background-color: var(--sidebar-bg);
             color: var(--sidebar-text);
@@ -154,19 +151,19 @@
         }
         .sidebar ul {
             list-style: none;
-            padding: 20px;
+            padding: 15px;
         }
         .sidebar ul li {
-            margin: 15px 0;
+            margin: 10px 0;
         }
         .sidebar ul li a {
             color: var(--sidebar-text);
             text-decoration: none;
-            font-size: 1.1em;
+            font-size: 1rem;
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 10px 15px;
+            padding: 12px 15px;
             border-radius: 5px;
             transition: background-color 0.3s;
         }
@@ -174,46 +171,41 @@
             background-color: var(--hover-bg);
         }
         .sidebar ul li a i {
-            font-size: 1.2em;
+            font-size: 1.5rem; /* Ícones maiores em mobile */
         }
         main {
             margin-top: 60px;
-            padding: 20px;
-            max-width: 1200px;
-            margin-left: auto;
-            margin-right: auto;
+            padding: 15px;
+            max-width: 100%;
         }
         .hero {
             text-align: center;
-            padding: 30px 0;
-            animation: fadeIn 0.5s ease-in;
+            padding: 20px 0;
         }
         .hero h1 {
-            font-size: 2em;
+            font-size: 1.5rem;
             color: var(--navbar-bg);
             font-weight: 700;
         }
         .features {
             display: flex;
             flex-wrap: wrap;
-            gap: 20px;
+            gap: 10px;
             justify-content: center;
-            margin-top: 20px;
+            margin-top: 15px;
         }
         .feature-link {
             text-decoration: none;
-            flex: 1;
-            min-width: 200px;
-            max-width: 250px;
-            height: 120px;
+            flex: 1 1 45%; /* 2 por linha em mobile */
+            min-width: 140px;
+            height: 100px;
         }
         .feature {
             background-color: var(--card-bg);
-            padding: 20px;
+            padding: 15px;
             border-radius: 8px;
             text-align: center;
             box-shadow: 0 4px 10px var(--shadow);
-            transition: transform 0.3s, box-shadow 0.3s;
             height: 100%;
             display: flex;
             flex-direction: column;
@@ -222,66 +214,54 @@
         }
         .feature:hover {
             transform: translateY(-5px);
-            box-shadow: 0 6px 15px var(--shadow);
         }
         .feature i {
-            font-size: 2em;
+            font-size: 2rem; /* Ícones maiores */
             color: var(--navbar-bg);
             margin-bottom: 10px;
         }
         .feature h3 {
-            font-size: 1.2em;
+            font-size: 0.9rem;
             color: var(--text-color);
             font-weight: 500;
             margin: 0;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            max-width: 100%;
         }
         .section {
             background-color: var(--card-bg);
-            padding: 20px;
+            padding: 15px;
             border-radius: 8px;
             box-shadow: 0 4px 10px var(--shadow);
-            margin-top: 20px;
+            margin-top: 15px;
         }
         h2 {
-            font-size: 1.6em;
+            font-size: 1.3rem;
             color: var(--navbar-bg);
-            margin-bottom: 15px;
-            font-weight: 700;
+            margin-bottom: 10px;
             text-align: center;
         }
         .scale {
-            margin: 15px 0;
-            padding: 15px;
+            margin: 10px 0;
+            padding: 10px;
             border: 1px solid var(--scale-border);
             border-radius: 5px;
             background-color: var(--scale-bg);
-            transition: transform 0.3s;
-        }
-        .scale:hover {
-            transform: translateY(-3px);
-        }
-        .scale strong {
-            color: var(--text-color);
-            font-weight: 500;
-            margin-right: 5px;
         }
         .scale p {
             margin: 5px 0;
-            font-size: 1em;
+            font-size: 0.9rem;
         }
         .btn {
-            display: inline-block;
-            padding: 10px 20px;
+            display: block;
+            padding: 10px;
             background-color: var(--btn-bg);
             color: #FFFFFF;
             text-align: center;
             text-decoration: none;
             border-radius: 5px;
-            font-size: 0.9em;
+            font-size: 0.9rem;
             font-weight: 500;
             transition: background-color 0.3s;
         }
@@ -290,9 +270,9 @@
         }
         .no-scales {
             text-align: center;
-            font-size: 1em;
+            font-size: 0.9rem;
             color: var(--muted-text);
-            padding: 20px 0;
+            padding: 15px 0;
         }
         .bottom-nav {
             display: flex;
@@ -301,7 +281,7 @@
             left: 0;
             width: 100%;
             background-color: var(--bottom-nav-bg);
-            padding: 10px 0;
+            padding: 5px 0;
             box-shadow: 0 -2px 10px var(--shadow);
             z-index: 1000;
         }
@@ -310,8 +290,8 @@
             color: var(--sidebar-text);
             text-decoration: none;
             text-align: center;
-            padding: 5px;
-            font-size: 0.9em;
+            padding: 10px 5px; /* Mais área de toque */
+            font-size: 0.8rem;
             transition: background-color 0.3s;
         }
         .bottom-nav a.active, .bottom-nav a:hover {
@@ -319,39 +299,31 @@
         }
         .bottom-nav a i {
             display: block;
-            font-size: 1.5em;
+            font-size: 1.8rem; /* Ícones maiores */
             margin-bottom: 5px;
         }
         .bottom-nav a span {
             display: block;
         }
         .flash-messages {
-            margin: 20px 0;
-            position: relative;
-            z-index: 1100;
+            margin: 15px 0;
         }
         .flash-message {
-            padding: 15px;
+            padding: 10px;
             margin-bottom: 10px;
             border-radius: 5px;
             display: flex;
             align-items: center;
-            gap: 10px;
-            font-size: 1em;
-            min-height: 50px;
+            gap: 8px;
+            font-size: 0.9rem;
             background-color: var(--card-bg);
             color: var(--text-color);
             border: 1px solid var(--shadow);
-            opacity: 1;
-            animation: slideIn 0.5s ease-in-out;
         }
         .flash-message.success {
             background-color: var(--notice-bg);
             color: #2E7D32 !important;
             border: 1px solid var(--notice-border);
-        }
-        .flash-message.success span {
-            color: #2E7D32 !important;
         }
         .flash-message.error {
             background-color: #FFEBEE;
@@ -359,93 +331,99 @@
             border: 1px solid #EF9A9A;
         }
         .flash-message i {
-            font-size: 1.2em;
-            color: inherit;
-        }
-        body.dark-theme .flash-message.success {
-            color: #FFFFFF !important;
-        }
-        body.dark-theme .flash-message.success span {
-            color: #FFFFFF !important;
+            font-size: 1.2rem;
         }
         .notification-container {
             position: fixed;
-            top: 70px;
-            right: 20px;
+            top: 60px;
+            right: 10px;
             z-index: 2000;
-            width: 300px;
+            width: 90%;
+            max-width: 300px;
         }
         .notification {
             background-color: var(--notification-bg);
             border: 2px solid var(--notification-border);
-            padding: 15px;
+            padding: 10px;
             margin-bottom: 10px;
             border-radius: 5px;
             box-shadow: 0 4px 10px var(--shadow);
-            animation: slideIn 0.5s ease-in-out;
         }
         .notification h4 {
+            font-size: 1rem;
             margin: 0 0 5px;
-            font-size: 1.1em;
-            font-weight: 500;
         }
         .notification p {
+            font-size: 0.8rem;
             margin: 0;
-            font-size: 0.9em;
         }
         .notices-section {
-            margin-top: 20px;
+            margin-top: 15px;
         }
         .notice {
             background-color: var(--notice-bg);
             border: 2px solid var(--notice-border);
-            padding: 15px;
-            margin-bottom: 15px;
+            padding: 10px;
+            margin-bottom: 10px;
             border-radius: 5px;
             box-shadow: 0 4px 10px var(--shadow);
         }
         .notice h3 {
-            font-size: 1.3em;
-            margin-bottom: 10px;
-            color: var(--text-color);
-            font-weight: 500;
+            font-size: 1.1rem;
+            margin-bottom: 8px;
         }
         .notice p {
-            font-size: 1em;
+            font-size: 0.9rem;
             margin: 5px 0;
         }
         .notice .date {
-            font-size: 0.9em;
+            font-size: 0.8rem;
             color: var(--muted-text);
         }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
         @media (max-width: 768px) {
-            .navbar { padding: 10px 15px; }
-            .logo { font-size: 1.2em; }
-            .user-info span { font-size: 0.9em; }
-            .user-profile-pic { width: 25px; height: 25px; }
-            .sidebar { top: 50px; height: calc(100% - 50px); width: 200px; }
-            main { padding: 15px; }
-            .hero h1 { font-size: 1.5em; }
-            .features { flex-direction: column; align-items: center; }
-            .feature-link { 
-                max-width: 100%; 
-                height: 100px;
+            .navbar {
+                padding: 8px 10px;
             }
-            .section { padding: 15px; }
-            h2 { font-size: 1.4em; }
-            .scale { padding: 10px; }
-            .btn { font-size: 0.8em; padding: 8px 15px; width: 100%; }
-            .bottom-nav { display: flex; }
-            .notification-container { width: 90%; right: 5%; top: 60px; }
-            .flash-messages { margin: 10px 0; }
+            .logo {
+                font-size: 1rem;
+            }
+            .sidebar-toggle, .logout-icon, .theme-toggle {
+                font-size: 1.8rem;
+            }
+            .sidebar {
+                width: 100%; /* Ocupa tela inteira em mobile */
+            }
+            .sidebar ul li a {
+                font-size: 1.1rem;
+                padding: 15px;
+            }
+            .features {
+                flex-direction: column;
+                align-items: center;
+            }
+            .feature-link {
+                flex: 1 1 100%;
+                max-width: 100%;
+                height: 80px;
+            }
+            .hero h1 {
+                font-size: 1.3rem;
+            }
+            h2 {
+                font-size: 1.2rem;
+            }
+            .btn {
+                font-size: 0.9rem;
+                padding: 12px;
+            }
+        }
+        @media (max-width: 480px) {
+            .bottom-nav a i {
+                font-size: 1.5rem;
+            }
+            .bottom-nav a span {
+                font-size: 0.7rem;
+            }
         }
     </style>
 </head>
@@ -473,22 +451,22 @@
 
     <nav class="sidebar">
         <ul>
-            <li><a href="{{ url_for('visualizar_escalas') }}"><i class="fas fa-calendar"></i> Visualizar Escalas</a></li>
-            <li><a href="{{ url_for('historico_escalas') }}"><i class="fas fa-history"></i> Histórico</a></li>
+            <li><a href="{{ url_for('visualizar_escalas') }}" onclick="toggleSidebar()"><i class="fas fa-calendar"></i> Visualizar Escalas</a></li>
+            <li><a href="{{ url_for('historico_escalas') }}" onclick="toggleSidebar()"><i class="fas fa-history"></i> Histórico</a></li>
             {% if is_admin %}
-            <li><a href="{{ url_for('criar_escala') }}"><i class="fas fa-plus-circle"></i> Criar Escala</a></li>
-            <li><a href="{{ url_for('cadastrar_membro') }}"><i class="fas fa-user-plus"></i> Cadastrar Membro</a></li>
-            <li><a href="{{ url_for('lista_membros') }}"><i class="fas fa-users"></i> Lista de Membros</a></li>
-            <li><a href="{{ url_for('cadastrar_aviso') }}"><i class="fas fa-bullhorn"></i> Cadastrar Aviso</a></li>
-            <li><a href="{{ url_for('gerenciar_avisos') }}"><i class="fas fa-edit"></i> Gerenciar Avisos</a></li>
-            <li><a href="{{ url_for('gerenciar_repertorio_global') }}"><i class="fas fa-music"></i> Gerenciar Repertório</a></li>
-            <li><a href="{{ url_for('comunicar_equipe') }}"><i class="fas fa-bullhorn"></i> Comunicar</a></li>
-            <li><a href="{{ url_for('enviar_notificacoes') }}"><i class="fas fa-bell"></i> Notificações</a></li>
-            <li><a href="{{ url_for('relatorios') }}"><i class="fas fa-chart-bar"></i> Relatórios</a></li>
+            <li><a href="{{ url_for('criar_escala') }}" onclick="toggleSidebar()"><i class="fas fa-plus-circle"></i> Criar Escala</a></li>
+            <li><a href="{{ url_for('cadastrar_membro') }}" onclick="toggleSidebar()"><i class="fas fa-user-plus"></i> Cadastrar Membro</a></li>
+            <li><a href="{{ url_for('lista_membros') }}" onclick="toggleSidebar()"><i class="fas fa-users"></i> Lista de Membros</a></li>
+            <li><a href="{{ url_for('cadastrar_aviso') }}" onclick="toggleSidebar()"><i class="fas fa-bullhorn"></i> Cadastrar Aviso</a></li>
+            <li><a href="{{ url_for('gerenciar_avisos') }}" onclick="toggleSidebar()"><i class="fas fa-edit"></i> Gerenciar Avisos</a></li>
+            <li><a href="{{ url_for('gerenciar_repertorio_global') }}" onclick="toggleSidebar()"><i class="fas fa-music"></i> Gerenciar Repertório</a></li>
+            <li><a href="{{ url_for('comunicar_equipe') }}" onclick="toggleSidebar()"><i class="fas fa-bullhorn"></i> Comunicar</a></li>
+            <li><a href="{{ url_for('enviar_notificacoes') }}" onclick="toggleSidebar()"><i class="fas fa-bell"></i> Notificações</a></li>
+            <li><a href="{{ url_for('relatorios') }}" onclick="toggleSidebar()"><i class="fas fa-chart-bar"></i> Relatórios</a></li>
             {% endif %}
-            <li><a href="{{ url_for('repertorio') }}"><i class="fas fa-list"></i> Repertório</a></li>
-            <li><a href="{{ url_for('perfil') }}"><i class="fas fa-user"></i> Perfil</a></li>
-            <li><a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Sair</a></li>
+            <li><a href="{{ url_for('repertorio') }}" onclick="toggleSidebar()"><i class="fas fa-list"></i> Repertório</a></li>
+            <li><a href="{{ url_for('perfil') }}" onclick="toggleSidebar()"><i class="fas fa-user"></i> Perfil</a></li>
+            <li><a href="{{ url_for('logout') }}" onclick="toggleSidebar()"><i class="fas fa-sign-out-alt"></i> Sair</a></li>
         </ul>
     </nav>
 
@@ -717,7 +695,6 @@
                         console.log('Service Worker registrado com sucesso:', registration);
                         const messaging = firebase.messaging();
 
-                        // Solicitação automática de permissão ao carregar a página (opcional)
                         if ({{ 'true' if session.get('logged_in') else 'false' }}) {
                             Notification.requestPermission().then((permission) => {
                                 if (permission === 'granted') {
