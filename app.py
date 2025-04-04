@@ -24,19 +24,13 @@ if not cred_path:
     if cred_json:
         cred = credentials.Certificate(json.loads(cred_json))
     else:
-        cred = credentials.Certificate('static/firebase-adminsdk.json')
+        cred = credentials.Certificate('firebase-adminsdk.json')
 else:
     cred = credentials.Certificate(cred_path)
 firebase_admin.initialize_app(cred)
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)  # Chave secreta mais segura gerada randomicamente
-
-# Configurar sessões persistentes (sem expiração fixa)
-app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SECURE'] = True  # Ativar em produção com HTTPS
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-
 socketio = SocketIO(app, async_mode='gevent', ping_timeout=60, ping_interval=25)
 
 # Configurações de e-mail
@@ -240,7 +234,6 @@ def login():
             session['username'] = username
             session['is_admin'] = bool(user['is_admin'])
             session['name'] = user['username']
-            session.permanent = True  # Torna a sessão persistente (sem expiração)
             conn.close()
             flash("Login realizado com sucesso!", "success")
             logger.info(f"Usuário {username} logado com sucesso como admin")
@@ -255,7 +248,6 @@ def login():
             session['username'] = username
             session['is_admin'] = False
             session['name'] = member['name']
-            session.permanent = True  # Torna a sessão persistente (sem expiração)
             flash("Login realizado com sucesso!", "success")
             logger.info(f"Membro {username} logado com sucesso")
             return redirect(url_for('index'))
@@ -1087,31 +1079,6 @@ def save_token():
 @app.route('/firebase-messaging-sw.js')
 def serve_service_worker():
     return app.send_static_file('firebase-messaging-sw.js')
-
-# Rota para o manifest.json (necessário para PWA)
-@app.route('/manifest.json')
-def serve_manifest():
-    manifest = {
-        "name": "Ministério de Louvor",
-        "short_name": "Ministério",
-        "start_url": "/",
-        "display": "standalone",
-        "background_color": "#D32F2F",
-        "theme_color": "#D32F2F",
-        "icons": [
-            {
-                "src": "/static/icon.png",
-                "sizes": "192x192",
-                "type": "image/png"
-            },
-            {
-                "src": "/static/icon.png",
-                "sizes": "512x512",
-                "type": "image/png"
-            }
-        ]
-    }
-    return jsonify(manifest)
 
 @socketio.on('connect')
 def handle_connect():
