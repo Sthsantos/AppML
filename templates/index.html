@@ -90,8 +90,9 @@
             display: flex;
             flex-direction: column;
             transition: background-color 0.3s, color 0.3s;
+            min-height: 100vh;
             padding-top: env(safe-area-inset-top);
-            padding-bottom: env(safe-area-inset-bottom);
+            padding-bottom: calc(60px + env(safe-area-inset-bottom)); /* Espaço para bottom-nav */
         }
         .navbar {
             display: flex;
@@ -125,7 +126,6 @@
             font-size: 20px;
             cursor: pointer;
             transition: transform 0.3s;
-            margin-right: 20px;
         }
         .sidebar-toggle:hover {
             transform: scale(1.1);
@@ -143,7 +143,6 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-left: 20px;
             white-space: nowrap;
         }
         .user-info span {
@@ -215,7 +214,6 @@
             margin-left: auto;
             margin-right: auto;
             overflow-y: auto;
-            height: calc(100vh - 120px); /* Navbar (60px) + Bottom-nav (60px) */
         }
         .hero {
             text-align: center;
@@ -462,7 +460,7 @@
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
-        @media (max-width: 768px) {
+        @media (max-width: 480px) {
             .navbar {
                 padding: 10px 15px;
                 padding-top: calc(10px + env(safe-area-inset-top));
@@ -471,13 +469,10 @@
             .user-info span { font-size: 0.9em; }
             .user-profile-pic { width: 25px; height: 25px; }
             .sidebar {
-                top: calc(60px + env(safe-area-inset-top));
-                height: calc(100vh - 60px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
                 width: 200px;
             }
             main {
                 padding: 15px;
-                height: calc(100vh - 120px);
             }
             .hero h1 { font-size: 1.5em; }
             .features { flex-direction: column; align-items: center; }
@@ -495,7 +490,6 @@
             .notification-container {
                 width: 90%;
                 right: 5%;
-                top: calc(70px + env(safe-area-inset-top));
             }
             .flash-messages { margin: 10px 0; }
         }
@@ -752,6 +746,13 @@
                 const notificationContainer = document.getElementById('notification-container');
                 const notification = document.createElement('div');
                 notification.className = 'notification';
+                notification.style.backgroundColor = 'var(--notification-bg)';
+                notification.style.border = '2px solid var(--notification-border)';
+                notification.style.padding = '15px';
+                notification.style.marginBottom = '10px';
+                notification.style.borderRadius = '5px';
+                notification.style.boxShadow = '0 4px 10px var(--shadow)';
+                notification.style.color = 'var(--text-color)';
                 notification.innerHTML = `
                     <h4>${data.title}</h4>
                     <p>${data.message}</p>
@@ -765,45 +766,13 @@
                 }, 5000);
             });
 
+            // Registro do Service Worker
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('/service-worker.js')
-                    .then((reg) => {
-                        console.log('Service Worker registrado', reg);
-                        const messaging = firebase.messaging();
-                        messaging.getToken({ serviceWorkerRegistration: reg, vapidKey: "BHsh78adyLS_OG4V89Fdcw1KLOHFc81UUwpJZQBf7jWdnFfGllXS4-bRmCtwMFa-O7ArUZflqHrjPt3UovaxzB8" })
-                            .then((token) => {
-                                console.log('FCM Token:', token);
-                                fetch('/save_token', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                                    body: `fcm_token=${encodeURIComponent(token)}`
-                                })
-                                .then(response => response.json())
-                                .then(data => console.log('Token salvo:', data))
-                                .catch(error => console.error('Erro ao salvar token:', error));
-                            })
-                            .catch((err) => console.error('Erro ao obter token:', err));
-
-                        messaging.onMessage((payload) => {
-                            console.log('Notificação recebida em foreground:', payload);
-                            const notificationContainer = document.getElementById('notification-container');
-                            const notification = document.createElement('div');
-                            notification.className = 'notification';
-                            notification.innerHTML = `
-                                <h4>${payload.notification.title}</h4>
-                                <p>${payload.notification.body}</p>
-                            `;
-                            notificationContainer.appendChild(notification);
-                            setTimeout(() => {
-                                notification.style.transition = 'opacity 0.5s';
-                                notification.style.opacity = '0';
-                                setTimeout(() => notification.remove(), 500);
-                            }, 5000);
-                        });
+                    .then((registration) => {
+                        console.log('Service Worker registrado com sucesso:', registration);
                     })
                     .catch((err) => console.error('Erro ao registrar Service Worker:', err));
-            } else {
-                console.log('Service Workers não são suportados neste navegador');
             }
         });
     </script>
