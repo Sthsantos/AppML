@@ -2,20 +2,21 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- Configurações para PWA -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <!-- Meta tags para PWA e tela cheia -->
+    <meta name="theme-color" content="#D32F2F">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#D32F2F">
-    <link rel="manifest" href="/manifest.json">
-    <link rel="apple-touch-icon" href="/static/icon.png">
+    <meta name="apple-mobile-web-app-title" content="Ministério de Louvor">
     <title>Dashboard - Ministério de Louvor</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.js"></script>
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.4.0/firebase-messaging.js"></script>
     <script>
+        // Configuração do Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyCEL3aK4qVP6XTWjJqRs307-9TDxxr0ERs",
             authDomain: "ministerio-de-louvor-62fcf.firebaseapp.com",
@@ -48,8 +49,6 @@
             --notice-border: #c8e6c9;
             --btn-bg: #D32F2F;
             --btn-hover: #B71C1C;
-            --btn-discreet-bg: #666; /* Cor mais suave para o botão discreto */
-            --btn-discreet-hover: #555;
         }
         body.dark-theme {
             --bg-color: #121212;
@@ -71,8 +70,6 @@
             --notice-border: #4caf50;
             --btn-bg: #D32F2F;
             --btn-hover: #B71C1C;
-            --btn-discreet-bg: #888;
-            --btn-discreet-hover: #777;
         }
         * {
             margin: 0;
@@ -80,19 +77,26 @@
             box-sizing: border-box;
             font-family: 'Roboto', sans-serif;
         }
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
         body {
             background-color: var(--bg-color);
             color: var(--text-color);
             line-height: 1.6;
-            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
             transition: background-color 0.3s, color 0.3s;
-            padding-bottom: 70px;
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: calc(60px + env(safe-area-inset-bottom)); /* Espaço para bottom-nav */
         }
         .navbar {
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
-            padding: 10px 15px;
+            padding: 10px 20px;
             background-color: var(--navbar-bg);
             color: var(--navbar-text);
             position: fixed;
@@ -101,33 +105,48 @@
             width: 100%;
             z-index: 1000;
             box-shadow: 0 2px 10px var(--shadow);
+            padding-top: calc(10px + env(safe-area-inset-top));
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+            min-height: 60px;
+        }
+        .navbar-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 1200px;
         }
         .sidebar-toggle {
             background: none;
             border: none;
             color: var(--navbar-text);
-            font-size: 1.5rem;
+            font-size: 20px;
             cursor: pointer;
-            padding: 10px;
+            transition: transform 0.3s;
+            margin-right: 20px; /* Balanceia o layout */
         }
         .sidebar-toggle:hover {
             transform: scale(1.1);
         }
         .logo {
-            font-size: 1.2rem;
+            font-size: 1.5em;
             font-weight: 700;
-            flex-grow: 1;
             text-align: center;
+            flex-grow: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .user-info {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
+            margin-left: 20px; /* Balanceia o layout */
         }
         .user-info span {
-            font-size: 0.9rem;
+            font-size: 1em;
             font-weight: 500;
-            display: none;
         }
         .user-profile-pic {
             width: 30px;
@@ -135,11 +154,13 @@
             border-radius: 50%;
             object-fit: cover;
             border: 1px solid var(--navbar-text);
+            transition: border-color 0.3s;
         }
         .logout-icon, .theme-toggle {
             color: var(--navbar-text);
-            font-size: 1.5rem;
-            padding: 10px;
+            font-size: 20px;
+            text-decoration: none;
+            transition: color 0.3s;
             cursor: pointer;
         }
         .logout-icon:hover, .theme-toggle:hover {
@@ -147,33 +168,34 @@
         }
         .sidebar {
             position: fixed;
-            top: 60px;
-            left: -100%;
-            width: 80%;
-            height: calc(100% - 60px);
+            top: calc(60px + env(safe-area-inset-top));
+            left: -250px;
+            width: 250px;
+            height: calc(100% - 60px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
             background-color: var(--sidebar-bg);
             color: var(--sidebar-text);
             transition: left 0.3s ease;
             z-index: 999;
+            overflow-y: auto;
         }
         .sidebar.open {
             left: 0;
         }
         .sidebar ul {
             list-style: none;
-            padding: 15px;
+            padding: 20px;
         }
         .sidebar ul li {
-            margin: 10px 0;
+            margin: 15px 0;
         }
         .sidebar ul li a {
             color: var(--sidebar-text);
             text-decoration: none;
-            font-size: 1rem;
+            font-size: 1.1em;
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 12px 15px;
+            padding: 10px 15px;
             border-radius: 5px;
             transition: background-color 0.3s;
         }
@@ -181,112 +203,116 @@
             background-color: var(--hover-bg);
         }
         .sidebar ul li a i {
-            font-size: 1.5rem;
+            font-size: 1.2em;
         }
         main {
-            margin-top: 60px;
-            padding: 15px;
-            max-width: 100%;
+            margin-top: calc(60px + env(safe-area-inset-top));
+            padding: 20px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+            overflow-y: auto;
+            height: calc(100vh - 60px - env(safe-area-inset-top) - 60px - env(safe-area-inset-bottom));
         }
         .hero {
             text-align: center;
-            padding: 20px 0;
-            position: relative;
+            padding: 30px 0;
+            animation: fadeIn 0.5s ease-in;
         }
         .hero h1 {
-            font-size: 1.5rem;
+            font-size: 2em;
             color: var(--navbar-bg);
             font-weight: 700;
         }
-        .btn-discreet {
-            display: inline-block;
-            padding: 6px 12px;
-            background-color: var(--btn-discreet-bg);
-            color: #FFFFFF;
-            text-align: center;
-            text-decoration: none;
-            border-radius: 5px;
-            font-size: 0.8rem;
-            font-weight: 400;
-            transition: background-color 0.3s;
-            margin-top: 10px;
-        }
-        .btn-discreet:hover {
-            background-color: var(--btn-discreet-hover);
-        }
         .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 10px;
-            margin-top: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 20px;
         }
         .feature-link {
             text-decoration: none;
-            height: 100px;
+            flex: 1;
+            min-width: 200px;
+            max-width: 250px;
+            height: 120px;
         }
         .feature {
             background-color: var(--card-bg);
-            padding: 10px;
+            padding: 20px;
             border-radius: 8px;
             text-align: center;
             box-shadow: 0 4px 10px var(--shadow);
+            transition: transform 0.3s, box-shadow 0.3s;
             height: 100%;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            transition: transform 0.3s;
         }
         .feature:hover {
             transform: translateY(-5px);
+            box-shadow: 0 6px 15px var(--shadow);
         }
         .feature i {
-            font-size: 1.8rem;
+            font-size: 2em;
             color: var(--navbar-bg);
-            margin-bottom: 8px;
+            margin-bottom: 10px;
         }
         .feature h3 {
-            font-size: 0.8rem;
+            font-size: 1.2em;
             color: var(--text-color);
             font-weight: 500;
             margin: 0;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            max-width: 100%;
         }
         .section {
             background-color: var(--card-bg);
-            padding: 15px;
+            padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 10px var(--shadow);
-            margin-top: 15px;
+            margin-top: 20px;
         }
         h2 {
-            font-size: 1.3rem;
+            font-size: 1.6em;
             color: var(--navbar-bg);
-            margin-bottom: 10px;
+            margin-bottom: 15px;
+            font-weight: 700;
             text-align: center;
         }
         .scale {
-            margin: 10px 0;
-            padding: 10px;
+            margin: 15px 0;
+            padding: 15px;
             border: 1px solid var(--scale-border);
             border-radius: 5px;
             background-color: var(--scale-bg);
+            transition: transform 0.3s;
+        }
+        .scale:hover {
+            transform: translateY(-3px);
+        }
+        .scale strong {
+            color: var(--text-color);
+            font-weight: 500;
+            margin-right: 5px;
         }
         .scale p {
             margin: 5px 0;
-            font-size: 0.9rem;
+            font-size: 1em;
         }
         .btn {
-            display: block;
-            padding: 10px;
+            display: inline-block;
+            padding: 10px 20px;
             background-color: var(--btn-bg);
             color: #FFFFFF;
             text-align: center;
             text-decoration: none;
             border-radius: 5px;
-            font-size: 0.9rem;
+            font-size: 0.9em;
             font-weight: 500;
             transition: background-color 0.3s;
         }
@@ -295,9 +321,9 @@
         }
         .no-scales {
             text-align: center;
-            font-size: 0.9rem;
+            font-size: 1em;
             color: var(--muted-text);
-            padding: 15px 0;
+            padding: 20px 0;
         }
         .bottom-nav {
             display: flex;
@@ -306,7 +332,8 @@
             left: 0;
             width: 100%;
             background-color: var(--bottom-nav-bg);
-            padding: 5px 0;
+            padding: 10px 0;
+            padding-bottom: calc(10px + env(safe-area-inset-bottom));
             box-shadow: 0 -2px 10px var(--shadow);
             z-index: 1000;
         }
@@ -315,8 +342,8 @@
             color: var(--sidebar-text);
             text-decoration: none;
             text-align: center;
-            padding: 10px 5px;
-            font-size: 0.8rem;
+            padding: 5px;
+            font-size: 0.9em;
             transition: background-color 0.3s;
         }
         .bottom-nav a.active, .bottom-nav a:hover {
@@ -324,31 +351,39 @@
         }
         .bottom-nav a i {
             display: block;
-            font-size: 1.8rem;
+            font-size: 1.5em;
             margin-bottom: 5px;
         }
         .bottom-nav a span {
             display: block;
         }
         .flash-messages {
-            margin: 15px 0;
+            margin: 20px 0;
+            position: relative;
+            z-index: 1100;
         }
         .flash-message {
-            padding: 10px;
+            padding: 15px;
             margin-bottom: 10px;
             border-radius: 5px;
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 0.9rem;
+            gap: 10px;
+            font-size: 1em;
+            min-height: 50px;
             background-color: var(--card-bg);
             color: var(--text-color);
             border: 1px solid var(--shadow);
+            opacity: 1;
+            animation: slideIn 0.5s ease-in-out;
         }
         .flash-message.success {
             background-color: var(--notice-bg);
             color: #2E7D32 !important;
             border: 1px solid var(--notice-border);
+        }
+        .flash-message.success span {
+            color: #2E7D32 !important;
         }
         .flash-message.error {
             background-color: #FFEBEE;
@@ -356,153 +391,155 @@
             border: 1px solid #EF9A9A;
         }
         .flash-message i {
-            font-size: 1.2rem;
+            font-size: 1.2em;
+            color: inherit;
+        }
+        body.dark-theme .flash-message.success {
+            color: #FFFFFF !important;
+        }
+        body.dark-theme .flash-message.success span {
+            color: #FFFFFF !important;
         }
         .notification-container {
             position: fixed;
-            top: 60px;
-            right: 10px;
+            top: calc(70px + env(safe-area-inset-top));
+            right: 20px;
             z-index: 2000;
-            width: 90%;
-            max-width: 300px;
+            width: 300px;
         }
         .notification {
             background-color: var(--notification-bg);
             border: 2px solid var(--notification-border);
-            padding: 10px;
+            padding: 15px;
             margin-bottom: 10px;
             border-radius: 5px;
             box-shadow: 0 4px 10px var(--shadow);
+            animation: slideIn 0.5s ease-in-out;
         }
         .notification h4 {
-            font-size: 1rem;
             margin: 0 0 5px;
+            font-size: 1.1em;
+            font-weight: 500;
         }
         .notification p {
-            font-size: 0.8rem;
             margin: 0;
+            font-size: 0.9em;
         }
         .notices-section {
-            margin-top: 15px;
+            margin-top: 20px;
         }
         .notice {
             background-color: var(--notice-bg);
             border: 2px solid var(--notice-border);
-            padding: 10px;
-            margin-bottom: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
             border-radius: 5px;
             box-shadow: 0 4px 10px var(--shadow);
         }
         .notice h3 {
-            font-size: 1.1rem;
-            margin-bottom: 8px;
+            font-size: 1.3em;
+            margin-bottom: 10px;
+            color: var(--text-color);
+            font-weight: 500;
         }
         .notice p {
-            font-size: 0.9rem;
+            font-size: 1em;
             margin: 5px 0;
         }
         .notice .date {
-            font-size: 0.8rem;
+            font-size: 0.9em;
             color: var(--muted-text);
         }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
         @media (max-width: 768px) {
-            .navbar {
-                padding: 8px 10px;
+            .navbar { 
+                padding: 10px 15px; 
+                padding-top: calc(10px + env(safe-area-inset-top)); 
             }
-            .logo {
-                font-size: 1rem;
+            .logo { font-size: 1.2em; }
+            .user-info span { font-size: 0.9em; }
+            .user-profile-pic { width: 25px; height: 25px; }
+            .sidebar { 
+                top: calc(50px + env(safe-area-inset-top)); 
+                height: calc(100% - 50px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); 
+                width: 200px; 
             }
-            .sidebar-toggle, .logout-icon, .theme-toggle {
-                font-size: 1.8rem;
+            main { 
+                padding: 15px; 
+                margin-top: calc(50px + env(safe-area-inset-top)); 
+                height: calc(100vh - 50px - env(safe-area-inset-top) - 60px - env(safe-area-inset-bottom)); 
             }
-            .sidebar {
-                width: 100%;
+            .hero h1 { font-size: 1.5em; }
+            .features { flex-direction: column; align-items: center; }
+            .feature-link { 
+                max-width: 100%; 
+                height: 100px;
             }
-            .sidebar ul li a {
-                font-size: 1.1rem;
-                padding: 15px;
+            .section { padding: 15px; }
+            h2 { font-size: 1.4em; }
+            .scale { padding: 10px; }
+            .btn { font-size: 0.8em; padding: 8px 15px; width: 100%; }
+            .bottom-nav { 
+                padding-bottom: calc(10px + env(safe-area-inset-bottom)); 
             }
-            .features {
-                grid-template-columns: repeat(2, 1fr);
+            .notification-container { 
+                width: 90%; 
+                right: 5%; 
+                top: calc(60px + env(safe-area-inset-top)); 
             }
-            .hero h1 {
-                font-size: 1.3rem;
-            }
-            h2 {
-                font-size: 1.2rem;
-            }
-            .btn {
-                font-size: 0.9rem;
-                padding: 12px;
-            }
-        }
-        @media (max-width: 480px) {
-            .features {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            .feature-link {
-                height: 80px;
-            }
-            .feature i {
-                font-size: 1.5rem;
-            }
-            .feature h3 {
-                font-size: 0.7rem;
-            }
-            .bottom-nav a i {
-                font-size: 1.5rem;
-            }
-            .bottom-nav a span {
-                font-size: 0.7rem;
-            }
-        }
-        @media (min-width: 769px) {
-            .features {
-                grid-template-columns: repeat(3, 1fr);
-            }
+            .flash-messages { margin: 10px 0; }
         }
     </style>
 </head>
 <body>
     <header>
         <div class="navbar">
-            <button class="sidebar-toggle" onclick="toggleSidebar()">
-                <i class="fas fa-bars"></i>
-            </button>
-            <div class="logo">Ministério de Louvor</div>
-            <div class="user-info">
-                {% if user_data['profile_pic'] %}
-                    <img src="{{ url_for('static', filename='uploads/' + user_data['profile_pic']) }}" alt="Foto de Perfil" class="user-profile-pic">
-                {% else %}
-                    <img src="{{ url_for('static', filename='default-profile-pic.jpg') }}" alt="Foto de Perfil Padrão" class="user-profile-pic">
-                {% endif %}
-                <span>{{ name }}</span>
-                <a href="#" class="theme-toggle" onclick="toggleTheme()">
-                    <i class="fas fa-moon"></i>
-                </a>
-                <a href="{{ url_for('logout') }}" class="logout-icon"><i class="fas fa-sign-out-alt"></i></a>
+            <div class="navbar-content">
+                <button class="sidebar-toggle" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="logo">Ministério de Louvor</div>
+                <div class="user-info">
+                    {% if user_data['profile_pic'] %}
+                        <img src="{{ url_for('static', filename='uploads/' + user_data['profile_pic']) }}" alt="Foto de Perfil" class="user-profile-pic">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='default-profile-pic.jpg') }}" alt="Foto de Perfil Padrão" class="user-profile-pic">
+                    {% endif %}
+                    <span>{{ name }}</span>
+                    <a href="#" class="theme-toggle" onclick="toggleTheme()">
+                        <i class="fas fa-moon"></i>
+                    </a>
+                    <a href="{{ url_for('logout') }}" class="logout-icon"><i class="fas fa-sign-out-alt"></i></a>
+                </div>
             </div>
         </div>
     </header>
 
     <nav class="sidebar">
         <ul>
-            <li><a href="{{ url_for('visualizar_escalas') }}" onclick="toggleSidebar()"><i class="fas fa-calendar"></i> Visualizar Escalas</a></li>
-            <li><a href="{{ url_for('historico_escalas') }}" onclick="toggleSidebar()"><i class="fas fa-history"></i> Histórico</a></li>
+            <li><a href="{{ url_for('visualizar_escalas') }}"><i class="fas fa-calendar"></i> Visualizar Escalas</a></li>
+            <li><a href="{{ url_for('historico_escalas') }}"><i class="fas fa-history"></i> Histórico</a></li>
             {% if is_admin %}
-            <li><a href="{{ url_for('criar_escala') }}" onclick="toggleSidebar()"><i class="fas fa-plus-circle"></i> Criar Escala</a></li>
-            <li><a href="{{ url_for('cadastrar_membro') }}" onclick="toggleSidebar()"><i class="fas fa-user-plus"></i> Cadastrar Membro</a></li>
-            <li><a href="{{ url_for('lista_membros') }}" onclick="toggleSidebar()"><i class="fas fa-users"></i> Lista de Membros</a></li>
-            <li><a href="{{ url_for('cadastrar_aviso') }}" onclick="toggleSidebar()"><i class="fas fa-bullhorn"></i> Cadastrar Aviso</a></li>
-            <li><a href="{{ url_for('gerenciar_avisos') }}" onclick="toggleSidebar()"><i class="fas fa-edit"></i> Gerenciar Avisos</a></li>
-            <li><a href="{{ url_for('gerenciar_repertorio_global') }}" onclick="toggleSidebar()"><i class="fas fa-music"></i> Gerenciar Repertório</a></li>
-            <li><a href="{{ url_for('comunicar_equipe') }}" onclick="toggleSidebar()"><i class="fas fa-bullhorn"></i> Comunicar</a></li>
-            <li><a href="{{ url_for('enviar_notificacoes') }}" onclick="toggleSidebar()"><i class="fas fa-bell"></i> Notificações</a></li>
-            <li><a href="{{ url_for('relatorios') }}" onclick="toggleSidebar()"><i class="fas fa-chart-bar"></i> Relatórios</a></li>
->            {% endif %}
-            <li><a href="{{ url_for('repertorio') }}" onclick="toggleSidebar()"><i class="fas fa-list"></i> Repertório</a></li>
-            <li><a href="{{ url_for('perfil') }}" onclick="toggleSidebar()"><i class="fas fa-user"></i> Perfil</a></li>
-            <li><a href="{{ url_for('logout') }}" onclick="toggleSidebar()"><i class="fas fa-sign-out-alt"></i> Sair</a></li>
+            <li><a href="{{ url_for('criar_escala') }}"><i class="fas fa-plus-circle"></i> Criar Escala</a></li>
+            <li><a href="{{ url_for('cadastrar_membro') }}"><i class="fas fa-user-plus"></i> Cadastrar Membro</a></li>
+            <li><a href="{{ url_for('lista_membros') }}"><i class="fas fa-users"></i> Lista de Membros</a></li>
+            <li><a href="{{ url_for('cadastrar_aviso') }}"><i class="fas fa-bullhorn"></i> Cadastrar Aviso</a></li>
+            <li><a href="{{ url_for('gerenciar_avisos') }}"><i class="fas fa-edit"></i> Gerenciar Avisos</a></li>
+            <li><a href="{{ url_for('gerenciar_repertorio_global') }}"><i class="fas fa-music"></i> Gerenciar Repertório</a></li>
+            <li><a href="{{ url_for('comunicar_equipe') }}"><i class="fas fa-bullhorn"></i> Comunicar</a></li>
+            <li><a href="{{ url_for('enviar_notificacoes') }}"><i class="fas fa-bell"></i> Notificações</a></li>
+            <li><a href="{{ url_for('relatorios') }}"><i class="fas fa-chart-bar"></i> Relatórios</a></li>
+            {% endif %}
+            <li><a href="{{ url_for('repertorio') }}"><i class="fas fa-list"></i> Repertório</a></li>
+            <li><a href="{{ url_for('perfil') }}"><i class="fas fa-user"></i> Perfil</a></li>
+            <li><a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Sair</a></li>
         </ul>
     </nav>
 
@@ -526,7 +563,7 @@
 
         <section class="hero">
             <h1>Bem-vindo, {{ name }}!</h1>
-            <button onclick="requestNotificationPermission()" class="btn-discreet">Ativar Notificações</button>
+            <button onclick="requestNotificationPermission()" class="btn">Ativar Notificações</button>
         </section>
 
         {% if notices %}
@@ -649,27 +686,6 @@
     </nav>
 
     <script>
-        // Solicitar modo tela cheia
-        function enterFullScreen() {
-            const elem = document.documentElement;
-            if (elem.requestFullscreen) {
-                elem.requestFullscreen();
-            } else if (elem.webkitRequestFullscreen) { /* Safari */
-                elem.webkitRequestFullscreen();
-            } else if (elem.msRequestFullscreen) { /* IE11 */
-                elem.msRequestFullscreen();
-            }
-        }
-
-        // PWA: Solicitar adição à tela inicial
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            // Mostrar um botão ou mensagem para o usuário (opcional)
-            console.log('PWA: Pode ser instalado na tela inicial');
-        });
-
         function toggleSidebar() {
             const sidebar = document.querySelector('.sidebar');
             sidebar.classList.toggle('open');
@@ -723,9 +739,6 @@
                 themeToggle.classList.add('fa-sun');
             }
 
-            // Ativar tela cheia ao carregar
-            enterFullScreen();
-
             const socket = io.connect('http://' + document.domain + ':' + location.port);
             socket.on('connect', () => {
                 socket.emit('connect');
@@ -755,6 +768,7 @@
                         console.log('Service Worker registrado com sucesso:', registration);
                         const messaging = firebase.messaging();
 
+                        // Solicitação automática de permissão ao carregar a página (opcional)
                         if ({{ 'true' if session.get('logged_in') else 'false' }}) {
                             Notification.requestPermission().then((permission) => {
                                 if (permission === 'granted') {
