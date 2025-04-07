@@ -2,7 +2,12 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <!-- Meta tags para PWA e tela cheia -->
+    <meta name="theme-color" content="#D32F2F"> <!-- Cor da barra de status -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Ministério de Louvor">
     <title>Login - Ministério de Louvor</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
@@ -46,11 +51,15 @@
             box-sizing: border-box;
             font-family: 'Roboto', sans-serif;
         }
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden; /* Evita barras de rolagem */
+        }
         body {
             background-color: var(--bg-color);
             color: var(--text-color);
             line-height: 1.6;
-            min-height: 100vh;
             display: flex;
             flex-direction: column;
             transition: background-color 0.3s, color 0.3s;
@@ -68,6 +77,7 @@
             width: 100%;
             z-index: 1000;
             box-shadow: 0 2px 10px var(--shadow);
+            min-height: 50px; /* Altura mínima ajustada */
         }
         .logo {
             font-size: 1.5em;
@@ -90,6 +100,7 @@
             justify-content: center;
             align-items: center;
             padding: 20px;
+            height: calc(100vh - 60px); /* Ajusta para ocupar toda a altura menos a navbar */
             margin-top: 60px; /* Espaço para o cabeçalho fixo */
         }
         .login-container {
@@ -166,18 +177,30 @@
         .flash-message i {
             font-size: 1.2em;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
         @media (max-width: 480px) {
-            .navbar { padding: 10px 15px; }
-            .logo { font-size: 1.2em; }
-            main { padding: 15px; }
-            .login-container { padding: 20px; }
-            h2 { font-size: 1.4em; }
-            input, .btn { font-size: 0.9em; }
-            .flash-message { padding: 10px; font-size: 0.9em; }
+            .navbar { 
+                padding: 0.5rem 0.75rem; 
+            }
+            .logo { 
+                font-size: 1.2em; 
+                max-width: 85%; 
+            }
+            main { 
+                padding: 15px; 
+            }
+            .login-container { 
+                padding: 20px; 
+            }
+            h2 { 
+                font-size: 1.4em; 
+            }
+            input, .btn { 
+                font-size: 0.9em; 
+            }
+            .flash-message { 
+                padding: 10px; 
+                font-size: 0.9em; 
+            }
         }
     </style>
 </head>
