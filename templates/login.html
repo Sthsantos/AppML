@@ -54,7 +54,7 @@
         html, body {
             height: 100%;
             width: 100%;
-            overflow: hidden; /* Evita barras de rolagem */
+            overflow: hidden;
         }
         body {
             background-color: var(--bg-color);
@@ -63,11 +63,11 @@
             display: flex;
             flex-direction: column;
             transition: background-color 0.3s, color 0.3s;
-            padding-top: env(safe-area-inset-top); /* Respeita a Dynamic Island */
+            padding-top: env(safe-area-inset-top);
         }
         .navbar {
             display: flex;
-            justify-content: space-between;
+            justify-content: center; /* Centraliza todos os itens horizontalmente */
             align-items: center;
             padding: 10px 20px;
             background-color: var(--navbar-bg);
@@ -78,26 +78,33 @@
             width: 100%;
             z-index: 1000;
             box-shadow: 0 2px 10px var(--shadow);
-            padding-top: calc(10px + env(safe-area-inset-top)); /* Ajusta para a Dynamic Island */
-            padding-left: env(safe-area-inset-left); /* Respeita bordas arredondadas */
+            padding-top: calc(10px + env(safe-area-inset-top));
+            padding-left: env(safe-area-inset-left);
             padding-right: env(safe-area-inset-right);
-            min-height: 60px; /* Altura mínima ajustada */
+            min-height: 60px;
+        }
+        .navbar-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 1200px; /* Limita a largura máxima para melhor controle */
         }
         .logo {
             font-size: 1.5em;
             font-weight: 700;
             text-align: center;
-            flex-grow: 1;
+            flex-grow: 1; /* Permite que o logo ocupe o espaço central */
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 70%; /* Limita a largura para evitar sobreposição */
         }
         .theme-toggle {
             color: var(--navbar-text);
             font-size: 20px;
             cursor: pointer;
             transition: color 0.3s;
+            margin-left: 20px; /* Espaço à esquerda para balancear o layout */
         }
         .theme-toggle:hover {
             color: #E0E0E0;
@@ -108,8 +115,8 @@
             justify-content: center;
             align-items: center;
             padding: 20px;
-            padding-top: calc(60px + env(safe-area-inset-top)); /* Espaço para navbar + safe area */
-            padding-bottom: env(safe-area-inset-bottom); /* Respeita a parte inferior */
+            padding-top: calc(60px + env(safe-area-inset-top));
+            padding-bottom: env(safe-area-inset-bottom);
             height: calc(100vh - env(safe-area-inset-top));
         }
         .login-container {
@@ -193,7 +200,6 @@
             }
             .logo { 
                 font-size: 1.2em; 
-                max-width: 60%; 
             }
             main { 
                 padding: 15px; 
@@ -218,10 +224,12 @@
 <body>
     <header>
         <div class="navbar">
-            <div class="logo">Ministério de Louvor</div>
-            <a href="#" class="theme-toggle" onclick="toggleTheme()">
-                <i class="fas fa-moon"></i>
-            </a>
+            <div class="navbar-content">
+                <div class="logo">Ministério de Louvor</div>
+                <a href="#" class="theme-toggle" onclick="toggleTheme()">
+                    <i class="fas fa-moon"></i>
+                </a>
+            </div>
         </div>
     </header>
 
@@ -281,7 +289,7 @@
                 const notificationContainer = document.createElement('div');
                 notificationContainer.className = 'notification-container';
                 notificationContainer.style.position = 'fixed';
-                notificationContainer.style.top = 'calc(70px + env(safe-area-inset-top))'; /* Ajuste para Dynamic Island */
+                notificationContainer.style.top = 'calc(70px + env(safe-area-inset-top))';
                 notificationContainer.style.right = '20px';
                 notificationContainer.style.zIndex = '2000';
                 notificationContainer.style.width = '300px';
