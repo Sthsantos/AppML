@@ -8,6 +8,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Ministério de Louvor">
+    <link rel="manifest" href="/manifest.json"> <!-- Referência ao manifesto -->
+    <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png"> <!-- Ícone para iOS -->
     <title>Dashboard - Ministério de Louvor</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
@@ -78,8 +80,9 @@
             font-family: 'Roboto', sans-serif;
         }
         html, body {
-            height: 100%;
-            width: 100%;
+            height: 100vh;
+            width: 100vw;
+            margin: 0;
             overflow: hidden;
         }
         body {
@@ -89,8 +92,9 @@
             display: flex;
             flex-direction: column;
             transition: background-color 0.3s, color 0.3s;
+            min-height: 100vh;
             padding-top: env(safe-area-inset-top);
-            padding-bottom: calc(60px + env(safe-area-inset-bottom)); /* Espaço para bottom-nav */
+            padding-bottom: env(safe-area-inset-bottom);
         }
         .navbar {
             display: flex;
@@ -108,7 +112,7 @@
             padding-top: calc(10px + env(safe-area-inset-top));
             padding-left: env(safe-area-inset-left);
             padding-right: env(safe-area-inset-right);
-            min-height: 60px;
+            height: 60px;
         }
         .navbar-content {
             display: flex;
@@ -124,7 +128,7 @@
             font-size: 20px;
             cursor: pointer;
             transition: transform 0.3s;
-            margin-right: 20px; /* Balanceia o layout */
+            margin-right: 20px;
         }
         .sidebar-toggle:hover {
             transform: scale(1.1);
@@ -142,7 +146,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-left: 20px; /* Balanceia o layout */
+            margin-left: 20px;
         }
         .user-info span {
             font-size: 1em;
@@ -171,7 +175,7 @@
             top: calc(60px + env(safe-area-inset-top));
             left: -250px;
             width: 250px;
-            height: calc(100% - 60px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+            height: calc(100vh - 60px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
             background-color: var(--sidebar-bg);
             color: var(--sidebar-text);
             transition: left 0.3s ease;
@@ -206,13 +210,14 @@
             font-size: 1.2em;
         }
         main {
-            margin-top: calc(60px + env(safe-area-inset-top));
+            flex: 1;
+            margin-top: 60px;
             padding: 20px;
             max-width: 1200px;
             margin-left: auto;
             margin-right: auto;
             overflow-y: auto;
-            height: calc(100vh - 60px - env(safe-area-inset-top) - 60px - env(safe-area-inset-bottom));
+            height: calc(100vh - 120px); /* Ajustado para navbar e bottom-nav */
         }
         .hero {
             text-align: center;
@@ -336,6 +341,7 @@
             padding-bottom: calc(10px + env(safe-area-inset-bottom));
             box-shadow: 0 -2px 10px var(--shadow);
             z-index: 1000;
+            height: 60px;
         }
         .bottom-nav a {
             flex: 1;
@@ -467,14 +473,13 @@
             .user-info span { font-size: 0.9em; }
             .user-profile-pic { width: 25px; height: 25px; }
             .sidebar { 
-                top: calc(50px + env(safe-area-inset-top)); 
-                height: calc(100% - 50px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); 
+                top: calc(60px + env(safe-area-inset-top)); 
+                height: calc(100vh - 60px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); 
                 width: 200px; 
             }
             main { 
                 padding: 15px; 
-                margin-top: calc(50px + env(safe-area-inset-top)); 
-                height: calc(100vh - 50px - env(safe-area-inset-top) - 60px - env(safe-area-inset-bottom)); 
+                height: calc(100vh - 120px); /* Ajustado para navbar e bottom-nav */
             }
             .hero h1 { font-size: 1.5em; }
             .features { flex-direction: column; align-items: center; }
@@ -492,7 +497,7 @@
             .notification-container { 
                 width: 90%; 
                 right: 5%; 
-                top: calc(60px + env(safe-area-inset-top)); 
+                top: calc(70px + env(safe-area-inset-top)); 
             }
             .flash-messages { margin: 10px 0; }
         }
@@ -762,13 +767,19 @@
                 }, 5000);
             });
 
+            // Registro do Service Worker para PWA e Firebase
             if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('/firebase-messaging-sw.js')
+                navigator.serviceWorker.register('/service-worker.js')
                     .then((registration) => {
                         console.log('Service Worker registrado com sucesso:', registration);
+                    })
+                    .catch((err) => console.error('Erro ao registrar Service Worker:', err));
+
+                navigator.serviceWorker.register('/firebase-messaging-sw.js')
+                    .then((registration) => {
+                        console.log('Firebase Service Worker registrado:', registration);
                         const messaging = firebase.messaging();
 
-                        // Solicitação automática de permissão ao carregar a página (opcional)
                         if ({{ 'true' if session.get('logged_in') else 'false' }}) {
                             Notification.requestPermission().then((permission) => {
                                 if (permission === 'granted') {
@@ -806,7 +817,7 @@
                             }, 5000);
                         });
                     })
-                    .catch((err) => console.error('Erro ao registrar Service Worker:', err));
+                    .catch((err) => console.error('Erro ao registrar Firebase Service Worker:', err));
             } else {
                 console.log('Service Workers não são suportados neste navegador');
             }
