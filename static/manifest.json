@@ -1,21 +1,20 @@
 {
-    "name": "Ministério de Louvor",
-    "short_name": "Louvor",
-    "description": "Aplicativo para gestão do Ministério de Louvor",
-    "start_url": "/",
-    "display": "standalone",
-    "background_color": "#F5F5F5",
-    "theme_color": "#D32F2F",
-    "icons": [
-        {
-            "src": "/static/icons/icon-192x192.png",
-            "sizes": "192x192",
-            "type": "image/png"
-        },
-        {
-            "src": "/static/icons/icon-512x512.png",
-            "sizes": "512x512",
-            "type": "image/png"
-        }
-    ]
+  "name": "Ministério de Louvor",
+  "short_name": "Louvor",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#D32F2F",
+  "theme_color": "#D32F2F",
+  "icons": [
+    {
+      "src": "/static/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }
