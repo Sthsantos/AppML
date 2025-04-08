@@ -1,6 +1,7 @@
 {
     "name": "Ministério de Louvor",
     "short_name": "Louvor",
+    "description": "Aplicativo para gestão do Ministério de Louvor",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#F5F5F5",
