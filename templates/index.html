@@ -2,50 +2,28 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <!-- Meta tags para PWA -->
-    <meta name="theme-color" content="#D32F2F">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Ministério de Louvor">
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}?v=2">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192x192.png') }}?v=2">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Ministério de Louvor</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.4.0/firebase-messaging.js"></script>
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyCEL3aK4qVP6XTWjJqRs307-9TDxxr0ERs",
-            authDomain: "ministerio-de-louvor-62fcf.firebaseapp.com",
-            projectId: "ministerio-de-louvor-62fcf",
-            storageBucket: "ministerio-de-louvor-62fcf.firebasestorage.app",
-            messagingSenderId: "1029007412822",
-            appId: "1:1029007412822:web:0001439d6dcc9d632bf5f7",
-            measurementId: "G-0ML9TJDJGX"
-        };
-        firebase.initializeApp(firebaseConfig);
-
-        // Registro do Service Worker com cache busting
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/static/sw.js?v=2')
-                    .then(reg => console.log('Service Worker registrado', reg))
-                    .catch(err => console.log('Erro ao registrar Service Worker', err));
-            });
-        }
-    </script>
     <style>
         :root {
             --bg-color: #F5F5F5;
             --text-color: #212121;
             --navbar-bg: #D32F2F;
             --navbar-text: white;
+            --sidebar-bg: #212121;
+            --sidebar-text: white;
             --card-bg: white;
             --shadow: rgba(0, 0, 0, 0.1);
             --hover-bg: #D32F2F;
+            --scale-bg: #fafafa;
+            --scale-border: #eee;
+            --muted-text: #666;
+            --bottom-nav-bg: #212121;
             --notification-bg: #fff3e0;
             --notification-border: #ff9800;
             --notice-bg: #e8f5e9;
@@ -53,18 +31,22 @@
             --btn-bg: #D32F2F;
             --btn-hover: #B71C1C;
             --input-border: #ccc;
-            --sidebar-bg: #212121;
-            --sidebar-text: white;
-            --bottom-nav-bg: #212121;
+            --checkbox-accent: #D32F2F;
         }
         body.dark-theme {
             --bg-color: #121212;
             --text-color: #E0E0E0;
             --navbar-bg: #D32F2F;
             --navbar-text: #E0E0E0;
+            --sidebar-bg: #1E1E1E;
+            --sidebar-text: #E0E0E0;
             --card-bg: #1E1E1E;
             --shadow: rgba(255, 255, 255, 0.1);
             --hover-bg: #B71C1C;
+            --scale-bg: #2E2E2E;
+            --scale-border: #444;
+            --muted-text: #999;
+            --bottom-nav-bg: #1E1E1E;
             --notification-bg: #ff9800;
             --notification-border: #ffb300;
             --notice-bg: #2e7d32;
@@ -72,9 +54,7 @@
             --btn-bg: #D32F2F;
             --btn-hover: #B71C1C;
             --input-border: #666;
-            --sidebar-bg: #1E1E1E;
-            --sidebar-text: #E0E0E0;
-            --bottom-nav-bg: #1E1E1E;
+            --checkbox-accent: #D32F2F;
         }
         * {
             margin: 0;
@@ -86,17 +66,15 @@
             background-color: var(--bg-color);
             color: var(--text-color);
             line-height: 1.6;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
+            overflow-x: hidden;
             transition: background-color 0.3s, color 0.3s;
+            padding-bottom: 60px; /* Espaço para o menu inferior */
         }
         .navbar {
-            padding: 0.75rem 1rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            min-height: 50px;
+            padding: 10px 20px;
             background-color: var(--navbar-bg);
             color: var(--navbar-text);
             position: fixed;
@@ -105,17 +83,6 @@
             width: 100%;
             z-index: 1000;
             box-shadow: 0 2px 10px var(--shadow);
-        }
-        .logo {
-            font-size: 1.2em;
-            font-weight: 600;
-            color: var(--navbar-text);
-            text-align: center;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 90%;
-            flex-grow: 1;
         }
         .sidebar-toggle {
             background: none;
@@ -128,6 +95,12 @@
         .sidebar-toggle:hover {
             transform: scale(1.1);
         }
+        .logo {
+            font-size: 1.5em;
+            font-weight: 700;
+            flex-grow: 1;
+            text-align: center;
+        }
         .user-info {
             display: flex;
             align-items: center;
@@ -136,14 +109,6 @@
         .user-info span {
             font-size: 1em;
             font-weight: 500;
-        }
-        .user-profile-pic {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 1px solid var(--navbar-text);
-            transition: border-color 0.3s;
         }
         .logout-icon, .theme-toggle {
             color: var(--navbar-text);
@@ -155,75 +120,12 @@
         .logout-icon:hover, .theme-toggle:hover {
             color: #E0E0E0;
         }
-        .dashboard-container {
-            margin-top: 50px;
-            padding: 20px;
-            background-color: var(--card-bg);
-            border-radius: 8px;
-            box-shadow: 0 4px 12px var(--shadow);
-            width: 100%;
-            max-width: 400px;
-            transition: background-color 0.3s;
-            overflow-y: auto;
-            max-height: calc(100vh - 100px); /* Navbar + Bottom-nav */
-        }
-        h2 {
-            color: var(--navbar-bg);
-            font-size: 1.6em;
-            font-weight: 700;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        .btn {
-            width: 100%;
-            padding: 12px;
-            background-color: var(--btn-bg);
-            color: #FFFFFF;
-            border: none;
-            border-radius: 5px;
-            font-size: 1em;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.3s;
-            margin-top: 10px;
-        }
-        .btn:hover {
-            background-color: var(--btn-hover);
-        }
-        .flash-messages {
-            margin: 20px 0;
-        }
-        .flash-message {
-            padding: 15px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 1em;
-            background-color: var(--card-bg);
-            color: var(--text-color);
-            border: 1px solid var(--shadow);
-        }
-        .flash-message.success {
-            background-color: var(--notice-bg);
-            color: #2E7D32;
-            border: 1px solid var(--notice-border);
-        }
-        .flash-message.error {
-            background-color: #FFEBEE;
-            color: #C62828;
-            border: 1px solid #EF9A9A;
-        }
-        .flash-message i {
-            font-size: 1.2em;
-        }
         .sidebar {
             position: fixed;
-            top: 50px;
+            top: 60px;
             left: -250px;
             width: 250px;
-            height: calc(100vh - 50px);
+            height: calc(100% - 60px);
             background-color: var(--sidebar-bg);
             color: var(--sidebar-text);
             transition: left 0.3s ease;
@@ -254,6 +156,73 @@
             background-color: var(--hover-bg);
         }
         .sidebar ul li a i {
+            font-size: 1.2em;
+        }
+        main {
+            margin-top: 60px;
+            padding: 20px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .form-container {
+            background-color: var(--card-bg);
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px var(--shadow);
+            transition: background-color 0.3s;
+        }
+        h2 {
+            font-size: 1.6em;
+            color: var(--navbar-bg);
+            margin-bottom: 15px;
+            font-weight: 700;
+            text-align: center;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: var(--btn-bg);
+            color: #FFFFFF;
+            text-align: center;
+            text-decoration: none;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            width: 100%;
+        }
+        .btn:hover {
+            background-color: var(--btn-hover);
+        }
+        .flash-messages {
+            margin: 20px 0;
+        }
+        .flash-message {
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1em;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            border: 1px solid var(--shadow);
+        }
+        .flash-message.success {
+            background-color: var(--notice-bg);
+            color: #2E7D32;
+            border: 1px solid var(--notice-border);
+        }
+        .flash-message.error {
+            background-color: #FFEBEE;
+            color: #C62828;
+            border: 1px solid #EF9A9A;
+        }
+        .flash-message i {
             font-size: 1.2em;
         }
         .bottom-nav {
@@ -289,30 +258,30 @@
         }
         .hero {
             text-align: center;
-            margin-bottom: 20px;
+            padding: 20px 0;
         }
         .hero h1 {
-            font-size: 1.6em;
+            font-size: 2em;
             color: var(--navbar-bg);
             font-weight: 700;
         }
         .features {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 20px;
             justify-content: center;
             margin-top: 20px;
         }
         .feature-link {
             text-decoration: none;
             flex: 1;
-            min-width: 150px;
-            max-width: 180px;
-            height: 100px;
+            min-width: 200px;
+            max-width: 250px;
+            height: 120px;
         }
         .feature {
             background-color: var(--card-bg);
-            padding: 15px;
+            padding: 20px;
             border-radius: 8px;
             text-align: center;
             box-shadow: 0 4px 10px var(--shadow);
@@ -328,12 +297,12 @@
             box-shadow: 0 6px 15px var(--shadow);
         }
         .feature i {
-            font-size: 1.5em;
+            font-size: 2em;
             color: var(--navbar-bg);
             margin-bottom: 10px;
         }
         .feature h3 {
-            font-size: 1em;
+            font-size: 1.2em;
             color: var(--text-color);
             font-weight: 500;
             margin: 0;
@@ -370,9 +339,9 @@
         .scale {
             margin: 15px 0;
             padding: 15px;
-            border: 1px solid var(--input-border);
+            border: 1px solid var(--scale-border);
             border-radius: 5px;
-            background-color: var(--card-bg);
+            background-color: var(--scale-bg);
             transition: transform 0.3s;
         }
         .scale:hover {
@@ -393,45 +362,20 @@
             color: var(--muted-text);
             padding: 20px 0;
         }
-        @media screen and (max-width: 480px) {
-            .navbar {
-                padding: 0.5rem 0.75rem;
-            }
-            .logo {
-                font-size: 1em;
-                max-width: 85%;
-            }
-            .dashboard-container {
-                padding: 15px;
-            }
-            h2 {
-                font-size: 1.4em;
-            }
-            .btn {
-                font-size: 0.9em;
-            }
-            .flash-message {
-                padding: 10px;
-                font-size: 0.9em;
-            }
-            .sidebar {
-                width: 200px;
-                left: -200px;
-            }
-            .sidebar.open {
-                left: 0;
-            }
-            .feature-link {
-                min-width: 120px;
-                max-width: 150px;
-                height: 80px;
-            }
-            .feature i {
-                font-size: 1.2em;
-            }
-            .feature h3 {
-                font-size: 0.9em;
-            }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @media (max-width: 768px) {
+            .navbar { padding: 10px 15px; }
+            .logo { font-size: 1.2em; }
+            .user-info span { font-size: 0.9em; }
+            .sidebar { top: 50px; height: calc(100% - 50px); width: 200px; }
+            main { padding: 15px; }
+            h2 { font-size: 1.4em; }
+            .form-container { padding: 15px; }
+            .features { flex-direction: column; align-items: center; }
+            .feature-link { max-width: 100%; height: 100px; }
         }
     </style>
 </head>
@@ -443,11 +387,6 @@
             </button>
             <div class="logo">Ministério de Louvor</div>
             <div class="user-info">
-                {% if user_data['profile_pic'] %}
-                    <img src="{{ url_for('static', filename='uploads/' + user_data['profile_pic']) }}" alt="Foto de Perfil" class="user-profile-pic">
-                {% else %}
-                    <img src="{{ url_for('static', filename='default-profile-pic.jpg') }}" alt="Foto de Perfil Padrão" class="user-profile-pic">
-                {% endif %}
                 <span>{{ name }}</span>
                 <a href="#" class="theme-toggle" onclick="toggleTheme()">
                     <i class="fas fa-moon"></i>
@@ -459,6 +398,7 @@
 
     <nav class="sidebar">
         <ul>
+            <li><a href="{{ url_for('index') }}"><i class="fas fa-home"></i> Início</a></li>
             <li><a href="{{ url_for('visualizar_escalas') }}"><i class="fas fa-calendar"></i> Visualizar Escalas</a></li>
             <li><a href="{{ url_for('historico_escalas') }}"><i class="fas fa-history"></i> Histórico</a></li>
             {% if is_admin %}
@@ -467,19 +407,16 @@
             <li><a href="{{ url_for('lista_membros') }}"><i class="fas fa-users"></i> Lista de Membros</a></li>
             <li><a href="{{ url_for('cadastrar_aviso') }}"><i class="fas fa-bullhorn"></i> Cadastrar Aviso</a></li>
             <li><a href="{{ url_for('gerenciar_avisos') }}"><i class="fas fa-edit"></i> Gerenciar Avisos</a></li>
-            <li><a href="{{ url_for('gerenciar_repertorio_global') }}"><i class="fas fa-music"></i> Gerenciar Repertório</a></li>
             <li><a href="{{ url_for('comunicar_equipe') }}"><i class="fas fa-bullhorn"></i> Comunicar</a></li>
             <li><a href="{{ url_for('enviar_notificacoes') }}"><i class="fas fa-bell"></i> Notificações</a></li>
             <li><a href="{{ url_for('relatorios') }}"><i class="fas fa-chart-bar"></i> Relatórios</a></li>
             {% endif %}
-            <li><a href="{{ url_for('repertorio') }}"><i class="fas fa-list"></i> Repertório</a></li>
             <li><a href="{{ url_for('perfil') }}"><i class="fas fa-user"></i> Perfil</a></li>
             <li><a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Sair</a></li>
         </ul>
     </nav>
 
-    <div class="dashboard-container">
-        <h2>Dashboard</h2>
+    <main>
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <div class="flash-messages">
@@ -497,108 +434,109 @@
             {% endif %}
         {% endwith %}
 
-        <section class="hero">
-            <h1>Bem-vindo, {{ name }}!</h1>
-            <button onclick="requestNotificationPermission()" class="btn">Ativar Notificações</button>
-        </section>
-
-        {% if notices %}
-            <section class="notices-section">
-                <h2>Avisos Gerais</h2>
-                {% for notice in notices %}
-                    <div class="notice">
-                        <h3>{{ notice['title'] }}</h3>
-                        <p>{{ notice['message'] }}</p>
-                        <p class="date">Publicado em: {{ notice['created_at'] }}</p>
-                    </div>
-                {% endfor %}
+        <div class="form-container">
+            <section class="hero">
+                <h1>Bem-vindo, {{ name }}!</h1>
             </section>
-        {% endif %}
 
-        <section class="features">
-            <a href="{{ url_for('visualizar_escalas') }}" class="feature-link">
-                <div class="feature">
-                    <i class="fas fa-calendar-check"></i>
-                    <h3>Escalas</h3>
-                </div>
-            </a>
-            {% if is_admin %}
-            <a href="{{ url_for('criar_escala') }}" class="feature-link">
-                <div class="feature">
-                    <i class="fas fa-plus-circle"></i>
-                    <h3>Criar Escala</h3>
-                </div>
-            </a>
-            <a href="{{ url_for('cadastrar_membro') }}" class="feature-link">
-                <div class="feature">
-                    <i class="fas fa-user-plus"></i>
-                    <h3>Cadastrar Membro</h3>
-                </div>
-            </a>
-            <a href="{{ url_for('gerenciar_repertorio_global') }}" class="feature-link">
-                <div class="feature">
-                    <i class="fas fa-music"></i>
-                    <h3>Gerenciar Repertório</h3>
-                </div>
-            </a>
-            <a href="{{ url_for('enviar_notificacoes') }}" class="feature-link">
-                <div class="feature">
-                    <i class="fas fa-bell"></i>
-                    <h3>Notificações</h3>
-                </div>
-            </a>
+            {% if notices %}
+                <section class="notices-section">
+                    <h2>Avisos Gerais</h2>
+                    {% for notice in notices %}
+                        <div class="notice">
+                            <h3>{{ notice['title'] }}</h3>
+                            <p>{{ notice['message'] }}</p>
+                            <p class="date">Publicado em: {{ notice['created_at'] }}</p>
+                        </div>
+                    {% endfor %}
+                </section>
             {% endif %}
-            <a href="{{ url_for('repertorio') }}" class="feature-link">
-                <div class="feature">
-                    <i class="fas fa-list"></i>
-                    <h3>Repertório</h3>
-                </div>
-            </a>
-            <a href="{{ url_for('historico_escalas') }}" class="feature-link">
-                <div class="feature">
-                    <i class="fas fa-history"></i>
-                    <h3>Histórico</h3>
-                </div>
-            </a>
-        </section>
 
-        <section class="section">
-            <h2>Minhas Próximas Escalas</h2>
-            {% if my_scales %}
-                {% for scale in my_scales %}
-                    <div class="scale">
-                        <p><strong>Data:</strong> {{ scale['date'] }}</p>
-                        <p><strong>Evento:</strong> {{ scale['event'] }}</p>
-                        <p><strong>Participantes:</strong>
-                            {% set participant_ids = scale['participants'].split(',') %}
-                            {% for pid in participant_ids %}
-                                {% if members[pid|int] %}
-                                    {{ members[pid|int] }}{% if not loop.last %}, {% endif %}
-                                {% endif %}
-                            {% endfor %}
-                        </p>
-                        <p><strong>Repertório:</strong>
-                            {% if scale['songs'] %}
-                                {{ scale['songs']|join(', ') }}
-                            {% else %}
-                                Ainda não definido
-                            {% endif %}
-                        </p>
-                        <p><strong>Ensaio:</strong>
-                            {% if scale['rehearsal'] %}
-                                {{ scale['rehearsal']['date'] }} às {{ scale['rehearsal']['time'] }} - {{ scale['rehearsal']['location'] }}
-                            {% else %}
-                                Não agendado
-                            {% endif %}
-                        </p>
-                        <a href="{{ url_for('visualizar_escala', scale_id=scale['id']) }}" class="btn">Visualizar Detalhes</a>
+            <section class="features">
+                <a href="{{ url_for('visualizar_escalas') }}" class="feature-link">
+                    <div class="feature">
+                        <i class="fas fa-calendar-check"></i>
+                        <h3>Escalas</h3>
                     </div>
-                {% endfor %}
-            {% else %}
-                <p class="no-scales">Você não está escalado para nenhuma escala futura.</p>
-            {% endif %}
-        </section>
-    </div>
+                </a>
+                {% if is_admin %}
+                <a href="{{ url_for('criar_escala') }}" class="feature-link">
+                    <div class="feature">
+                        <i class="fas fa-plus-circle"></i>
+                        <h3>Criar Escala</h3>
+                    </div>
+                </a>
+                <a href="{{ url_for('cadastrar_membro') }}" class="feature-link">
+                    <div class="feature">
+                        <i class="fas fa-user-plus"></i>
+                        <h3>Cadastrar Membro</h3>
+                    </div>
+                </a>
+                <a href="{{ url_for('gerenciar_repertorio_global') }}" class="feature-link">
+                    <div class="feature">
+                        <i class="fas fa-music"></i>
+                        <h3>Gerenciar Repertório</h3>
+                    </div>
+                </a>
+                <a href="{{ url_for('enviar_notificacoes') }}" class="feature-link">
+                    <div class="feature">
+                        <i class="fas fa-bell"></i>
+                        <h3>Notificações</h3>
+                    </div>
+                </a>
+                {% endif %}
+                <a href="{{ url_for('repertorio') }}" class="feature-link">
+                    <div class="feature">
+                        <i class="fas fa-list"></i>
+                        <h3>Repertório</h3>
+                    </div>
+                </a>
+                <a href="{{ url_for('historico_escalas') }}" class="feature-link">
+                    <div class="feature">
+                        <i class="fas fa-history"></i>
+                        <h3>Histórico</h3>
+                    </div>
+                </a>
+            </section>
+
+            <section class="section">
+                <h2>Minhas Próximas Escalas</h2>
+                {% if my_scales %}
+                    {% for scale in my_scales %}
+                        <div class="scale">
+                            <p><strong>Data:</strong> {{ scale['date'] }}</p>
+                            <p><strong>Evento:</strong> {{ scale['event'] }}</p>
+                            <p><strong>Participantes:</strong>
+                                {% set participant_ids = scale['participants'].split(',') %}
+                                {% for pid in participant_ids %}
+                                    {% if members[pid|int] %}
+                                        {{ members[pid|int] }}{% if not loop.last %}, {% endif %}
+                                    {% endif %}
+                                {% endfor %}
+                            </p>
+                            <p><strong>Repertório:</strong>
+                                {% if scale['songs'] %}
+                                    {{ scale['songs']|join(', ') }}
+                                {% else %}
+                                    Ainda não definido
+                                {% endif %}
+                            </p>
+                            <p><strong>Ensaio:</strong>
+                                {% if scale['rehearsal'] %}
+                                    {{ scale['rehearsal']['date'] }} às {{ scale['rehearsal']['time'] }} - {{ scale['rehearsal']['location'] }}
+                                {% else %}
+                                    Não agendado
+                                {% endif %}
+                            </p>
+                            <a href="{{ url_for('visualizar_escala', scale_id=scale['id']) }}" class="btn">Visualizar Detalhes</a>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="no-scales">Você não está escalado para nenhuma escala futura.</p>
+                {% endif %}
+            </section>
+        </div>
+    </main>
 
     <nav class="bottom-nav">
         <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">
