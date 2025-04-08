@@ -2,14 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <!-- Meta tags para PWA -->
-    <meta name="theme-color" content="#D32F2F">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Ministério de Louvor">
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Ministério de Louvor</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
@@ -18,6 +11,7 @@
     <script src="https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.4.0/firebase-messaging.js"></script>
     <script>
+        // Configuração do Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyCEL3aK4qVP6XTWjJqRs307-9TDxxr0ERs",
             authDomain: "ministerio-de-louvor-62fcf.firebaseapp.com",
@@ -28,15 +22,6 @@
             measurementId: "G-0ML9TJDJGX"
         };
         firebase.initializeApp(firebaseConfig);
-
-        // Registro do Service Worker
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/static/sw.js')
-                    .then(reg => console.log('Service Worker registrado', reg))
-                    .catch(err => console.log('Erro ao registrar Service Worker', err));
-            });
-        }
     </script>
     <style>
         :root {
@@ -44,38 +29,42 @@
             --text-color: #212121;
             --navbar-bg: #D32F2F;
             --navbar-text: white;
+            --sidebar-bg: #212121;
+            --sidebar-text: white;
             --card-bg: white;
             --shadow: rgba(0, 0, 0, 0.1);
             --hover-bg: #D32F2F;
+            --scale-bg: #fafafa;
+            --scale-border: #eee;
+            --muted-text: #666;
+            --bottom-nav-bg: #212121;
             --notification-bg: #fff3e0;
             --notification-border: #ff9800;
             --notice-bg: #e8f5e9;
             --notice-border: #c8e6c9;
             --btn-bg: #D32F2F;
             --btn-hover: #B71C1C;
-            --input-border: #ccc;
-            --sidebar-bg: #212121;
-            --sidebar-text: white;
-            --bottom-nav-bg: #212121;
         }
         body.dark-theme {
             --bg-color: #121212;
             --text-color: #E0E0E0;
             --navbar-bg: #D32F2F;
             --navbar-text: #E0E0E0;
+            --sidebar-bg: #1E1E1E;
+            --sidebar-text: #E0E0E0;
             --card-bg: #1E1E1E;
             --shadow: rgba(255, 255, 255, 0.1);
             --hover-bg: #B71C1C;
+            --scale-bg: #2E2E2E;
+            --scale-border: #444;
+            --muted-text: #999;
+            --bottom-nav-bg: #1E1E1E;
             --notification-bg: #ff9800;
             --notification-border: #ffb300;
             --notice-bg: #2e7d32;
             --notice-border: #4caf50;
             --btn-bg: #D32F2F;
             --btn-hover: #B71C1C;
-            --input-border: #666;
-            --sidebar-bg: #1E1E1E;
-            --sidebar-text: #E0E0E0;
-            --bottom-nav-bg: #1E1E1E;
         }
         * {
             margin: 0;
@@ -87,17 +76,15 @@
             background-color: var(--bg-color);
             color: var(--text-color);
             line-height: 1.6;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
+            overflow-x: hidden;
             transition: background-color 0.3s, color 0.3s;
+            padding-bottom: 60px;
         }
         .navbar {
-            padding: 0.75rem 1rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            min-height: 50px;
+            padding: 10px 20px;
             background-color: var(--navbar-bg);
             color: var(--navbar-text);
             position: fixed;
@@ -106,17 +93,6 @@
             width: 100%;
             z-index: 1000;
             box-shadow: 0 2px 10px var(--shadow);
-        }
-        .logo {
-            font-size: 1.2em;
-            font-weight: 600;
-            color: var(--navbar-text);
-            text-align: center;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 90%;
-            flex-grow: 1;
         }
         .sidebar-toggle {
             background: none;
@@ -128,6 +104,12 @@
         }
         .sidebar-toggle:hover {
             transform: scale(1.1);
+        }
+        .logo {
+            font-size: 1.5em;
+            font-weight: 700;
+            flex-grow: 1;
+            text-align: center;
         }
         .user-info {
             display: flex;
@@ -158,10 +140,10 @@
         }
         .sidebar {
             position: fixed;
-            top: 50px;
+            top: 60px;
             left: -250px;
             width: 250px;
-            height: calc(100vh - 50px);
+            height: calc(100% - 60px);
             background-color: var(--sidebar-bg);
             color: var(--sidebar-text);
             transition: left 0.3s ease;
@@ -194,68 +176,123 @@
         .sidebar ul li a i {
             font-size: 1.2em;
         }
-        .dashboard-container {
-            margin-top: 50px;
+        main {
+            margin-top: 60px;
             padding: 20px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .hero {
+            text-align: center;
+            padding: 30px 0;
+            animation: fadeIn 0.5s ease-in;
+        }
+        .hero h1 {
+            font-size: 2em;
+            color: var(--navbar-bg);
+            font-weight: 700;
+        }
+        .features {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .feature-link {
+            text-decoration: none;
+            flex: 1;
+            min-width: 200px;
+            max-width: 250px;
+            height: 120px;
+        }
+        .feature {
             background-color: var(--card-bg);
+            padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 4px 12px var(--shadow);
-            width: 100%;
-            max-width: 400px;
-            transition: background-color 0.3s;
-            overflow-y: auto;
-            max-height: calc(100vh - 100px); /* Navbar + Bottom-nav */
+            text-align: center;
+            box-shadow: 0 4px 10px var(--shadow);
+            transition: transform 0.3s, box-shadow 0.3s;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .feature:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 15px var(--shadow);
+        }
+        .feature i {
+            font-size: 2em;
+            color: var(--navbar-bg);
+            margin-bottom: 10px;
+        }
+        .feature h3 {
+            font-size: 1.2em;
+            color: var(--text-color);
+            font-weight: 500;
+            margin: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 100%;
+        }
+        .section {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px var(--shadow);
+            margin-top: 20px;
         }
         h2 {
-            color: var(--navbar-bg);
             font-size: 1.6em;
+            color: var(--navbar-bg);
+            margin-bottom: 15px;
             font-weight: 700;
-            margin-bottom: 20px;
             text-align: center;
         }
+        .scale {
+            margin: 15px 0;
+            padding: 15px;
+            border: 1px solid var(--scale-border);
+            border-radius: 5px;
+            background-color: var(--scale-bg);
+            transition: transform 0.3s;
+        }
+        .scale:hover {
+            transform: translateY(-3px);
+        }
+        .scale strong {
+            color: var(--text-color);
+            font-weight: 500;
+            margin-right: 5px;
+        }
+        .scale p {
+            margin: 5px 0;
+            font-size: 1em;
+        }
         .btn {
-            width: 100%;
-            padding: 12px;
+            display: inline-block;
+            padding: 10px 20px;
             background-color: var(--btn-bg);
             color: #FFFFFF;
-            border: none;
+            text-align: center;
+            text-decoration: none;
             border-radius: 5px;
-            font-size: 1em;
+            font-size: 0.9em;
             font-weight: 500;
-            cursor: pointer;
             transition: background-color 0.3s;
-            margin-top: 10px;
         }
         .btn:hover {
             background-color: var(--btn-hover);
         }
-        .flash-messages {
-            margin: 20px 0;
-        }
-        .flash-message {
-            padding: 15px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+        .no-scales {
+            text-align: center;
             font-size: 1em;
-            background-color: var(--card-bg);
-            color: var(--text-color);
-            border: 1px solid var(--shadow);
-        }
-        .flash-message.success {
-            background-color: var(--notice-bg);
-            color: #2E7D32;
-            border: 1px solid var(--notice-border);
-        }
-        .flash-message.error {
-            background-color: #FFEBEE;
-            color: #C62828;
-            border: 1px solid #EF9A9A;
-        }
-        .flash-message i {
-            font-size: 1.2em;
+            color: var(--muted-text);
+            padding: 20px 0;
         }
         .bottom-nav {
             display: flex;
@@ -288,60 +325,73 @@
         .bottom-nav a span {
             display: block;
         }
-        .hero {
-            text-align: center;
-            margin-bottom: 20px;
+        .flash-messages {
+            margin: 20px 0;
+            position: relative;
+            z-index: 1100;
         }
-        .hero h1 {
-            font-size: 1.6em;
-            color: var(--navbar-bg);
-            font-weight: 700;
-        }
-        .features {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            justify-content: center;
-            margin-top: 20px;
-        }
-        .feature-link {
-            text-decoration: none;
-            flex: 1;
-            min-width: 150px;
-            max-width: 180px;
-            height: 100px;
-        }
-        .feature {
-            background-color: var(--card-bg);
+        .flash-message {
             padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-            box-shadow: 0 4px 10px var(--shadow);
-            transition: transform 0.3s, box-shadow 0.3s;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-        .feature:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 6px 15px var(--shadow);
-        }
-        .feature i {
-            font-size: 1.5em;
-            color: var(--navbar-bg);
             margin-bottom: 10px;
-        }
-        .feature h3 {
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
             font-size: 1em;
+            min-height: 50px;
+            background-color: var(--card-bg);
             color: var(--text-color);
+            border: 1px solid var(--shadow);
+            opacity: 1;
+            animation: slideIn 0.5s ease-in-out;
+        }
+        .flash-message.success {
+            background-color: var(--notice-bg);
+            color: #2E7D32 !important;
+            border: 1px solid var(--notice-border);
+        }
+        .flash-message.success span {
+            color: #2E7D32 !important;
+        }
+        .flash-message.error {
+            background-color: #FFEBEE;
+            color: #C62828;
+            border: 1px solid #EF9A9A;
+        }
+        .flash-message i {
+            font-size: 1.2em;
+            color: inherit;
+        }
+        body.dark-theme .flash-message.success {
+            color: #FFFFFF !important;
+        }
+        body.dark-theme .flash-message.success span {
+            color: #FFFFFF !important;
+        }
+        .notification-container {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            z-index: 2000;
+            width: 300px;
+        }
+        .notification {
+            background-color: var(--notification-bg);
+            border: 2px solid var(--notification-border);
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            box-shadow: 0 4px 10px var(--shadow);
+            animation: slideIn 0.5s ease-in-out;
+        }
+        .notification h4 {
+            margin: 0 0 5px;
+            font-size: 1.1em;
             font-weight: 500;
+        }
+        .notification p {
             margin: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            max-width: 100%;
+            font-size: 0.9em;
         }
         .notices-section {
             margin-top: 20px;
@@ -368,71 +418,34 @@
             font-size: 0.9em;
             color: var(--muted-text);
         }
-        .scale {
-            margin: 15px 0;
-            padding: 15px;
-            border: 1px solid var(--input-border);
-            border-radius: 5px;
-            background-color: var(--card-bg);
-            transition: transform 0.3s;
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
-        .scale:hover {
-            transform: translateY(-3px);
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
-        .scale strong {
-            color: var(--text-color);
-            font-weight: 500;
-            margin-right: 5px;
-        }
-        .scale p {
-            margin: 5px 0;
-            font-size: 1em;
-        }
-        .no-scales {
-            text-align: center;
-            font-size: 1em;
-            color: var(--muted-text);
-            padding: 20px 0;
-        }
-        @media screen and (max-width: 480px) {
-            .navbar {
-                padding: 0.5rem 0.75rem;
+        @media (max-width: 768px) {
+            .navbar { padding: 10px 15px; }
+            .logo { font-size: 1.2em; }
+            .user-info span { font-size: 0.9em; }
+            .user-profile-pic { width: 25px; height: 25px; }
+            .sidebar { top: 50px; height: calc(100% - 50px); width: 200px; }
+            main { padding: 15px; }
+            .hero h1 { font-size: 1.5em; }
+            .features { flex-direction: column; align-items: center; }
+            .feature-link { 
+                max-width: 100%; 
+                height: 100px;
             }
-            .logo {
-                font-size: 1em;
-                max-width: 85%;
-            }
-            .dashboard-container {
-                padding: 15px;
-            }
-            h2 {
-                font-size: 1.4em;
-            }
-            .btn {
-                font-size: 0.9em;
-            }
-            .flash-message {
-                padding: 10px;
-                font-size: 0.9em;
-            }
-            .sidebar {
-                width: 200px;
-                left: -200px;
-            }
-            .sidebar.open {
-                left: 0;
-            }
-            .feature-link {
-                min-width: 120px;
-                max-width: 150px;
-                height: 80px;
-            }
-            .feature i {
-                font-size: 1.2em;
-            }
-            .feature h3 {
-                font-size: 0.9em;
-            }
+            .section { padding: 15px; }
+            h2 { font-size: 1.4em; }
+            .scale { padding: 10px; }
+            .btn { font-size: 0.8em; padding: 8px 15px; width: 100%; }
+            .bottom-nav { display: flex; }
+            .notification-container { width: 90%; right: 5%; top: 60px; }
+            .flash-messages { margin: 10px 0; }
         }
     </style>
 </head>
@@ -479,8 +492,7 @@
         </ul>
     </nav>
 
-    <div class="dashboard-container">
-        <h2>Dashboard</h2>
+    <main>
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <div class="flash-messages">
@@ -491,7 +503,7 @@
                             {% elif category == 'error' %}
                                 <i class="fas fa-times-circle"></i>
                             {% endif %}
-                            {{ message }}
+                            <span>{{ message }}</span>
                         </div>
                     {% endfor %}
                 </div>
@@ -599,7 +611,9 @@
                 <p class="no-scales">Você não está escalado para nenhuma escala futura.</p>
             {% endif %}
         </section>
-    </div>
+    </main>
+
+    <div class="notification-container" id="notification-container"></div>
 
     <nav class="bottom-nav">
         <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">
@@ -677,26 +691,13 @@
             const socket = io.connect('http://' + document.domain + ':' + location.port);
             socket.on('connect', () => {
                 socket.emit('connect');
+                console.log('Conectado ao SocketIO');
             });
 
             socket.on('notification', (data) => {
-                const notificationContainer = document.createElement('div');
-                notificationContainer.className = 'notification-container';
-                notificationContainer.style.position = 'fixed';
-                notificationContainer.style.top = '70px';
-                notificationContainer.style.right = '20px';
-                notificationContainer.style.zIndex = '2000';
-                notificationContainer.style.width = '300px';
-                document.body.appendChild(notificationContainer);
+                const notificationContainer = document.getElementById('notification-container');
                 const notification = document.createElement('div');
                 notification.className = 'notification';
-                notification.style.backgroundColor = 'var(--notification-bg)';
-                notification.style.border = '2px solid var(--notification-border)';
-                notification.style.padding = '15px';
-                notification.style.marginBottom = '10px';
-                notification.style.borderRadius = '5px';
-                notification.style.boxShadow = '0 4px 10px var(--shadow)';
-                notification.style.color = 'var(--text-color)';
                 notification.innerHTML = `
                     <h4>${data.title}</h4>
                     <p>${data.message}</p>
@@ -709,6 +710,55 @@
                     setTimeout(() => notification.remove(), 500);
                 }, 5000);
             });
+
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/firebase-messaging-sw.js')
+                    .then((registration) => {
+                        console.log('Service Worker registrado com sucesso:', registration);
+                        const messaging = firebase.messaging();
+
+                        // Solicitação automática de permissão ao carregar a página (opcional)
+                        if ({{ 'true' if session.get('logged_in') else 'false' }}) {
+                            Notification.requestPermission().then((permission) => {
+                                if (permission === 'granted') {
+                                    messaging.getToken({ serviceWorkerRegistration: registration, vapidKey: "BHsh78adyLS_OG4V89Fdcw1KLOHFc81UUwpJZQBf7jWdnFfGllXS4-bRmCtwMFa-O7ArUZflqHrjPt3UovaxzB8" })
+                                        .then((token) => {
+                                            console.log('FCM Token gerado:', token);
+                                            fetch('/save_token', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                                body: `fcm_token=${encodeURIComponent(token)}`
+                                            })
+                                            .then(response => response.json())
+                                            .then(data => console.log('Token salvo:', data))
+                                            .catch(error => console.error('Erro ao salvar token:', error));
+                                        })
+                                        .catch((err) => console.error('Erro ao obter token:', err));
+                                }
+                            });
+                        }
+
+                        messaging.onMessage((payload) => {
+                            console.log('Mensagem em foreground recebida:', payload);
+                            const notificationContainer = document.getElementById('notification-container');
+                            const notification = document.createElement('div');
+                            notification.className = 'notification';
+                            notification.innerHTML = `
+                                <h4>${payload.notification.title}</h4>
+                                <p>${payload.notification.body}</p>
+                            `;
+                            notificationContainer.appendChild(notification);
+                            setTimeout(() => {
+                                notification.style.transition = 'opacity 0.5s';
+                                notification.style.opacity = '0';
+                                setTimeout(() => notification.remove(), 500);
+                            }, 5000);
+                        });
+                    })
+                    .catch((err) => console.error('Erro ao registrar Service Worker:', err));
+            } else {
+                console.log('Service Workers não são suportados neste navegador');
+            }
         });
     </script>
 </body>
