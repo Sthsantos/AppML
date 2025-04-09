@@ -18,7 +18,7 @@
             --text-color: #212121;
             --navbar-bg: #D32F2F;
             --navbar-text: white;
-            --card-bg: white;
+            --card-bg: rgba(255, 255, 255, 0.9); /* Fundo com transparência para legibilidade */
             --shadow: rgba(0, 0, 0, 0.1);
             --hover-bg: #D32F2F;
             --notification-bg: #fff3e0;
@@ -34,7 +34,7 @@
             --text-color: #E0E0E0;
             --navbar-bg: #D32F2F;
             --navbar-text: #E0E0E0;
-            --card-bg: #1E1E1E;
+            --card-bg: rgba(30, 30, 30, 0.9); /* Fundo escuro com transparência */
             --shadow: rgba(255, 255, 255, 0.1);
             --hover-bg: #B71C1C;
             --notification-bg: #ff9800;
@@ -57,7 +57,8 @@
             overflow: hidden;
         }
         body {
-            background-color: var(--bg-color);
+            background: url('/static/images/background-login.jpg') no-repeat center center fixed;
+            background-size: cover;
             color: var(--text-color);
             line-height: 1.6;
             display: flex;
@@ -67,7 +68,7 @@
         }
         .navbar {
             display: flex;
-            justify-content: center; /* Centraliza todos os itens horizontalmente */
+            justify-content: center;
             align-items: center;
             padding: 10px 20px;
             background-color: var(--navbar-bg);
@@ -88,13 +89,13 @@
             justify-content: space-between;
             align-items: center;
             width: 100%;
-            max-width: 1200px; /* Limita a largura máxima para melhor controle */
+            max-width: 1200px;
         }
         .logo {
             font-size: 1.5em;
             font-weight: 700;
             text-align: center;
-            flex-grow: 1; /* Permite que o logo ocupe o espaço central */
+            flex-grow: 1;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -104,7 +105,7 @@
             font-size: 20px;
             cursor: pointer;
             transition: color 0.3s;
-            margin-left: 20px; /* Espaço à esquerda para balancear o layout */
+            margin-left: 20px;
         }
         .theme-toggle:hover {
             color: #E0E0E0;
