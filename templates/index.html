@@ -32,6 +32,12 @@
             --btn-bg: #D32F2F;
             --btn-hover: #B71C1C;
             --input-border: #ccc;
+            --sidebar-bg: #212121;
+            --sidebar-text: white;
+            --bottom-nav-bg: #212121;
+            --scale-bg: #fafafa;
+            --scale-border: #eee;
+            --muted-text: #666;
         }
         body.dark-theme {
             --bg-color: #121212;
@@ -48,6 +54,12 @@
             --btn-bg: #D32F2F;
             --btn-hover: #B71C1C;
             --input-border: #666;
+            --sidebar-bg: #1E1E1E;
+            --sidebar-text: #E0E0E0;
+            --bottom-nav-bg: #1E1E1E;
+            --scale-bg: #2E2E2E;
+            --scale-border: #444;
+            --muted-text: #999;
         }
         * {
             margin: 0;
@@ -68,6 +80,7 @@
             flex-direction: column;
             transition: background-color 0.3s, color 0.3s;
             padding-top: env(safe-area-inset-top);
+            padding-bottom: 60px; /* Espaço para o menu inferior */
         }
         .navbar {
             display: flex;
@@ -94,6 +107,17 @@
             width: 100%;
             max-width: 1200px;
         }
+        .sidebar-toggle {
+            background: none;
+            border: none;
+            color: var(--navbar-text);
+            font-size: 20px;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        .sidebar-toggle:hover {
+            transform: scale(1.1);
+        }
         .logo {
             font-size: 1.5em;
             font-weight: 700;
@@ -103,15 +127,70 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        .theme-toggle {
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .user-info span {
+            font-size: 1em;
+            font-weight: 500;
+        }
+        .user-profile-pic {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid var(--navbar-text);
+            transition: border-color 0.3s;
+        }
+        .logout-icon, .theme-toggle {
             color: var(--navbar-text);
             font-size: 20px;
-            cursor: pointer;
+            text-decoration: none;
             transition: color 0.3s;
-            margin-left: 20px;
+            cursor: pointer;
         }
-        .theme-toggle:hover {
+        .logout-icon:hover, .theme-toggle:hover {
             color: #E0E0E0;
+        }
+        .sidebar {
+            position: fixed;
+            top: 60px;
+            left: -250px;
+            width: 250px;
+            height: calc(100% - 60px);
+            background-color: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            transition: left 0.3s ease;
+            z-index: 999;
+        }
+        .sidebar.open {
+            left: 0;
+        }
+        .sidebar ul {
+            list-style: none;
+            padding: 20px;
+        }
+        .sidebar ul li {
+            margin: 15px 0;
+        }
+        .sidebar ul li a {
+            color: var(--sidebar-text);
+            text-decoration: none;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .sidebar ul li a:hover {
+            background-color: var(--hover-bg);
+        }
+        .sidebar ul li a i {
+            font-size: 1.2em;
         }
         main {
             flex: 1;
@@ -121,7 +200,7 @@
             padding: 20px;
             padding-top: calc(60px + env(safe-area-inset-top));
             padding-bottom: env(safe-area-inset-bottom);
-            height: calc(100vh - env(safe-area-inset-top));
+            height: calc(100vh - env(safe-area-inset-top) - 60px);
             overflow-y: auto;
         }
         .dashboard-container {
@@ -270,7 +349,7 @@
             padding: 15px;
             border: 1px solid var(--input-border);
             border-radius: 5px;
-            background-color: var(--card-bg);
+            background-color: var(--scale-bg);
             transition: transform 0.3s;
         }
         .scale:hover {
@@ -291,6 +370,38 @@
             color: var(--muted-text);
             padding: 20px 0;
         }
+        .bottom-nav {
+            display: flex;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: var(--bottom-nav-bg);
+            padding: 10px 0;
+            box-shadow: 0 -2px 10px var(--shadow);
+            z-index: 1000;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .bottom-nav a {
+            flex: 1;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            text-align: center;
+            padding: 5px;
+            font-size: 0.9em;
+            transition: background-color 0.3s;
+        }
+        .bottom-nav a.active, .bottom-nav a:hover {
+            background-color: var(--hover-bg);
+        }
+        .bottom-nav a i {
+            display: block;
+            font-size: 1.5em;
+            margin-bottom: 5px;
+        }
+        .bottom-nav a span {
+            display: block;
+        }
         @media (max-width: 480px) {
             .navbar { 
                 padding: 0.5rem 1rem; 
@@ -298,6 +409,10 @@
             }
             .logo { 
                 font-size: 1.2em; 
+            }
+            .user-profile-pic { 
+                width: 25px; 
+                height: 25px; 
             }
             main { 
                 padding: 15px; 
@@ -332,6 +447,11 @@
             .feature h3 {
                 font-size: 0.8em;
             }
+            .sidebar { 
+                top: 50px; 
+                height: calc(100% - 50px); 
+                width: 200px; 
+            }
         }
     </style>
 </head>
@@ -339,13 +459,46 @@
     <header>
         <div class="navbar">
             <div class="navbar-content">
+                <button class="sidebar-toggle" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
                 <div class="logo">Ministério de Louvor</div>
-                <a href="#" class="theme-toggle" onclick="toggleTheme()">
-                    <i class="fas fa-moon"></i>
-                </a>
+                <div class="user-info">
+                    {% if user_data['profile_pic'] %}
+                        <img src="{{ url_for('static', filename='uploads/' + user_data['profile_pic']) }}" alt="Foto de Perfil" class="user-profile-pic">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='default-profile-pic.jpg') }}" alt="Foto de Perfil Padrão" class="user-profile-pic">
+                    {% endif %}
+                    <span>{{ name }}</span>
+                    <a href="#" class="theme-toggle" onclick="toggleTheme()">
+                        <i class="fas fa-moon"></i>
+                    </a>
+                    <a href="{{ url_for('logout') }}" class="logout-icon"><i class="fas fa-sign-out-alt"></i></a>
+                </div>
             </div>
         </div>
     </header>
+
+    <nav class="sidebar">
+        <ul>
+            <li><a href="{{ url_for('visualizar_escalas') }}"><i class="fas fa-calendar"></i> Visualizar Escalas</a></li>
+            <li><a href="{{ url_for('historico_escalas') }}"><i class="fas fa-history"></i> Histórico</a></li>
+            {% if is_admin %}
+            <li><a href="{{ url_for('criar_escala') }}"><i class="fas fa-plus-circle"></i> Criar Escala</a></li>
+            <li><a href="{{ url_for('cadastrar_membro') }}"><i class="fas fa-user-plus"></i> Cadastrar Membro</a></li>
+            <li><a href="{{ url_for('lista_membros') }}"><i class="fas fa-users"></i> Lista de Membros</a></li>
+            <li><a href="{{ url_for('cadastrar_aviso') }}"><i class="fas fa-bullhorn"></i> Cadastrar Aviso</a></li>
+            <li><a href="{{ url_for('gerenciar_avisos') }}"><i class="fas fa-edit"></i> Gerenciar Avisos</a></li>
+            <li><a href="{{ url_for('gerenciar_repertorio_global') }}"><i class="fas fa-music"></i> Gerenciar Repertório</a></li>
+            <li><a href="{{ url_for('comunicar_equipe') }}"><i class="fas fa-bullhorn"></i> Comunicar</a></li>
+            <li><a href="{{ url_for('enviar_notificacoes') }}"><i class="fas fa-bell"></i> Notificações</a></li>
+            <li><a href="{{ url_for('relatorios') }}"><i class="fas fa-chart-bar"></i> Relatórios</a></li>
+            {% endif %}
+            <li><a href="{{ url_for('repertorio') }}"><i class="fas fa-list"></i> Repertório</a></li>
+            <li><a href="{{ url_for('perfil') }}"><i class="fas fa-user"></i> Perfil</a></li>
+            <li><a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Sair</a></li>
+        </ul>
+    </nav>
 
     <main>
         <div class="dashboard-container">
@@ -470,6 +623,25 @@
         </div>
     </main>
 
+    <nav class="bottom-nav">
+        <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">
+            <i class="fas fa-home"></i>
+            <span>Início</span>
+        </a>
+        <a href="{{ url_for('visualizar_escalas') }}" class="{% if request.endpoint == 'visualizar_escalas' %}active{% endif %}">
+            <i class="fas fa-calendar"></i>
+            <span>Escalas</span>
+        </a>
+        <a href="{{ url_for('historico_escalas') }}" class="{% if request.endpoint == 'historico_escalas' %}active{% endif %}">
+            <i class="fas fa-history"></i>
+            <span>Histórico</span>
+        </a>
+        <a href="{{ url_for('perfil') }}" class="{% if request.endpoint == 'perfil' %}active{% endif %}">
+            <i class="fas fa-user"></i>
+            <span>Perfil</span>
+        </a>
+    </nav>
+
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyCEL3aK4qVP6XTWjJqRs307-9TDxxr0ERs",
@@ -488,6 +660,11 @@
                     .then(reg => console.log('Service Worker registrado', reg))
                     .catch(err => console.log('Erro ao registrar Service Worker', err));
             });
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            sidebar.classList.toggle('open');
         }
 
         function toggleTheme() {
