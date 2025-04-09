@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <!-- Meta tags para PWA -->
+    <!-- Meta tags para PWA e tela cheia -->
     <meta name="theme-color" content="#D32F2F">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -16,42 +16,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.4.0/firebase-messaging.js"></script>
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyCEL3aK4qVP6XTWjJqRs307-9TDxxr0ERs",
-            authDomain: "ministerio-de-louvor-62fcf.firebaseapp.com",
-            projectId: "ministerio-de-louvor-62fcf",
-            storageBucket: "ministerio-de-louvor-62fcf.firebasestorage.app",
-            messagingSenderId: "1029007412822",
-            appId: "1:1029007412822:web:0001439d6dcc9d632bf5f7",
-            measurementId: "G-0ML9TJDJGX"
-        };
-        firebase.initializeApp(firebaseConfig);
-
-        // Registro do Service Worker com cache busting
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/static/sw.js?v=3')
-                    .then(reg => console.log('Service Worker registrado', reg))
-                    .catch(err => console.log('Erro ao registrar Service Worker', err));
-            });
-        }
-    </script>
     <style>
         :root {
             --bg-color: #F5F5F5;
             --text-color: #212121;
             --navbar-bg: #D32F2F;
             --navbar-text: white;
-            --sidebar-bg: #212121;
-            --sidebar-text: white;
             --card-bg: white;
             --shadow: rgba(0, 0, 0, 0.1);
             --hover-bg: #D32F2F;
-            --scale-bg: #fafafa;
-            --scale-border: #eee;
-            --muted-text: #666;
-            --bottom-nav-bg: #212121;
             --notification-bg: #fff3e0;
             --notification-border: #ff9800;
             --notice-bg: #e8f5e9;
@@ -59,22 +32,15 @@
             --btn-bg: #D32F2F;
             --btn-hover: #B71C1C;
             --input-border: #ccc;
-            --checkbox-accent: #D32F2F;
         }
         body.dark-theme {
             --bg-color: #121212;
             --text-color: #E0E0E0;
             --navbar-bg: #D32F2F;
             --navbar-text: #E0E0E0;
-            --sidebar-bg: #1E1E1E;
-            --sidebar-text: #E0E0E0;
             --card-bg: #1E1E1E;
             --shadow: rgba(255, 255, 255, 0.1);
             --hover-bg: #B71C1C;
-            --scale-bg: #2E2E2E;
-            --scale-border: #444;
-            --muted-text: #999;
-            --bottom-nav-bg: #1E1E1E;
             --notification-bg: #ff9800;
             --notification-border: #ffb300;
             --notice-bg: #2e7d32;
@@ -82,7 +48,6 @@
             --btn-bg: #D32F2F;
             --btn-hover: #B71C1C;
             --input-border: #666;
-            --checkbox-accent: #D32F2F;
         }
         * {
             margin: 0;
@@ -90,17 +55,23 @@
             box-sizing: border-box;
             font-family: 'Roboto', sans-serif;
         }
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
         body {
             background-color: var(--bg-color);
             color: var(--text-color);
             line-height: 1.6;
-            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
             transition: background-color 0.3s, color 0.3s;
-            padding-bottom: 60px; /* Espaço para o menu inferior */
+            padding-top: env(safe-area-inset-top);
         }
         .navbar {
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
             padding: 10px 20px;
             background-color: var(--navbar-bg);
@@ -111,116 +82,76 @@
             width: 100%;
             z-index: 1000;
             box-shadow: 0 2px 10px var(--shadow);
+            padding-top: calc(10px + env(safe-area-inset-top));
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+            min-height: 60px;
         }
-        .sidebar-toggle {
-            background: none;
-            border: none;
-            color: var(--navbar-text);
-            font-size: 20px;
-            cursor: pointer;
-            transition: transform 0.3s;
-        }
-        .sidebar-toggle:hover {
-            transform: scale(1.1);
+        .navbar-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 1200px;
         }
         .logo {
             font-size: 1.5em;
             font-weight: 700;
-            flex-grow: 1;
             text-align: center;
+            flex-grow: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .user-info span {
-            font-size: 1em;
-            font-weight: 500;
-        }
-        .logout-icon, .theme-toggle {
+        .theme-toggle {
             color: var(--navbar-text);
             font-size: 20px;
-            text-decoration: none;
-            transition: color 0.3s;
             cursor: pointer;
+            transition: color 0.3s;
+            margin-left: 20px;
         }
-        .logout-icon:hover, .theme-toggle:hover {
+        .theme-toggle:hover {
             color: #E0E0E0;
         }
-        .sidebar {
-            position: fixed;
-            top: 60px;
-            left: -250px;
-            width: 250px;
-            height: calc(100% - 60px);
-            background-color: var(--sidebar-bg);
-            color: var(--sidebar-text);
-            transition: left 0.3s ease;
-            z-index: 999;
-        }
-        .sidebar.open {
-            left: 0;
-        }
-        .sidebar ul {
-            list-style: none;
-            padding: 20px;
-        }
-        .sidebar ul li {
-            margin: 15px 0;
-        }
-        .sidebar ul li a {
-            color: var(--sidebar-text);
-            text-decoration: none;
-            font-size: 1.1em;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 15px;
-            border-radius: 5px;
-            transition: background-color 0.3s;
-        }
-        .sidebar ul li a:hover {
-            background-color: var(--hover-bg);
-        }
-        .sidebar ul li a i {
-            font-size: 1.2em;
-        }
         main {
-            margin-top: 60px;
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             padding: 20px;
-            max-width: 800px;
-            margin-left: auto;
-            margin-right: auto;
+            padding-top: calc(60px + env(safe-area-inset-top));
+            padding-bottom: env(safe-area-inset-bottom);
+            height: calc(100vh - env(safe-area-inset-top));
+            overflow-y: auto;
         }
-        .form-container {
+        .dashboard-container {
             background-color: var(--card-bg);
-            padding: 25px;
+            padding: 30px;
             border-radius: 8px;
-            box-shadow: 0 4px 10px var(--shadow);
+            box-shadow: 0 4px 12px var(--shadow);
+            width: 100%;
+            max-width: 400px;
             transition: background-color 0.3s;
         }
         h2 {
-            font-size: 1.6em;
             color: var(--navbar-bg);
-            margin-bottom: 15px;
+            font-size: 1.6em;
             font-weight: 700;
+            margin-bottom: 20px;
             text-align: center;
         }
         .btn {
-            display: inline-block;
-            padding: 10px 20px;
+            width: 100%;
+            padding: 12px;
             background-color: var(--btn-bg);
             color: #FFFFFF;
-            text-align: center;
-            text-decoration: none;
             border: none;
             border-radius: 5px;
             font-size: 1em;
             font-weight: 500;
             cursor: pointer;
             transition: background-color 0.3s;
-            width: 100%;
+            margin-top: 10px;
         }
         .btn:hover {
             background-color: var(--btn-hover);
@@ -253,68 +184,38 @@
         .flash-message i {
             font-size: 1.2em;
         }
-        .bottom-nav {
-            display: flex;
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background-color: var(--bottom-nav-bg);
-            padding: 10px 0;
-            box-shadow: 0 -2px 10px var(--shadow);
-            z-index: 1000;
-        }
-        .bottom-nav a {
-            flex: 1;
-            color: var(--sidebar-text);
-            text-decoration: none;
-            text-align: center;
-            padding: 5px;
-            font-size: 0.9em;
-            transition: background-color 0.3s;
-        }
-        .bottom-nav a.active, .bottom-nav a:hover {
-            background-color: var(--hover-bg);
-        }
-        .bottom-nav a i {
-            display: block;
-            font-size: 1.5em;
-            margin-bottom: 5px;
-        }
-        .bottom-nav a span {
-            display: block;
-        }
         .hero {
             text-align: center;
-            padding: 20px 0;
+            margin-bottom: 20px;
         }
         .hero h1 {
-            font-size: 2em;
+            font-size: 1.8em;
             color: var(--navbar-bg);
             font-weight: 700;
         }
         .features {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
             justify-content: center;
             margin-top: 20px;
         }
         .feature-link {
             text-decoration: none;
-            flex: 1;
-            min-width: 200px;
-            max-width: 250px;
-            height: 120px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         .feature {
             background-color: var(--card-bg);
-            padding: 20px;
+            padding: 15px;
             border-radius: 8px;
             text-align: center;
             box-shadow: 0 4px 10px var(--shadow);
             transition: transform 0.3s, box-shadow 0.3s;
-            height: 100%;
+            width: 100%;
+            max-width: 150px;
+            height: 100px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -325,12 +226,12 @@
             box-shadow: 0 6px 15px var(--shadow);
         }
         .feature i {
-            font-size: 2em;
+            font-size: 1.5em;
             color: var(--navbar-bg);
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
         .feature h3 {
-            font-size: 1.2em;
+            font-size: 0.9em;
             color: var(--text-color);
             font-weight: 500;
             margin: 0;
@@ -367,9 +268,9 @@
         .scale {
             margin: 15px 0;
             padding: 15px;
-            border: 1px solid var(--scale-border);
+            border: 1px solid var(--input-border);
             border-radius: 5px;
-            background-color: var(--scale-bg);
+            background-color: var(--card-bg);
             transition: transform 0.3s;
         }
         .scale:hover {
@@ -390,83 +291,85 @@
             color: var(--muted-text);
             padding: 20px 0;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        @media (max-width: 768px) {
-            .navbar { padding: 10px 15px; }
-            .logo { font-size: 1.2em; }
-            .user-info span { font-size: 0.9em; }
-            .sidebar { top: 50px; height: calc(100% - 50px); width: 200px; }
-            main { padding: 15px; }
-            h2 { font-size: 1.4em; }
-            .form-container { padding: 15px; }
-            .features { flex-direction: column; align-items: center; }
-            .feature-link { max-width: 100%; height: 100px; }
+        @media (max-width: 480px) {
+            .navbar { 
+                padding: 0.5rem 1rem; 
+                padding-top: calc(0.5rem + env(safe-area-inset-top)); 
+            }
+            .logo { 
+                font-size: 1.2em; 
+            }
+            main { 
+                padding: 15px; 
+                padding-top: calc(60px + env(safe-area-inset-top)); 
+            }
+            .dashboard-container { 
+                padding: 20px; 
+            }
+            h2 { 
+                font-size: 1.4em; 
+            }
+            .btn { 
+                font-size: 0.9em; 
+            }
+            .flash-message { 
+                padding: 10px; 
+                font-size: 0.9em; 
+            }
+            .features {
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+                gap: 10px;
+            }
+            .feature {
+                padding: 10px;
+                max-width: 120px;
+                height: 80px;
+            }
+            .feature i {
+                font-size: 1.2em;
+                margin-bottom: 5px;
+            }
+            .feature h3 {
+                font-size: 0.8em;
+            }
         }
     </style>
 </head>
 <body>
     <header>
         <div class="navbar">
-            <button class="sidebar-toggle" onclick="toggleSidebar()">
-                <i class="fas fa-bars"></i>
-            </button>
-            <div class="logo">Ministério de Louvor</div>
-            <div class="user-info">
-                <span>{{ name }}</span>
+            <div class="navbar-content">
+                <div class="logo">Ministério de Louvor</div>
                 <a href="#" class="theme-toggle" onclick="toggleTheme()">
                     <i class="fas fa-moon"></i>
                 </a>
-                <a href="{{ url_for('logout') }}" class="logout-icon"><i class="fas fa-sign-out-alt"></i></a>
             </div>
         </div>
     </header>
 
-    <nav class="sidebar">
-        <ul>
-            <li><a href="{{ url_for('index') }}"><i class="fas fa-home"></i> Início</a></li>
-            <li><a href="{{ url_for('visualizar_escalas') }}"><i class="fas fa-calendar"></i> Visualizar Escalas</a></li>
-            <li><a href="{{ url_for('historico_escalas') }}"><i class="fas fa-history"></i> Histórico</a></li>
-            {% if is_admin %}
-            <li><a href="{{ url_for('criar_escala') }}"><i class="fas fa-plus-circle"></i> Criar Escala</a></li>
-            <li><a href="{{ url_for('cadastrar_membro') }}"><i class="fas fa-user-plus"></i> Cadastrar Membro</a></li>
-            <li><a href="{{ url_for('lista_membros') }}"><i class="fas fa-users"></i> Lista de Membros</a></li>
-            <li><a href="{{ url_for('cadastrar_aviso') }}"><i class="fas fa-bullhorn"></i> Cadastrar Aviso</a></li>
-            <li><a href="{{ url_for('gerenciar_avisos') }}"><i class="fas fa-edit"></i> Gerenciar Avisos</a></li>
-            <li><a href="{{ url_for('comunicar_equipe') }}"><i class="fas fa-bullhorn"></i> Comunicar</a></li>
-            <li><a href="{{ url_for('enviar_notificacoes') }}"><i class="fas fa-bell"></i> Notificações</a></li>
-            <li><a href="{{ url_for('relatorios') }}"><i class="fas fa-chart-bar"></i> Relatórios</a></li>
-            {% endif %}
-            <li><a href="{{ url_for('perfil') }}"><i class="fas fa-user"></i> Perfil</a></li>
-            <li><a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Sair</a></li>
-        </ul>
-    </nav>
-
     <main>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="flash-messages">
-                    {% for category, message in messages %}
-                        <div class="flash-message {{ category }}">
-                            {% if category == 'success' %}
-                                <i class="fas fa-check-circle"></i>
-                            {% elif category == 'error' %}
-                                <i class="fas fa-times-circle"></i>
-                            {% endif %}
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
-
-        <div class="form-container">
+        <div class="dashboard-container">
             <section class="hero">
-                <h1>Bem-vindo, {{ name }}!</h1>
+                <h2>Bem-vindo, {{ name }}!</h2>
                 <button onclick="requestNotificationPermission()" class="btn">Ativar Notificações</button>
             </section>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-messages">
+                        {% for category, message in messages %}
+                            <div class="flash-message {{ category }}">
+                                {% if category == 'success' %}
+                                    <i class="fas fa-check-circle"></i>
+                                {% elif category == 'error' %}
+                                    <i class="fas fa-times-circle"></i>
+                                {% endif %}
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
 
             {% if notices %}
                 <section class="notices-section">
@@ -504,7 +407,7 @@
                 <a href="{{ url_for('gerenciar_repertorio_global') }}" class="feature-link">
                     <div class="feature">
                         <i class="fas fa-music"></i>
-                        <h3>Gerenciar Repertório</h3>
+                        <h3>Repertório</h3>
                     </div>
                 </a>
                 <a href="{{ url_for('enviar_notificacoes') }}" class="feature-link">
@@ -567,29 +470,24 @@
         </div>
     </main>
 
-    <nav class="bottom-nav">
-        <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">
-            <i class="fas fa-home"></i>
-            <span>Início</span>
-        </a>
-        <a href="{{ url_for('visualizar_escalas') }}" class="{% if request.endpoint == 'visualizar_escalas' %}active{% endif %}">
-            <i class="fas fa-calendar"></i>
-            <span>Escalas</span>
-        </a>
-        <a href="{{ url_for('historico_escalas') }}" class="{% if request.endpoint == 'historico_escalas' %}active{% endif %}">
-            <i class="fas fa-history"></i>
-            <span>Histórico</span>
-        </a>
-        <a href="{{ url_for('perfil') }}" class="{% if request.endpoint == 'perfil' %}active{% endif %}">
-            <i class="fas fa-user"></i>
-            <span>Perfil</span>
-        </a>
-    </nav>
-
     <script>
-        function toggleSidebar() {
-            const sidebar = document.querySelector('.sidebar');
-            sidebar.classList.toggle('open');
+        const firebaseConfig = {
+            apiKey: "AIzaSyCEL3aK4qVP6XTWjJqRs307-9TDxxr0ERs",
+            authDomain: "ministerio-de-louvor-62fcf.firebaseapp.com",
+            projectId: "ministerio-de-louvor-62fcf",
+            storageBucket: "ministerio-de-louvor-62fcf.firebasestorage.app",
+            messagingSenderId: "1029007412822",
+            appId: "1:1029007412822:web:0001439d6dcc9d632bf5f7",
+            measurementId: "G-0ML9TJDJGX"
+        };
+        firebase.initializeApp(firebaseConfig);
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js?v=3')
+                    .then(reg => console.log('Service Worker registrado', reg))
+                    .catch(err => console.log('Erro ao registrar Service Worker', err));
+            });
         }
 
         function toggleTheme() {
@@ -649,7 +547,7 @@
                 const notificationContainer = document.createElement('div');
                 notificationContainer.className = 'notification-container';
                 notificationContainer.style.position = 'fixed';
-                notificationContainer.style.top = '70px';
+                notificationContainer.style.top = 'calc(70px + env(safe-area-inset-top))';
                 notificationContainer.style.right = '20px';
                 notificationContainer.style.zIndex = '2000';
                 notificationContainer.style.width = '300px';
