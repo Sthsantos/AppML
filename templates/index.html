@@ -22,9 +22,15 @@
             --text-color: #212121;
             --navbar-bg: #D32F2F;
             --navbar-text: white;
+            --sidebar-bg: #212121;
+            --sidebar-text: white;
             --card-bg: white;
             --shadow: rgba(0, 0, 0, 0.1);
             --hover-bg: #D32F2F;
+            --scale-bg: #fafafa;
+            --scale-border: #eee;
+            --muted-text: #666;
+            --bottom-nav-bg: #212121;
             --notification-bg: #fff3e0;
             --notification-border: #ff9800;
             --notice-bg: #e8f5e9;
@@ -32,21 +38,23 @@
             --btn-bg: #D32F2F;
             --btn-hover: #B71C1C;
             --input-border: #ccc;
-            --sidebar-bg: #212121;
-            --sidebar-text: white;
-            --bottom-nav-bg: #212121;
-            --scale-bg: #fafafa;
-            --scale-border: #eee;
-            --muted-text: #666;
+            --btn-back-bg: #212121;
+            --btn-back-hover: #424242;
         }
         body.dark-theme {
             --bg-color: #121212;
             --text-color: #E0E0E0;
             --navbar-bg: #D32F2F;
             --navbar-text: #E0E0E0;
+            --sidebar-bg: #1E1E1E;
+            --sidebar-text: #E0E0E0;
             --card-bg: #1E1E1E;
             --shadow: rgba(255, 255, 255, 0.1);
             --hover-bg: #B71C1C;
+            --scale-bg: #2E2E2E;
+            --scale-border: #444;
+            --muted-text: #999;
+            --bottom-nav-bg: #1E1E1E;
             --notification-bg: #ff9800;
             --notification-border: #ffb300;
             --notice-bg: #2e7d32;
@@ -54,12 +62,8 @@
             --btn-bg: #D32F2F;
             --btn-hover: #B71C1C;
             --input-border: #666;
-            --sidebar-bg: #1E1E1E;
-            --sidebar-text: #E0E0E0;
-            --bottom-nav-bg: #1E1E1E;
-            --scale-bg: #2E2E2E;
-            --scale-border: #444;
-            --muted-text: #999;
+            --btn-back-bg: #1E1E1E;
+            --btn-back-hover: #333;
         }
         * {
             margin: 0;
@@ -84,7 +88,7 @@
         }
         .navbar {
             display: flex;
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
             padding: 10px 20px;
             background-color: var(--navbar-bg);
@@ -100,13 +104,6 @@
             padding-right: env(safe-area-inset-right);
             min-height: 60px;
         }
-        .navbar-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
-            max-width: 1200px;
-        }
         .sidebar-toggle {
             background: none;
             border: none;
@@ -121,11 +118,8 @@
         .logo {
             font-size: 1.5em;
             font-weight: 700;
-            text-align: center;
             flex-grow: 1;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            text-align: center;
         }
         .user-info {
             display: flex;
@@ -135,14 +129,6 @@
         .user-info span {
             font-size: 1em;
             font-weight: 500;
-        }
-        .user-profile-pic {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 1px solid var(--navbar-text);
-            transition: border-color 0.3s;
         }
         .logout-icon, .theme-toggle {
             color: var(--navbar-text);
@@ -213,10 +199,10 @@
             transition: background-color 0.3s;
         }
         h2 {
-            color: var(--navbar-bg);
             font-size: 1.6em;
+            color: var(--navbar-bg);
+            margin-bottom: 15px;
             font-weight: 700;
-            margin-bottom: 20px;
             text-align: center;
         }
         .btn {
@@ -402,35 +388,16 @@
         .bottom-nav a span {
             display: block;
         }
-        @media (max-width: 480px) {
-            .navbar { 
-                padding: 0.5rem 1rem; 
-                padding-top: calc(0.5rem + env(safe-area-inset-top)); 
-            }
-            .logo { 
-                font-size: 1.2em; 
-            }
-            .user-profile-pic { 
-                width: 25px; 
-                height: 25px; 
-            }
-            main { 
-                padding: 15px; 
-                padding-top: calc(60px + env(safe-area-inset-top)); 
-            }
-            .dashboard-container { 
-                padding: 20px; 
-            }
-            h2 { 
-                font-size: 1.4em; 
-            }
-            .btn { 
-                font-size: 0.9em; 
-            }
-            .flash-message { 
-                padding: 10px; 
-                font-size: 0.9em; 
-            }
+        @media (max-width: 768px) {
+            .navbar { padding: 10px 15px; }
+            .logo { font-size: 1.2em; }
+            .user-info span { font-size: 0.9em; }
+            .sidebar { top: 50px; height: calc(100% - 50px); width: 200px; }
+            main { padding: 15px; padding-top: calc(60px + env(safe-area-inset-top)); }
+            .dashboard-container { padding: 20px; }
+            h2 { font-size: 1.4em; }
+            .btn { font-size: 0.9em; }
+            .flash-message { padding: 10px; font-size: 0.9em; }
             .features {
                 grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
                 gap: 10px;
@@ -447,40 +414,29 @@
             .feature h3 {
                 font-size: 0.8em;
             }
-            .sidebar { 
-                top: 50px; 
-                height: calc(100% - 50px); 
-                width: 200px; 
-            }
         }
     </style>
 </head>
 <body>
     <header>
         <div class="navbar">
-            <div class="navbar-content">
-                <button class="sidebar-toggle" onclick="toggleSidebar()">
-                    <i class="fas fa-bars"></i>
-                </button>
-                <div class="logo">Ministério de Louvor</div>
-                <div class="user-info">
-                    {% if user_data['profile_pic'] %}
-                        <img src="{{ url_for('static', filename='uploads/' + user_data['profile_pic']) }}" alt="Foto de Perfil" class="user-profile-pic">
-                    {% else %}
-                        <img src="{{ url_for('static', filename='default-profile-pic.jpg') }}" alt="Foto de Perfil Padrão" class="user-profile-pic">
-                    {% endif %}
-                    <span>{{ name }}</span>
-                    <a href="#" class="theme-toggle" onclick="toggleTheme()">
-                        <i class="fas fa-moon"></i>
-                    </a>
-                    <a href="{{ url_for('logout') }}" class="logout-icon"><i class="fas fa-sign-out-alt"></i></a>
-                </div>
+            <button class="sidebar-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="logo">Ministério de Louvor</div>
+            <div class="user-info">
+                <span>{{ name }}</span>
+                <a href="#" class="theme-toggle" onclick="toggleTheme()">
+                    <i class="fas fa-moon"></i>
+                </a>
+                <a href="{{ url_for('logout') }}" class="logout-icon"><i class="fas fa-sign-out-alt"></i></a>
             </div>
         </div>
     </header>
 
     <nav class="sidebar">
         <ul>
+            <li><a href="{{ url_for('index') }}"><i class="fas fa-home"></i> Início</a></li>
             <li><a href="{{ url_for('visualizar_escalas') }}"><i class="fas fa-calendar"></i> Visualizar Escalas</a></li>
             <li><a href="{{ url_for('historico_escalas') }}"><i class="fas fa-history"></i> Histórico</a></li>
             {% if is_admin %}
@@ -489,12 +445,10 @@
             <li><a href="{{ url_for('lista_membros') }}"><i class="fas fa-users"></i> Lista de Membros</a></li>
             <li><a href="{{ url_for('cadastrar_aviso') }}"><i class="fas fa-bullhorn"></i> Cadastrar Aviso</a></li>
             <li><a href="{{ url_for('gerenciar_avisos') }}"><i class="fas fa-edit"></i> Gerenciar Avisos</a></li>
-            <li><a href="{{ url_for('gerenciar_repertorio_global') }}"><i class="fas fa-music"></i> Gerenciar Repertório</a></li>
             <li><a href="{{ url_for('comunicar_equipe') }}"><i class="fas fa-bullhorn"></i> Comunicar</a></li>
             <li><a href="{{ url_for('enviar_notificacoes') }}"><i class="fas fa-bell"></i> Notificações</a></li>
             <li><a href="{{ url_for('relatorios') }}"><i class="fas fa-chart-bar"></i> Relatórios</a></li>
             {% endif %}
-            <li><a href="{{ url_for('repertorio') }}"><i class="fas fa-list"></i> Repertório</a></li>
             <li><a href="{{ url_for('perfil') }}"><i class="fas fa-user"></i> Perfil</a></li>
             <li><a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Sair</a></li>
         </ul>
@@ -632,13 +586,13 @@
             <i class="fas fa-calendar"></i>
             <span>Escalas</span>
         </a>
+        <a href="{{ url_for('lista_membros') }}" class="{% if request.endpoint == 'lista_membros' or request.endpoint == 'editar_membro' %}active{% endif %}">
+            <i class="fas fa-users"></i>
+            <span>Membros</span>
+        </a>
         <a href="{{ url_for('historico_escalas') }}" class="{% if request.endpoint == 'historico_escalas' %}active{% endif %}">
             <i class="fas fa-history"></i>
             <span>Histórico</span>
-        </a>
-        <a href="{{ url_for('perfil') }}" class="{% if request.endpoint == 'perfil' %}active{% endif %}">
-            <i class="fas fa-user"></i>
-            <span>Perfil</span>
         </a>
     </nav>
 
