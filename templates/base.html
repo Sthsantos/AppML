@@ -7,18 +7,35 @@
     
     <!-- PWA Meta Tags -->
     <meta name="description" content="Sistema completo de gestão para Ministério de Louvor - Escalas, Cultos, Repertório e Membros">
-    <meta name="theme-color" content="#667eea">
+    <meta name="theme-color" content="#667eea" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#1a1a2e" media="(prefers-color-scheme: dark)">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Min. Louvor">
     <meta name="mobile-web-app-capable" content="yes">
     
+    <!-- iOS Meta Tags -->
+    <meta name="apple-itunes-app" content="app-id=none">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon.svg') }}">
+    <link rel="apple-touch-icon" sizes="152x152" href="{{ url_for('static', filename='icon.svg') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='icon.svg') }}">
+    <link rel="apple-touch-icon" sizes="167x167" href="{{ url_for('static', filename='icon.svg') }}">
+    
+    <!-- Android Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Min. Louvor">
+    
+    <!-- Microsoft Meta Tags -->
+    <meta name="msapplication-TileColor" content="#667eea">
+    <meta name="msapplication-TileImage" content="{{ url_for('static', filename='icon.svg') }}">
+    <meta name="msapplication-tap-highlight" content="no">
+    
     <!-- PWA Manifest -->
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
     
     <!-- Favicons -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23667eea'/%3E%3Cpath d='M50 20c-4.418 0-8 3.582-8 8v32c0 4.418 3.582 8 8 8s8-3.582 8-8V28c0-4.418-3.582-8-8-8zm0 56c-4.418 0-8-3.582-8-8s3.582-8 8-8 8 3.582 8 8-3.582 8-8 8z' fill='%23fff'/%3E%3C/svg%3E">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' fill='%23667eea' rx='40'/%3E%3Cpath d='M90 50c-8.837 0-16 7.163-16 16v48c0 8.837 7.163 16 16 16s16-7.163 16-16V66c0-8.837-7.163-16-16-16z' fill='%23fff'/%3E%3C/svg%3E">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='icon.svg') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='icon.svg') }}">
     
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -162,23 +179,30 @@
             <i class="fas fa-home"></i>
             <span>Início</span>
         </a>
-        <a href="{{ url_for('membros') }}" class="bottom-nav-item {% if request.endpoint == 'membros' %}active{% endif %}">
-            <i class="fas fa-users"></i>
-            <span>Membros</span>
-        </a>
-        <a href="{{ url_for('escalas') }}" class="bottom-nav-item {% if request.endpoint == 'escalas' %}active{% endif %}">
-            <i class="fas fa-clipboard-list"></i>
-            <span>Escalas</span>
-        </a>
-        <a href="{{ url_for('repertorio') }}" class="bottom-nav-item {% if request.endpoint == 'repertorio' %}active{% endif %}">
-            <i class="fas fa-guitar"></i>
-            <span>Músicas</span>
-        </a>
         <button class="bottom-nav-item" onclick="App.sidebar.toggle()">
             <i class="fas fa-bars"></i>
             <span>Menu</span>
         </button>
     </nav>
+    
+    <!-- PWA Install Banner -->
+    <div id="pwaInstallBanner" class="pwa-install-banner" style="display: none;">
+        <div class="pwa-banner-content">
+            <div class="pwa-banner-icon">
+                <i class="fas fa-mobile-alt"></i>
+            </div>
+            <div class="pwa-banner-text">
+                <strong>Instalar App</strong>
+                <span>Adicione à tela inicial para acesso rápido</span>
+            </div>
+            <button onclick="App.pwa.install()" class="pwa-install-btn">
+                <i class="fas fa-download"></i> Instalar
+            </button>
+            <button onclick="App.pwa.dismissBanner()" class="pwa-close-btn">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
 
     <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
@@ -588,13 +612,15 @@
         
         // Install PWA (from menu button)
         async function installPWAFromMenu() {
-            if (window.App && window.App.sidebar && window.App.sidebar.close) {
-                window.App.sidebar.close();
+            if (window.App && window.App.pwa) {
+                if (window.App.sidebar && window.App.sidebar.close) {
+                    window.App.sidebar.close();
+                }
+                
+                setTimeout(() => {
+                    window.App.pwa.install();
+                }, 300);
             }
-            
-            setTimeout(() => {
-                installPWA();
-            }, 300);
         }
         
         // Close PWA Prompt

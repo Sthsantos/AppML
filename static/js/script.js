@@ -667,6 +667,117 @@ async function loadDashboardStats() {
                 </div>
             </div>
         `;
+    },
+
+    // PWA - Progressive Web App
+    pwa: {
+        deferredPrompt: null,
+        banner: null,
+
+        init() {
+            // Registrar Service Worker
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('✅ Service Worker registrado:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.error('❌ Erro ao registrar Service Worker:', error);
+                    });
+            }
+
+            // Capturar evento de instalação
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                this.deferredPrompt = e;
+                this.showBanner();
+            });
+
+            // Verificar se já está instalado
+            window.addEventListener('appinstalled', () => {
+                console.log('✅ PWA instalado!');
+                this.hideBanner();
+                App.toast.success('App instalado com sucesso! 🎉');
+            });
+
+            // Detectar se está rodando como PWA
+            if (window.matchMedia('(display-mode: standalone)').matches || 
+                window.navigator.standalone === true) {
+                console.log('✅ App rodando como PWA');
+                this.hideBanner();
+            }
+        },
+
+        showBanner() {
+            // Mostrar banner apenas se não foi dispensado recentemente
+            const dismissed = localStorage.getItem('pwa-banner-dismissed');
+            const dismissedTime = dismissed ? parseInt(dismissed) : 0;
+            const daysSinceDismissed = (Date.now() - dismissedTime) / (1000 * 60 * 60 * 24);
+
+            if (daysSinceDismissed > 7 || !dismissed) {
+                this.banner = document.getElementById('pwaInstallBanner');
+                if (this.banner) {
+                    setTimeout(() => {
+                        this.banner.style.display = 'block';
+                        setTimeout(() => this.banner.classList.add('show'), 100);
+                    }, 2000); // Mostrar após 2 segundos
+                }
+
+                // Também mostrar botão no menu
+                const menuBtn = document.getElementById('pwaInstallButton');
+                if (menuBtn) {
+                    menuBtn.style.display = 'block';
+                }
+            }
+        },
+
+        hideBanner() {
+            if (this.banner) {
+                this.banner.classList.remove('show');
+                setTimeout(() => {
+                    this.banner.style.display = 'none';
+                }, 300);
+            }
+
+            const menuBtn = document.getElementById('pwaInstallButton');
+            if (menuBtn) {
+                menuBtn.style.display = 'none';
+            }
+        },
+
+        dismissBanner() {
+            localStorage.setItem('pwa-banner-dismissed', Date.now().toString());
+            this.hideBanner();
+        },
+
+        async install() {
+            if (!this.deferredPrompt) {
+                // Já instalado ou não disponível
+                if (window.matchMedia('(display-mode: standalone)').matches) {
+                    App.toast.info('App já está instalado! 📱');
+                } else {
+                    App.toast.info('Instalação não disponível neste navegador');
+                }
+                return;
+            }
+
+            // Mostrar prompt de instalação
+            this.deferredPrompt.prompt();
+
+            // Aguardar escolha do usuário
+            const { outcome } = await this.deferredPrompt.userChoice;
+
+            if (outcome === 'accepted') {
+                console.log('✅ Usuário aceitou a instalação');
+                App.toast.success('Instalando aplicativo... 📲');
+            } else {
+                console.log('❌ Usuário recusou a instalação');
+                this.dismissBanner();
+            }
+
+            // Limpar prompt
+            this.deferredPrompt = null;
+        }
     }
 }
 
@@ -676,6 +787,9 @@ async function loadDashboardStats() {
 document.addEventListener('DOMContentLoaded', () => {
     // Inicializar tema (PRIMEIRO)
     App.theme.init();
+    
+    // Inicializar PWA
+    App.pwa.init();
     
     // Configurar sidebar toggle
     const sidebarToggle = document.querySelector('.sidebar-toggle');

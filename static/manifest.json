@@ -5,27 +5,42 @@
     "start_url": "/",
     "scope": "/",
     "display": "standalone",
-    "orientation": "portrait-primary",
+    "orientation": "portrait",
     "background_color": "#1a1a2e",
     "theme_color": "#667eea",
     "categories": ["productivity", "music", "utilities"],
     "lang": "pt-BR",
     "dir": "ltr",
+    "prefer_related_applications": false,
     "icons": [
         {
-            "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%23667eea'/%3E%3Cpath d='M96 40c-8.837 0-16 7.163-16 16v64c0 8.837 7.163 16 16 16s16-7.163 16-16V56c0-8.837-7.163-16-16-16zm0 112c-8.837 0-16-7.163-16-16s7.163-16 16-16 16 7.163 16 16-7.163 16-16 16z' fill='%23fff'/%3E%3C/svg%3E",
-            "sizes": "192x192",
+            "src": "/static/icon.svg",
+            "sizes": "any",
             "type": "image/svg+xml",
             "purpose": "any"
         },
         {
-            "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%23667eea'/%3E%3Cpath d='M256 107c-23.559 0-42.667 19.108-42.667 42.667v170.666c0 23.559 19.108 42.667 42.667 42.667s42.667-19.108 42.667-42.667V149.667c0-23.559-19.108-42.667-42.667-42.667zm0 298.667c-23.559 0-42.667-19.108-42.667-42.667s19.108-42.667 42.667-42.667 42.667 19.108 42.667 42.667-19.108 42.667-42.667 42.667z' fill='%23fff'/%3E%3C/svg%3E",
+            "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='192'height='192' viewBox='0 0 192 192'%3E%3Cdefs%3E%3ClinearGradient id='a' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23667eea'/%3E%3Cstop offset='100%25' style='stop-color:%23764ba2'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='192' height='192' fill='url(%23a)' rx='40'/%3E%3Cg fill='%23fff'%3E%3Crect x='76' y='40' width='16' height='88' rx='8'/%3E%3Cellipse cx='84' cy='140' rx='24' ry='16'/%3E%3Ccircle cx='84' cy='40' r='18'/%3E%3C/g%3E%3C/svg%3E",
+            "sizes": "192x192",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='b' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23667eea'/%3E%3Cstop offset='100%25' style='stop-color:%23764ba2'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='512' height='512' fill='url(%23b)' rx='100'/%3E%3Cg fill='%23fff'%3E%3Crect x='236' y='116' width='40' height='220' rx='20'/%3E%3Cellipse cx='256' cy='356' rx='60' ry='40'/%3E%3Ccircle cx='256' cy='116' r='45'/%3E%3C/g%3E%3C/svg%3E",
             "sizes": "512x512",
             "type": "image/svg+xml",
             "purpose": "any maskable"
         }
     ],
-    "screenshots": [],
+    "screenshots": [
+        {
+            "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='c' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23667eea'/%3E%3Cstop offset='100%25' style='stop-color:%23764ba2'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='512' height='512' fill='url(%23c)' rx='50'/%3E%3Ctext x='256' y='180' text-anchor='middle' fill='white' font-size='48' font-weight='bold'%3EMinistério%3C/text%3E%3Ctext x='256' y='240' text-anchor='middle' fill='white' font-size='48' font-weight='bold'%3Ede Louvor%3C/text%3E%3Cg fill='%23fff' opacity='0.9'%3E%3Crect x='186' y='290' width='140' height='40' rx='20'/%3E%3Ctext x='256' y='318' text-anchor='middle' fill='%23667eea' font-size='20' font-weight='600'%3EEscalas%3C/text%3E%3Crect x='186' y='345' width='140' height='40' rx='20'/%3E%3Ctext x='256' y='373' text-anchor='middle' fill='%23667eea' font-size='20' font-weight='600'%3ERepertório%3C/text%3E%3C/g%3E%3C/svg%3E",
+            "sizes": "512x512",
+            "type": "image/svg+xml",
+            "form_factor": "narrow",
+            "label": "Tela inicial do aplicativo"
+        }
+    ],
     "shortcuts": [
         {
             "name": "Escalas",
@@ -34,8 +49,8 @@
             "url": "/escalas",
             "icons": [
                 {
-                    "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' fill='%23667eea'/%3E%3Cpath d='M24 20h48v8H24zm0 16h48v8H24zm0 16h48v8H24zm0 16h48v8H24z' fill='%23fff'/%3E%3C/svg%3E",
-                    "sizes": "96x96",
+                    "src": "/static/icon.svg",
+                    "sizes": "any",
                     "type": "image/svg+xml"
                 }
             ]
@@ -47,7 +62,14 @@
             "url": "/repertorio",
             "icons": [
                 {
-                    "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' fill='%23667eea'/%3E%3Cpath d='M48 20c-4.418 0-8 3.582-8 8v32c0 4.418 3.582 8 8 8s8-3.582 8-8V28c0-4.418-3.582-8-8-8zm0 56c-4.418 0-8-3.582-8-8s3.582-8 8-8 8 3.582 8 8-3.582 8-8 8z' fill='%23fff'/%3E%3C/svg%3E",
+                    "src": "/static/icon.svg",
+                    "sizes": "any",
+                    "type": "image/svg+xml"
+                }
+            ]
+        }
+    ]
+}
                     "sizes": "96x96",
                     "type": "image/svg+xml"
                 }

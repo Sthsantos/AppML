@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" version="1.1" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="iconGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#f0f0f0;stop-opacity:1" />
+        </linearGradient>
+        <filter id="shadow">
+            <feDropShadow dx="0" dy="4" stdDeviation="8" flood-opacity="0.3"/>
+        </filter>
+    </defs>
+    
+    <!-- Background -->
+    <rect width="512" height="512" fill="url(#bgGradient)" rx="100"/>
+    
+    <!-- Music Note Icon -->
+    <g transform="translate(256, 256)" filter="url(#shadow)">
+        <!-- Main stem -->
+        <rect x="-20" y="-140" width="40" height="220" fill="url(#iconGradient)" rx="20"/>
+        
+        <!-- Musical notes -->
+        <ellipse cx="0" cy="100" rx="60" ry="40" fill="url(#iconGradient)"/>
+        <ellipse cx="0" cy="90" rx="55" ry="35" fill="url(#bgGradient)"/>
+        
+        <!-- Top circle -->
+        <circle cx="0" cy="-140" r="45" fill="url(#iconGradient)"/>
+        
+        <!-- Accent lines -->
+        <path d="M -15,-80 Q 40,-60 40,-20" stroke="url(#iconGradient)" stroke-width="12" fill="none" stroke-linecap="round" opacity="0.6"/>
+        <path d="M 15,-100 Q 70,-80 70,-40" stroke="url(#iconGradient)" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.4"/>
+    </g>
+</svg>
