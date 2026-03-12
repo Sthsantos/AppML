@@ -78,15 +78,13 @@
                     </a>
                 {% endif %}
                 
-                <button class="menu-toggle" onclick="App.sidebar.toggle()">
-                    <i class="fas fa-bars"></i>
-                </button>
+                <!-- Menu toggle removido -->
             </div>
         </div>
     </nav>
 
     <!-- Sidebar -->
-    <aside class="sidebar" id="sidebar">
+    <aside class="sidebar" id="sidebar" style="display: none;">
         <div class="sidebar-header">
             <div class="sidebar-logo">
                 <i class="fas fa-music"></i>
@@ -164,7 +162,7 @@
     </aside>
     
     <!-- Sidebar Overlay -->
-    <div class="sidebar-overlay" id="sidebarOverlay" onclick="App.sidebar.close()"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="App.sidebar.close()" style="display: none;"></div>
 
     <!-- Main Content -->
     <main class="main-content">
@@ -179,10 +177,6 @@
             <i class="fas fa-home"></i>
             <span>Início</span>
         </a>
-        <button class="bottom-nav-item" onclick="App.sidebar.toggle()">
-            <i class="fas fa-bars"></i>
-            <span>Menu</span>
-        </button>
     </nav>
     
     <!-- PWA Install Banner -->

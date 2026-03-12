@@ -1237,9 +1237,17 @@ select.form-control {
 @media (max-width: 768px) {
     .bottom-nav {
         display: flex;
+        justify-content: center;
     }
     
     .navbar-menu {
+        display: none !important;
+    }
+    
+    /* Esconder sidebar e menu toggle em mobile */
+    .sidebar,
+    .sidebar-overlay,
+    .menu-toggle {
         display: none !important;
     }
 }
@@ -1256,6 +1264,8 @@ select.form-control {
     padding: 0.5rem;
     transition: var(--transition-fast);
     position: relative;
+    max-width: 200px;
+    margin: 0 auto;
 }
 
 .bottom-nav-item i {
