@@ -93,7 +93,7 @@ const App = {
             }
         },
 
-        show(message, type = 'info') {
+        show(message, type = 'info', duration = 4000) {
             this.init();
             
             const toast = document.createElement('div');
@@ -105,31 +105,50 @@ const App = {
                 warning: 'fa-exclamation-triangle',
                 info: 'fa-info-circle'
             };
+
+            const titles = {
+                success: 'Sucesso!',
+                error: 'Erro!',
+                warning: 'Atenção!',
+                info: 'Informação'
+            };
             
             toast.innerHTML = `
-                <i class="fas ${icons[type]}"></i>
-                <span class="toast-message">${message}</span>
-                <button class="toast-close" onclick="this.parentElement.remove()">
+                <div class="toast-icon-wrapper">
+                    <i class="fas ${icons[type]}"></i>
+                </div>
+                <div class="toast-content">
+                    <div class="toast-title">${titles[type]}</div>
+                    <div class="toast-message">${message}</div>
+                </div>
+                <button class="toast-close" aria-label="Fechar">
                     <i class="fas fa-times"></i>
                 </button>
+                <div class="toast-progress" style="animation-duration: ${duration}ms;"></div>
             `;
+
+            const closeBtn = toast.querySelector('.toast-close');
+            closeBtn.addEventListener('click', () => this.remove(toast));
             
             this.container.appendChild(toast);
             
-            // Animação de entrada
-            setTimeout(() => toast.classList.add('show'), 10);
-            
             // Auto remoção
-            setTimeout(() => {
-                toast.classList.remove('show');
-                setTimeout(() => toast.remove(), App.config.animationDuration);
-            }, App.config.toastDuration);
+            setTimeout(() => this.remove(toast), duration);
         },
 
-        success(message) { this.show(message, 'success'); },
-        error(message) { this.show(message, 'error'); },
-        warning(message) { this.show(message, 'warning'); },
-        info(message) { this.show(message, 'info'); }
+        remove(toast) {
+            toast.classList.add('removing');
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.remove();
+                }
+            }, 300);
+        },
+
+        success(message, duration) { this.show(message, 'success', duration); },
+        error(message, duration) { this.show(message, 'error', duration); },
+        warning(message, duration) { this.show(message, 'warning', duration); },
+        info(message, duration) { this.show(message, 'info', duration); }
     },
 
     // Sistema de Loading
@@ -838,27 +857,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentPage = window.location.pathname;
     
     if (currentPage.includes('index') || currentPage === '/') {
-        loadUserData();
-        loadAnnouncements();
-        loadScales();
-        loadCultCalendar();
+        if (typeof loadUserData === 'function') loadUserData();
+        if (typeof loadAnnouncements === 'function') loadAnnouncements();
+        if (typeof loadScales === 'function') loadScales();
+        if (typeof loadCultCalendar === 'function') loadCultCalendar();
     }
     
-    if (currentPage.includes('membros')) {
-        loadMembers();
-    }
-    
-    if (currentPage.includes('cultos')) {
-        loadCultos();
-    }
-    
-    if (currentPage.includes('repertorio')) {
-        loadRepertorio();
-    }
-    
-    if (currentPage.includes('dashboard')) {
-        loadDashboardStats();
-    }
+    // Nota: loadCultos, loadMembers, loadRepertorio, etc são definidos
+    // nos templates específicos, não aqui. O DOMContentLoaded de cada
+    // página cuida de chamar essas funções quando necessário.
 
     // Marcar link ativo no menu
     const navLinks = document.querySelectorAll('.nav-link, .nav-item');

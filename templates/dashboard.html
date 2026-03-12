@@ -886,11 +886,12 @@ async function loadIndisponibilidades() {
         
         // Mapear instrumento para ícone
         const instrumentIcons = {
+            'Vocalista': 'fa-microphone',
             'Guitarrista': 'fa-guitar',
             'Violonista': 'fa-guitar',
             'Baterista': 'fa-drum',
             'Tecladista': 'fa-keyboard',
-            'Baixista': 'fa-guitar',
+            'Baixista': 'fa-guitar'
         };
         
         container.innerHTML = recentIndisponibilidades.map(ind => {

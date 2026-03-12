@@ -294,10 +294,33 @@ function renderMembers(members) {
         return;
     }
     
+    // Mapear instrumento para ícone
+    const instrumentIcons = {
+        'Vocalista': 'fa-microphone',
+        'Guitarrista': 'fa-guitar',
+        'Violonista': 'fa-guitar',
+        'Baterista': 'fa-drum',
+        'Tecladista': 'fa-keyboard',
+        'Baixista': 'fa-guitar'
+    };
+    
+    // Cores por instrumento
+    const instrumentColors = {
+        'Vocalista': 'linear-gradient(135deg, #ec4899, #db2777)',
+        'Guitarrista': 'linear-gradient(135deg, #f59e0b, #d97706)',
+        'Violonista': 'linear-gradient(135deg, #84cc16, #65a30d)',
+        'Baterista': 'linear-gradient(135deg, #ef4444, #dc2626)',
+        'Tecladista': 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+        'Baixista': 'linear-gradient(135deg, #06b6d4, #0891b2)'
+    };
+    
     grid.innerHTML = members.map(member => {
         const statusBadge = member.suspended 
             ? '<span class="badge" style="background: var(--accent-danger); color: white;">Suspenso</span>'
             : '<span class="badge" style="background: var(--accent-success); color: white;">Ativo</span>';
+        
+        const icon = instrumentIcons[member.instrument] || 'fa-user';
+        const gradient = instrumentColors[member.instrument] || 'linear-gradient(135deg, #6366f1, #8b5cf6)';
         
         const adminButtons = isAdmin ? `
             <div style="display: flex; gap: 0.5rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
@@ -319,8 +342,8 @@ function renderMembers(members) {
             <div class="card" style="${member.suspended ? 'opacity: 0.6;' : ''}">
                 <div class="card-body">
                     <div style="display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1rem;">
-                        <div style="width: 56px; height: 56px; border-radius: var(--border-radius); background: linear-gradient(135deg, #6366f1, #8b5cf6); display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 1.5rem; font-weight: 700; flex-shrink: 0; box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);">
-                            ${member.name.charAt(0).toUpperCase()}
+                        <div style="width: 56px; height: 56px; border-radius: var(--border-radius); background: ${gradient}; display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 1.5rem; flex-shrink: 0; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);">
+                            <i class="fas ${icon}"></i>
                         </div>
                         <div style="flex: 1; min-width: 0;">
                             <h3 style="font-family: 'Poppins', sans-serif; font-size: 1.1rem; font-weight: 600; color: var(--text-color); margin: 0 0 0.5rem 0;">
@@ -539,16 +562,67 @@ async function confirmDeleteAction() {
 }
 
 // Toast Notification
-function showToast(type, message) {
-    // Usar o sistema de toast do App se disponível
+function showToast(message, type = 'info', duration = 4000) {
+    // Se o tipo foi passado primeiro (compatibilidade reversa)
+    if (['success', 'error', 'warning', 'info'].includes(message)) {
+        [type, message] = [message, type];
+    }
+
     if (typeof App !== 'undefined' && App.toast) {
-        App.toast[type](message);
-    } else if (typeof GlobalModals !== 'undefined') {
-        // Usar GlobalModals se disponível
-        GlobalModals.toast(message, type);
+        App.toast.show(message, type, duration);
     } else {
-        // Fallback simples
-        alert(message);
+        // Fallback moderno - criar toast standalone
+        let container = document.querySelector('.toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        
+        const icons = {
+            success: 'fa-check-circle',
+            error: 'fa-exclamation-circle',
+            warning: 'fa-exclamation-triangle',
+            info: 'fa-info-circle'
+        };
+
+        const titles = {
+            success: 'Sucesso!',
+            error: 'Erro!',
+            warning: 'Atenção!',
+            info: 'Informação'
+        };
+        
+        toast.innerHTML = `
+            <div class="toast-icon-wrapper">
+                <i class="fas ${icons[type]}"></i>
+            </div>
+            <div class="toast-content">
+                <div class="toast-title">${titles[type]}</div>
+                <div class="toast-message">${message}</div>
+            </div>
+            <button class="toast-close" aria-label="Fechar">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="toast-progress" style="animation-duration: ${duration}ms;"></div>
+        `;
+
+        const closeBtn = toast.querySelector('.toast-close');
+        closeBtn.addEventListener('click', () => {
+            toast.classList.add('removing');
+            setTimeout(() => toast.remove(), 300);
+        });
+        
+        container.appendChild(toast);
+        
+        // Auto remoção
+        setTimeout(() => {
+            toast.classList.add('removing');
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
     }
 }
 

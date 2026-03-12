@@ -2,6 +2,14 @@
 
 {% block title %}Repertório - Ministério de Louvor{% endblock %}
 
+{% block extra_css %}
+<style>
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="page-header">
     <div>
@@ -12,7 +20,7 @@
         <p class="page-subtitle">Biblioteca completa de músicas do ministério</p>
     </div>
     {% if current_user.is_authenticated and current_user.is_admin %}
-    <button class="btn btn-blue" onclick="App.modal.open('addSongModal')">
+    <button class="btn btn-blue" onclick="openModal('addSongModal')">
         <i class="fas fa-plus"></i>
         Adicionar Música
     </button>
@@ -69,7 +77,7 @@
     <div class="modal">
         <div class="modal-header">
             <h2 class="modal-title">Adicionar Nova Música</h2>
-            <button class="modal-close" onclick="App.modal.close('addSongModal')">
+            <button class="modal-close" onclick="closeModal('addSongModal')">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -140,7 +148,7 @@
             </div>
         </form>
         <div class="modal-footer">
-            <button class="btn btn-outline" onclick="App.modal.close('addSongModal')">Cancelar</button>
+            <button class="btn btn-outline" onclick="closeModal('addSongModal')">Cancelar</button>
             <button class="btn btn-blue" onclick="saveSong()">
                 <i class="fas fa-save"></i>
                 Salvar Música
@@ -155,6 +163,114 @@
 {% block extra_js %}
 <script>
 let allSongs = [];
+
+// Funções locais para modal (evita dependência do App)
+function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('active');
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }, 300);
+    }
+}
+
+// Funções para loading overlay
+let loadingOverlay = null;
+
+function showLoading(message = 'Carregando...') {
+    if (!loadingOverlay) {
+        loadingOverlay = document.createElement('div');
+        loadingOverlay.className = 'loading-overlay';
+        loadingOverlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9999;';
+        loadingOverlay.innerHTML = `
+            <div style="background: white; padding: 2rem; border-radius: 16px; text-align: center; min-width: 200px;">
+                <div class="loading-spinner" style="width: 48px; height: 48px; border: 4px solid #e5e7eb; border-top-color: #6366f1; border-radius: 50%; margin: 0 auto 1rem; animation: spin 0.8s linear infinite;"></div>
+                <p class="loading-message" style="color: #374151; font-weight: 500;">${message}</p>
+            </div>
+        `;
+        document.body.appendChild(loadingOverlay);
+    } else {
+        loadingOverlay.querySelector('.loading-message').textContent = message;
+        loadingOverlay.style.display = 'flex';
+    }
+}
+
+function hideLoading() {
+    if (loadingOverlay) {
+        loadingOverlay.style.display = 'none';
+    }
+}
+
+// Sistema de toasts moderno
+function showToast(message, type = 'info', duration = 4000) {
+    if (typeof App !== 'undefined' && App.toast) {
+        App.toast.show(message, type, duration);
+    } else {
+        // Fallback moderno - criar toast standalone
+        let container = document.querySelector('.toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        
+        const icons = {
+            success: 'fa-check-circle',
+            error: 'fa-exclamation-circle',
+            warning: 'fa-exclamation-triangle',
+            info: 'fa-info-circle'
+        };
+
+        const titles = {
+            success: 'Sucesso!',
+            error: 'Erro!',
+            warning: 'Atenção!',
+            info: 'Informação'
+        };
+        
+        toast.innerHTML = `
+            <div class="toast-icon-wrapper">
+                <i class="fas ${icons[type]}"></i>
+            </div>
+            <div class="toast-content">
+                <div class="toast-title">${titles[type]}</div>
+                <div class="toast-message">${message}</div>
+            </div>
+            <button class="toast-close" aria-label="Fechar">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="toast-progress" style="animation-duration: ${duration}ms;"></div>
+        `;
+
+        const closeBtn = toast.querySelector('.toast-close');
+        closeBtn.addEventListener('click', () => {
+            toast.classList.add('removing');
+            setTimeout(() => toast.remove(), 300);
+        });
+        
+        container.appendChild(toast);
+        
+        // Auto remoção
+        setTimeout(() => {
+            toast.classList.add('removing');
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
+    }
+}
 
 async function loadSongs() {
     try {
@@ -296,7 +412,7 @@ function validateAudioFile(input) {
     const extension = file.name.split('.').pop().toLowerCase();
     
     if (!allowedExtensions.includes(extension)) {
-        GlobalModals.alert('Formato de arquivo não permitido. Use: MP3, WAV, OGG, M4A, AAC ou FLAC', 'error');
+        showToast('Formato de arquivo não permitido. Use: MP3, WAV, OGG, M4A, AAC ou FLAC', 'error');
         input.value = '';
         fileInfo.style.display = 'none';
         return;
@@ -305,7 +421,7 @@ function validateAudioFile(input) {
     // Validar tamanho (50MB = 50 * 1024 * 1024 bytes)
     const maxSize = 50 * 1024 * 1024;
     if (file.size > maxSize) {
-        GlobalModals.alert('Arquivo muito grande! O tamanho máximo é 50MB.', 'error');
+        showToast('Arquivo muito grande! O tamanho máximo é 50MB.', 'error');
         input.value = '';
         fileInfo.style.display = 'none';
         return;
@@ -323,7 +439,7 @@ async function saveSong() {
     
     // Verificar se título foi preenchido
     if (!formData.get('title')) {
-        GlobalModals.alert('O título da música é obrigatório!', 'error');
+        showToast('O título da música é obrigatório!', 'error');
         return;
     }
     
@@ -332,7 +448,7 @@ async function saveSong() {
     const loadingMessage = audioFile ? 'Salvando música e enviando arquivo...' : 'Salvando música...';
     
     try {
-        App.loading.show(loadingMessage);
+        showLoading(loadingMessage);
         
         const response = await fetch('/add_musica', {
             method: 'POST',
@@ -341,53 +457,62 @@ async function saveSong() {
         
         const result = await response.json();
         
-        App.loading.hide();
+        hideLoading();
         
         if (result.success) {
-            GlobalModals.toast('Música adicionada com sucesso!', 'success');
-            App.modal.close('addSongModal');
+            showToast('Música adicionada com sucesso!', 'success');
+            closeModal('addSongModal');
             form.reset();
             document.getElementById('fileInfo').style.display = 'none';
             loadSongs();
         } else {
-            GlobalModals.alert(result.message || 'Erro ao adicionar música', 'error');
+            showToast(result.message || 'Erro ao adicionar música', 'error');
         }
     } catch (error) {
-        App.loading.hide();
-        GlobalModals.alert('Erro ao processar requisição', 'error');
+        hideLoading();
+        showToast('Erro ao processar requisição', 'error');
         console.error(error);
     }
 }
 
 async function deleteSong(songId) {
-    GlobalModals.confirm(
-        'Deseja realmente remover esta música? Esta ação não pode ser desfeita.',
-        async () => {
-            try {
-                App.loading.show('Removendo música...');
-                
-                const response = await fetch(`/delete_musica/${songId}`, {
-                    method: 'DELETE'
-                });
-                
-                const result = await response.json();
-                
-                App.loading.hide();
-                
-                if (result.success) {
-                    GlobalModals.toast('Música removida com sucesso!', 'success');
-                    loadSongs();
-                } else {
-                    GlobalModals.alert(result.message || 'Erro ao remover música', 'error');
-                }
-            } catch (error) {
-                App.loading.hide();
-                GlobalModals.alert('Erro ao processar requisição', 'error');
-                console.error(error);
-            }
-        },
-        'Confirmar Exclusão'
-    );
+    // Criar modal de confirmação customizado
+    if (typeof GlobalModals !== 'undefined' && GlobalModals.confirm) {
+        GlobalModals.confirm(
+            'Deseja realmente remover esta música? Esta ação não pode ser desfeita.',
+            async () => {
+                await executeDelete(songId);
+            },
+            'Confirmar Exclusão'
+        );
+    } else if (confirm('Deseja realmente remover esta música? Esta ação não pode ser desfeita.')) {
+        await executeDelete(songId);
+    }
+}
+
+async function executeDelete(songId) {
+    try {
+        showLoading('Removendo música...');
+        
+        const response = await fetch(`/delete_musica/${songId}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        hideLoading();
+        
+        if (result.success) {
+            showToast('Música removida com sucesso!', 'success');
+            loadSongs();
+        } else {
+            showToast(result.message || 'Erro ao remover música', 'error');
+        }
+    } catch (error) {
+        hideLoading();
+        showToast('Erro ao processar requisição', 'error');
+        console.error(error);
+    }
 }
 
 function showLyrics(songId) {

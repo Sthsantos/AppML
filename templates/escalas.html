@@ -1,8 +1,50 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block title %}Escalas - Ministério de Louvor{% endblock %}
 
 {% block content %}
+<style>
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.05);
+        opacity: 0.9;
+    }
+}
+
+@keyframes shake {
+    0%, 100% {
+        transform: translateX(0) rotate(0deg);
+    }
+    25% {
+        transform: translateX(-5px) rotate(-5deg);
+    }
+    75% {
+        transform: translateX(5px) rotate(5deg);
+    }
+}
+
+/* Backdrop com blur */
+.modal-overlay {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+</style>
+
 <div class="page-header">
     <div>
         <h1 class="page-title">
@@ -13,7 +55,7 @@
     </div>
     {% if current_user.is_authenticated and current_user.is_admin %}
     <div style="display: flex; gap: 1rem;">
-        <button class="btn btn-danger" onclick="App.modal.open('deleteAllEscalasModal')">
+        <button class="btn btn-danger" onclick="openModal('deleteAllEscalasModal')">
             <i class="fas fa-trash-alt"></i>
             Excluir Todas
         </button>
@@ -70,7 +112,7 @@
     <div class="modal">
         <div class="modal-header">
             <h2 class="modal-title">Criar Nova Escala</h2>
-            <button class="modal-close" onclick="App.modal.close('addEscalaModal')">
+            <button class="modal-close" onclick="closeModal('addEscalaModal')">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -104,7 +146,7 @@
             </div>
         </form>
         <div class="modal-footer">
-            <button class="btn btn-outline" onclick="App.modal.close('addEscalaModal')">Cancelar</button>
+            <button class="btn btn-outline" onclick="closeModal('addEscalaModal')">Cancelar</button>
             <button class="btn btn-blue" onclick="saveEscala()">
                 <i class="fas fa-save"></i>
                 Salvar Escala
@@ -118,7 +160,7 @@
     <div class="modal">
         <div class="modal-header">
             <h2 class="modal-title">Editar Escala</h2>
-            <button class="modal-close" onclick="App.modal.close('editEscalaModal')">
+            <button class="modal-close" onclick="closeModal('editEscalaModal')">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -147,7 +189,7 @@
             </div>
         </form>
         <div class="modal-footer">
-            <button class="btn btn-outline" onclick="App.modal.close('editEscalaModal')">Cancelar</button>
+            <button class="btn btn-outline" onclick="closeModal('editEscalaModal')">Cancelar</button>
             <button class="btn btn-blue" onclick="updateEscala()">
                 <i class="fas fa-save"></i>
                 Atualizar Escala
@@ -161,7 +203,7 @@
     <div class="modal">
         <div class="modal-header">
             <h2 class="modal-title">Adicionar Membro à Escala</h2>
-            <button class="modal-close" onclick="App.modal.close('addSingleMemberModal')">
+            <button class="modal-close" onclick="closeModal('addSingleMemberModal')">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -194,7 +236,7 @@
             </div>
         </form>
         <div class="modal-footer">
-            <button class="btn btn-outline" onclick="App.modal.close('addSingleMemberModal')">Cancelar</button>
+            <button class="btn btn-outline" onclick="closeModal('addSingleMemberModal')">Cancelar</button>
             <button class="btn btn-blue" onclick="saveSingleMember()">
                 <i class="fas fa-user-plus"></i>
                 Adicionar Membro
@@ -211,7 +253,7 @@
                 <i class="fas fa-music"></i>
                 Músicas do Culto
             </h2>
-            <button class="modal-close" onclick="App.modal.close('musicasCultoModal')" style="color: white;">
+            <button class="modal-close" onclick="closeModal('musicasCultoModal')" style="color: white;">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -289,7 +331,7 @@
             </div>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-outline" onclick="App.modal.close('musicasCultoModal')">Fechar</button>
+            <button class="btn btn-outline" onclick="closeModal('musicasCultoModal')">Fechar</button>
         </div>
     </div>
 </div>
@@ -302,7 +344,7 @@
                 <i class="fas fa-music"></i>
                 Cadastrar Nova Música
             </h2>
-            <button class="modal-close" onclick="App.modal.close('addMusicaRapidaModal')" style="color: white;">
+            <button class="modal-close" onclick="closeModal('addMusicaRapidaModal')" style="color: white;">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -412,7 +454,7 @@
             </div>
         </div>
         <div class="modal-footer" style="display: flex; gap: 0.75rem; justify-content: flex-end;">
-            <button type="button" class="btn btn-outline" onclick="App.modal.close('addMusicaRapidaModal')">
+            <button type="button" class="btn btn-outline" onclick="closeModal('addMusicaRapidaModal')">
                 <i class="fas fa-times"></i>
                 Cancelar
             </button>
@@ -426,29 +468,33 @@
 
 <!-- Delete Confirmation Modal -->
 <div class="modal-overlay" id="deleteConfirmModal">
-    <div class="modal" style="max-width: 500px;">
-        <div class="modal-header" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white;">
-            <h2 class="modal-title" style="color: white;">
-                <i class="fas fa-exclamation-triangle"></i>
+    <div class="modal" style="max-width: 480px; border-radius: 24px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); animation: slideIn 0.3s ease-out; overflow: hidden;">
+        <div class="modal-header" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 2rem; border-bottom: none;">
+            <h2 class="modal-title" style="color: white; font-weight: 700; font-size: 1.5rem; display: flex; align-items: center; gap: 0.75rem;">
+                <div style="width: 48px; height: 48px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 1.5rem;"></i>
+                </div>
                 Confirmar Exclusão
             </h2>
-            <button class="modal-close" onclick="App.modal.close('deleteConfirmModal')" style="color: white;">
-                <i class="fas fa-times"></i>
+            <button class="modal-close" onclick="closeModal('deleteConfirmModal')" style="color: white; opacity: 0.9; transition: all 0.2s; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.background='rgba(255,255,255,0.2)'; this.style.opacity='1'" onmouseout="this.style.background='transparent'; this.style.opacity='0.9'">
+                <i class="fas fa-times" style="font-size: 1.25rem;"></i>
             </button>
         </div>
-        <div class="modal-body">
-            <div style="text-align: center; padding: 1.5rem 0;">
-                <i class="fas fa-exclamation-circle" style="font-size: 4rem; color: #ef4444; margin-bottom: 1rem;"></i>
-                <h3 id="deleteConfirmTitle" style="font-size: 1.3rem; margin-bottom: 0.5rem;"></h3>
-                <p id="deleteConfirmMessage" style="color: var(--text-secondary);"></p>
+        <div class="modal-body" style="padding: 2.5rem 2rem;">
+            <div style="text-align: center;">
+                <div style="width: 80px; height: 80px; margin: 0 auto 1.5rem; background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.05)); border-radius: 50%; display: flex; align-items: center; justify-content: center; animation: pulse 2s ease-in-out infinite;">
+                    <i class="fas fa-exclamation-circle" style="font-size: 3rem; color: #ef4444;"></i>
+                </div>
+                <h3 id="deleteConfirmTitle" style="font-size: 1.4rem; font-weight: 600; margin-bottom: 0.75rem; color: var(--gray-900);"></h3>
+                <p id="deleteConfirmMessage" style="color: var(--gray-600); font-size: 1rem; line-height: 1.6;"></p>
             </div>
         </div>
-        <div class="modal-footer" style="justify-content: center; gap: 1rem;">
-            <button class="btn btn-outline" onclick="App.modal.close('deleteConfirmModal')" style="min-width: 120px;">
+        <div class="modal-footer" style="padding: 1.5rem 2rem 2rem; justify-content: center; gap: 1rem; background: var(--gray-50); border-top: 1px solid var(--border-color);">
+            <button class="btn btn-outline" onclick="closeModal('deleteConfirmModal')" style="min-width: 140px; padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 600; transition: all 0.2s;">
                 <i class="fas fa-times"></i>
                 Cancelar
             </button>
-            <button class="btn btn-danger" id="confirmDeleteBtn" style="min-width: 120px;">
+            <button class="btn btn-danger" id="confirmDeleteBtn" style="min-width: 140px; padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 600; background: linear-gradient(135deg, #ef4444, #dc2626); box-shadow: 0 4px 14px 0 rgba(239, 68, 68, 0.39); transition: all 0.2s; transform: translateY(0);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px 0 rgba(239, 68, 68, 0.49)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 14px 0 rgba(239, 68, 68, 0.39)'">
                 <i class="fas fa-trash"></i>
                 Excluir
             </button>
@@ -458,31 +504,37 @@
 
 <!-- Delete All Escalas Modal -->
 <div class="modal-overlay" id="deleteAllEscalasModal">
-    <div class="modal" style="max-width: 500px;">
-        <div class="modal-header" style="background: linear-gradient(135deg, #dc2626, #991b1b); color: white;">
-            <h2 class="modal-title" style="color: white;">
-                <i class="fas fa-exclamation-triangle"></i>
+    <div class="modal" style="max-width: 520px; border-radius: 24px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); animation: slideIn 0.3s ease-out; overflow: hidden; border: 2px solid #dc2626;">
+        <div class="modal-header" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); color: white; padding: 2rem; border-bottom: none;">
+            <h2 class="modal-title" style="color: white; font-weight: 700; font-size: 1.5rem; display: flex; align-items: center; gap: 0.75rem;">
+                <div style="width: 48px; height: 48px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; animation: shake 0.5s ease-in-out infinite;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 1.5rem;"></i>
+                </div>
                 Excluir TODAS as Escalas
             </h2>
-            <button class="modal-close" onclick="App.modal.close('deleteAllEscalasModal')" style="color: white;">
-                <i class="fas fa-times"></i>
+            <button class="modal-close" onclick="closeModal('deleteAllEscalasModal')" style="color: white; opacity: 0.9; transition: all 0.2s; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.background='rgba(255,255,255,0.2)'; this.style.opacity='1'" onmouseout="this.style.background='transparent'; this.style.opacity='0.9'">
+                <i class="fas fa-times" style="font-size: 1.25rem;"></i>
             </button>
         </div>
-        <div class="modal-body">
-            <div style="text-align: center; padding: 1.5rem 0;">
-                <i class="fas fa-bomb" style="font-size: 4rem; color: #dc2626; margin-bottom: 1rem;"></i>
-                <h3 style="font-size: 1.4rem; margin-bottom: 1rem; color: #dc2626;">⚠️ ATENÇÃO: Ação Irreversível!</h3>
-                <p style="color: var(--text-secondary); margin-bottom: 1rem;">Você está prestes a excluir <strong>TODAS as escalas cadastradas</strong> no sistema.</p>
-                <p style="color: var(--text-secondary); font-weight: 600;">Esta ação não pode ser desfeita!</p>
+        <div class="modal-body" style="padding: 2.5rem 2rem;">
+            <div style="text-align: center;">
+                <div style="width: 96px; height: 96px; margin: 0 auto 1.5rem; background: linear-gradient(135deg, rgba(220, 38, 38, 0.15), rgba(153, 27, 27, 0.05)); border-radius: 50%; display: flex; align-items: center; justify-content: center; animation: pulse 2s ease-in-out infinite; border: 3px solid rgba(220, 38, 38, 0.3);">
+                    <i class="fas fa-bomb" style="font-size: 3.5rem; color: #dc2626;"></i>
+                </div>
+                <div style="background: linear-gradient(135deg, rgba(220, 38, 38, 0.1), rgba(153, 27, 27, 0.05)); border-left: 4px solid #dc2626; padding: 1.25rem; border-radius: 12px; margin-bottom: 1.5rem;">
+                    <h3 style="font-size: 1.5rem; margin-bottom: 0.75rem; color: #dc2626; font-weight: 700;">⚠️ ATENÇÃO: Ação Irreversível!</h3>
+                    <p style="color: var(--gray-700); margin-bottom: 0.75rem; font-size: 1.05rem;">Você está prestes a excluir <strong style="color: #dc2626;">TODAS as escalas cadastradas</strong> no sistema.</p>
+                    <p style="color: #dc2626; font-weight: 600; font-size: 1.1rem;">Esta ação não pode ser desfeita!</p>
+                </div>
             </div>
         </div>
-        <div class="modal-footer" style="justify-content: center; gap: 1rem;">
-            <button class="btn btn-outline" onclick="App.modal.close('deleteAllEscalasModal')" style="min-width: 150px;">
+        <div class="modal-footer" style="padding: 1.5rem 2rem 2rem; justify-content: center; gap: 1rem; background: var(--gray-50); border-top: 1px solid var(--border-color);">
+            <button class="btn btn-outline" onclick="closeModal('deleteAllEscalasModal')" style="min-width: 160px; padding: 0.875rem 1.75rem; border-radius: 12px; font-weight: 600; font-size: 1.05rem; transition: all 0.2s;">
                 <i class="fas fa-times"></i>
                 Cancelar
             </button>
-            <button class="btn btn-danger" onclick="deleteAllEscalas()" style="min-width: 150px;">
-                <i class="fas fa-trash-alt"></i>
+            <button class="btn btn-danger" onclick="deleteAllEscalas()" style="min-width: 160px; padding: 0.875rem 1.75rem; border-radius: 12px; font-weight: 600; font-size: 1.05rem; background: linear-gradient(135deg, #dc2626, #991b1b); box-shadow: 0 4px 14px 0 rgba(220, 38, 38, 0.39); transition: all 0.2s; transform: translateY(0);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px 0 rgba(220, 38, 38, 0.49)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 14px 0 rgba(220, 38, 38, 0.39)'">
+                <i class="fas fa-bomb"></i>
                 Excluir Todas
             </button>
         </div>
@@ -494,6 +546,107 @@
 
 {% block extra_js %}
 <script>
+// Variável global para verificar permissões de administrador
+const IS_ADMIN = {% if current_user.is_authenticated and current_user.is_admin %}true{% else %}false{% endif %};
+
+// Funções de formatação locais (não dependem de App)
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR');
+}
+
+function formatDatetime(dateTimeString) {
+    const date = new Date(dateTimeString);
+    return date.toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function formatTime(timeString) {
+    return timeString.substring(0, 5);
+}
+
+// Funções de modal locais (não dependem de App)
+function openModal(modalId) {
+    if (typeof App !== 'undefined' && App.modal) {
+        App.modal.open(modalId);
+    } else {
+        document.getElementById(modalId).classList.add('active');
+    }
+}
+
+function closeModal(modalId) {
+    if (typeof App !== 'undefined' && App.modal) {
+        App.modal.close(modalId);
+    } else {
+        document.getElementById(modalId).classList.remove('active');
+    }
+}
+
+// Funções de toast/notificação locais (não dependem de App)
+function showToast(message, type = 'info', duration = 4000) {
+    if (typeof App !== 'undefined' && App.toast) {
+        App.toast.show(message, type, duration);
+    } else {
+        // Fallback moderno - criar toast standalone
+        let container = document.querySelector('.toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        
+        const icons = {
+            success: 'fa-check-circle',
+            error: 'fa-exclamation-circle',
+            warning: 'fa-exclamation-triangle',
+            info: 'fa-info-circle'
+        };
+
+        const titles = {
+            success: 'Sucesso!',
+            error: 'Erro!',
+            warning: 'Atenção!',
+            info: 'Informação'
+        };
+        
+        toast.innerHTML = `
+            <div class="toast-icon-wrapper">
+                <i class="fas ${icons[type]}"></i>
+            </div>
+            <div class="toast-content">
+                <div class="toast-title">${titles[type]}</div>
+                <div class="toast-message">${message}</div>
+            </div>
+            <button class="toast-close" aria-label="Fechar">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="toast-progress" style="animation-duration: ${duration}ms;"></div>
+        `;
+
+        const closeBtn = toast.querySelector('.toast-close');
+        closeBtn.addEventListener('click', () => {
+            toast.classList.add('removing');
+            setTimeout(() => toast.remove(), 300);
+        });
+        
+        container.appendChild(toast);
+        
+        // Auto remoção
+        setTimeout(() => {
+            toast.classList.add('removing');
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
+    }
+}
+
 // Carregar cultos que ainda precisam de escala
 async function loadCultosPendentes() {
     {% if not current_user.is_authenticated or not current_user.is_admin %}
@@ -554,12 +707,18 @@ async function loadCultosPendentes() {
         }
         
         // Para cada culto, buscar membros com flag de indisponibilidade
+        console.log('📥 Buscando membros para', cultosPendentes.length, 'cultos pendentes...');
+        console.log('Total de membros disponíveis (allMembers):', allMembers.length);
+        
         const cultosComIndisponibilidade = await Promise.all(
             cultosPendentes.map(async (culto) => {
                 try {
                     const response = await fetch(`/get_members?culto_id=${culto.id}`);
                     const data = await response.json();
-                    return { ...culto, membrosAtualizado: data.members || allMembers };
+                    console.log(`Culto ${culto.id} - Membros retornados:`, data.members ? data.members.length : 'NENHUM');
+                    const membrosParaUsar = data.members || allMembers;
+                    console.log(`Culto ${culto.id} - Membros finais:`, membrosParaUsar.length);
+                    return { ...culto, membrosAtualizado: membrosParaUsar };
                 } catch (error) {
                     console.error('Erro ao buscar membros para culto', culto.id, error);
                     return { ...culto, membrosAtualizado: allMembers };
@@ -567,9 +726,32 @@ async function loadCultosPendentes() {
             })
         );
         
+        console.log('✅ Cultos com membros carregados:', cultosComIndisponibilidade.length);
+        cultosComIndisponibilidade.forEach(c => {
+            console.log(`  - Culto ${c.id}: ${c.membrosAtualizado.length} membros`);
+        });
+        
         container.innerHTML = cultosComIndisponibilidade.map(culto => {
             const count = escalasPorCulto[culto.id] || 0;
             const faltam = 5 - count;
+            
+            // Garantir que membrosAtualizado existe e tem dados
+            if (!culto.membrosAtualizado || culto.membrosAtualizado.length === 0) {
+                console.warn(`⚠️ Culto ${culto.id} sem membros! Usando allMembers...`);
+                culto.membrosAtualizado = allMembers;
+            }
+            
+            console.log(`🎨 Renderizando culto ${culto.id}:`, {
+                name: culto.name,
+                membrosAtualizado: culto.membrosAtualizado ? culto.membrosAtualizado.length : 'UNDEFINED',
+                count: count,
+                faltam: faltam
+            });
+            
+            // Detecta Santa Ceia pela descrição
+            const isSantaCeia = culto.description && culto.description.toLowerCase().includes('santa ceia');
+            const badgeColor = isSantaCeia ? '#dc2626' : '#6366f1';
+            const iconEmoji = isSantaCeia ? '🍷' : '📅';
             
             // Texto do botão
             const btnText = count === 0 
@@ -577,11 +759,14 @@ async function loadCultosPendentes() {
                 : `<i class="fas fa-user-plus"></i> Adicionar Membros (${count}/5 - faltam ${faltam})`;
             
             return `
-                <div class="card mb-3 fade-in">
+                <div class="card mb-3 fade-in" style="border-left: 4px solid ${badgeColor};">
                     <div class="card-header">
                         <div>
-                            <h3 class="card-title">${culto.name}</h3>
-                            <p class="card-subtitle">${App.format.datetime(culto.date_time)}</p>
+                            <h3 class="card-title">
+                                ${iconEmoji} ${culto.name}
+                                ${isSantaCeia ? '<span class="badge" style="background: #dc2626; color: white; margin-left: 0.5rem;">SANTA CEIA</span>' : ''}
+                            </h3>
+                            <p class="card-subtitle">${formatDatetime(culto.date_time)}</p>
                             ${count > 0 ? `<span class="badge" style="background: var(--accent-warning); color: white; margin-top: 0.5rem;"><i class="fas fa-exclamation-circle"></i> ${count}/5 membros - Faltam ${faltam}</span>` : ''}
                         </div>
                         <button class="btn btn-blue" onclick="toggleCreateEscalaForm(${culto.id})" id="toggleBtn${culto.id}">
@@ -595,7 +780,12 @@ async function loadCultosPendentes() {
                         </h4>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
                             ${['Guitarrista', 'Violonista', 'Baterista', 'Tecladista', 'Baixista'].map(instrumento => {
+                                console.log(`Filtrando membros para ${instrumento}:`, {
+                                    total: culto.membrosAtualizado.length,
+                                    amostra: culto.membrosAtualizado.slice(0, 2).map(m => ({ id: m.id, name: m.name, instrument: m.instrument, suspended: m.suspended }))
+                                });
                                 const membrosInstrumento = culto.membrosAtualizado.filter(m => m.instrument === instrumento && !m.suspended);
+                                console.log(`Culto ${culto.id} - ${instrumento}: ${membrosInstrumento.length} membros disponíveis`);
                                 return `
                                     <div class="form-group" style="margin: 0;">
                                         <label class="form-label">
@@ -673,7 +863,7 @@ async function saveEscalaCompleta(cultoId) {
     
     // Validar se 5 membros foram selecionados
     if (membrosEscolhidos.length < 5) {
-        App.toast.error('Selecione os 5 membros da escala!');
+        showToast('Selecione os 5 membros da escala!', 'error');
         return;
     }
     
@@ -681,7 +871,7 @@ async function saveEscalaCompleta(cultoId) {
     const memberIds = membrosEscolhidos.map(m => m.member_id);
     const uniqueIds = new Set(memberIds);
     if (uniqueIds.size !== memberIds.length) {
-        App.toast.error('Não é possível selecionar o mesmo membro para múltiplos instrumentos!');
+        showToast('Não é possível selecionar o mesmo membro para múltiplos instrumentos!', 'error');
         return;
     }
     
@@ -703,15 +893,15 @@ async function saveEscalaCompleta(cultoId) {
         const allSuccess = results.every(r => r.ok);
         
         if (allSuccess) {
-            App.toast.success('Escala completa criada com sucesso!');
+            showToast('Escala completa criada com sucesso!', 'success');
             loadCultosPendentes(); // Recarregar cultos pendentes
             loadEscalas(); // Atualizar escalas criadas
         } else {
-            App.toast.error('Erro ao criar algumas escalas');
+            showToast('Erro ao criar algumas escalas', 'error');
         }
     } catch (error) {
         console.error('Erro:', error);
-        App.toast.error('Erro ao processar requisição');
+        showToast('Erro ao processar requisição', 'error');
     }
 }
 
@@ -864,20 +1054,28 @@ async function loadEscalas() {
         console.log(`🎨 Renderizando ${finalGroups.length} grupos de escalas...`);
         container.innerHTML = finalGroups.map(group => {
             const timeStr = group.times.length > 1 
-                ? `${App.format.date(group.date)}, ${group.times.join(' e ')}`
-                : App.format.datetime(group.date);
+                ? `${formatDate(group.date)}, ${group.times.join(' e ')}`
+                : formatDatetime(group.date);
+            
+            // Detecta Santa Ceia pelo nome do culto
+            const isSantaCeia = group.name.toLowerCase().includes('santa ceia');
+            const badgeColor = isSantaCeia ? '#dc2626' : '#6366f1';
+            const iconEmoji = isSantaCeia ? '🍷' : '📋';
             
             // Passar todos os culto_ids para deletar (quando há agrupamento)
             const cultoIdsStr = JSON.stringify(group.culto_ids);
             
             return `
-                <div class="card mb-3 fade-in">
+                <div class="card mb-3 fade-in" style="border-left: 4px solid ${badgeColor};">
                     <div class="card-header">
                         <div>
-                            <h3 class="card-title">${group.name}</h3>
+                            <h3 class="card-title">
+                                ${iconEmoji} ${group.name}
+                                ${isSantaCeia ? '<span class="badge" style="background: #dc2626; color: white; margin-left: 0.5rem;">SANTA CEIA</span>' : ''}
+                            </h3>
                             <p class="card-subtitle">${timeStr}</p>
                         </div>
-                        {% if current_user.is_authenticated and current_user.is_admin %}
+                        ${IS_ADMIN ? `
                         <div style="display: flex; gap: 0.75rem;">
                             <button class="btn btn-success" onclick='openMusicasModal(${group.culto_ids[0]}, "${group.name}")' title="Gerenciar músicas do culto">
                                 <i class="fas fa-music"></i>
@@ -892,15 +1090,38 @@ async function loadEscalas() {
                                 Excluir Escala
                             </button>
                         </div>
-                        {% endif %}
+                        ` : ''}
                     </div>
                     <div class="card-body">
                         <div class="grid grid-2">
-                            ${group.escalas.map(e => `
+                            ${group.escalas.map(e => {
+                                // Mapear instrumento para ícone
+                                const instrumentIcons = {
+                                    'Vocalista': 'fa-microphone',
+                                    'Guitarrista': 'fa-guitar',
+                                    'Violonista': 'fa-guitar',
+                                    'Baterista': 'fa-drum',
+                                    'Tecladista': 'fa-keyboard',
+                                    'Baixista': 'fa-guitar'
+                                };
+                                
+                                const instrumentColors = {
+                                    'Vocalista': 'linear-gradient(135deg, #ec4899, #db2777)',
+                                    'Guitarrista': 'linear-gradient(135deg, #f59e0b, #d97706)',
+                                    'Violonista': 'linear-gradient(135deg, #84cc16, #65a30d)',
+                                    'Baterista': 'linear-gradient(135deg, #ef4444, #dc2626)',
+                                    'Tecladista': 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                                    'Baixista': 'linear-gradient(135deg, #06b6d4, #0891b2)'
+                                };
+                                
+                                const icon = instrumentIcons[e.role] || 'fa-user';
+                                const gradient = instrumentColors[e.role] || 'var(--gradient-primary)';
+                                
+                                return `
                                 <div style="padding: 1rem; background: var(--gray-50); border-radius: var(--radius-lg); position: relative;">
                                     <div class="flex items-center gap-2">
-                                        <div style="width: 40px; height: 40px; border-radius: var(--radius-md); background: var(--gradient-primary); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700;">
-                                            ${e.member_name.charAt(0).toUpperCase()}
+                                        <div style="width: 40px; height: 40px; border-radius: var(--radius-md); background: ${gradient}; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);">
+                                            <i class="fas ${icon}"></i>
                                         </div>
                                         <div style="flex: 1;">
                                             <div style="font-weight: 600; color: var(--gray-900);">${e.member_name}</div>
@@ -909,7 +1130,7 @@ async function loadEscalas() {
                                                 ${e.role}
                                             </div>
                                         </div>
-                                        {% if current_user.is_authenticated and current_user.is_admin %}
+                                        ${IS_ADMIN ? `
                                         <div style="display: flex; gap: 0.5rem;">
                                             <button class="btn-icon" onclick="openEditEscala(${e.escala_id})" title="Editar membro da escala" style="color: var(--primary-500); background: rgba(59, 130, 246, 0.1);">
                                                 <i class="fas fa-edit"></i>
@@ -918,10 +1139,10 @@ async function loadEscalas() {
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </div>
-                                        {% endif %}
+                                        ` : ''}
                                     </div>
                                 </div>
-                            `).join('')}
+                            `}).join('')}
                         </div>
                         
                         <!-- Músicas do Culto -->
@@ -936,12 +1157,12 @@ async function loadEscalas() {
                                             <p style="color: var(--gray-600); margin: 0; font-size: 0.95rem;">
                                                 Nenhuma música selecionada para este culto
                                             </p>
-                                            {% if current_user.is_authenticated and current_user.is_admin %}
+                                            ${IS_ADMIN ? `
                                             <button class="btn btn-sm btn-success" onclick='openMusicasModal(${group.culto_ids[0]}, "${group.name}")' style="margin-top: 0.75rem;">
                                                 <i class="fas fa-plus"></i>
                                                 Adicionar Músicas
                                             </button>
-                                            {% endif %}
+                                            ` : ''}
                                         </div>
                                     </div>
                                 `;
@@ -955,11 +1176,11 @@ async function loadEscalas() {
                                             Repertório do Culto
                                             <span style="background: var(--accent-success); color: white; padding: 0.125rem 0.5rem; border-radius: 1rem; font-size: 0.875rem; margin-left: 0.5rem;">${musicas.length}</span>
                                         </h4>
-                                        {% if current_user.is_authenticated and current_user.is_admin %}
+                                        ${IS_ADMIN ? `
                                         <button class="btn-icon" onclick='openMusicasModal(${group.culto_ids[0]}, "${group.name}")' title="Editar músicas" style="color: var(--accent-success);">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        {% endif %}
+                                        ` : ''}
                                     </div>
                                     <div style="display: grid; gap: 0.75rem;">
                                         ${musicas.map((m, index) => `
@@ -1031,7 +1252,7 @@ async function loadEscalas() {
                 </button>
             </div>
         `;
-        App.toast.error('Erro ao carregar escalas');
+        showToast('Erro ao carregar escalas', 'error');
     }
 }
 
@@ -1058,7 +1279,11 @@ async function loadModalData() {
         console.log('allMembers populado com', allMembers.length, 'membros');
         
         document.getElementById('selectCulto').innerHTML = 
-            cultosData.cultos.map(c => `<option value="${c.id}">${c.name} - ${App.format.date(c.date_time)}</option>`).join('');
+            cultosData.cultos.map(c => {
+                const isSantaCeia = c.description && c.description.toLowerCase().includes('santa ceia');
+                const prefix = isSantaCeia ? '🍷 ' : '';
+                return `<option value="${c.id}">${prefix}${c.name} - ${formatDate(c.date_time)}</option>`;
+            }).join('');
     } catch (error) {
         console.error('Erro ao carregar dados:', error);
     }
@@ -1118,7 +1343,7 @@ async function saveEscala() {
     const instrument = document.getElementById('selectInstrument').value;
     
     if (!cultoId || !memberId || !instrument) {
-        App.toast.error('Preencha todos os campos');
+        showToast('Preencha todos os campos', 'error');
         return;
     }
     
@@ -1136,17 +1361,17 @@ async function saveEscala() {
         const result = await response.json();
         
         if (response.ok) {
-            App.toast.success('Escala criada com sucesso!');
-            App.modal.close('addEscalaModal');
+            showToast('Escala criada com sucesso!', 'success');
+            closeModal('addEscalaModal');
             document.getElementById('addEscalaForm').reset();
             document.getElementById('selectInstrument').value = '';
             loadEscalas();
         } else {
-            App.toast.error(result.message || 'Erro ao criar escala');
+            showToast(result.message || 'Erro ao criar escala', 'error');
         }
     } catch (error) {
         console.error('Erro:', error);
-        App.toast.error('Erro ao processar requisição');
+        showToast('Erro ao processar requisição', 'error');
     }
 }
 
@@ -1170,10 +1395,10 @@ async function openEditEscala(escalaId) {
             `<option value="${m.id}" ${m.id === escala.member_id ? 'selected' : ''}>${m.name} (${m.instrument})</option>`
         ).join('');
         
-        App.modal.open('editEscalaModal');
+        openModal('editEscalaModal');
     } catch (error) {
         console.error('Erro ao carregar escala:', error);
-        App.toast.error('Erro ao carregar dados da escala');
+        showToast('Erro ao carregar dados da escala', 'error');
     }
 }
 
@@ -1183,7 +1408,7 @@ async function updateEscala() {
     const role = document.getElementById('editRole').value;
     
     if (!memberId || !role) {
-        App.toast.error('Preencha todos os campos');
+        showToast('Preencha todos os campos', 'error');
         return;
     }
     
@@ -1197,15 +1422,15 @@ async function updateEscala() {
         const result = await response.json();
         
         if (response.ok) {
-            App.toast.success('Escala atualizada com sucesso!');
-            App.modal.close('editEscalaModal');
+            showToast('Escala atualizada com sucesso!', 'success');
+            closeModal('editEscalaModal');
             loadEscalas();
         } else {
-            App.toast.error(result.message || 'Erro ao atualizar escala');
+            showToast(result.message || 'Erro ao atualizar escala', 'error');
         }
     } catch (error) {
         console.error('Erro:', error);
-        App.toast.error('Erro ao processar requisição');
+        showToast('Erro ao processar requisição', 'error');
     }
 }
 
@@ -1216,7 +1441,7 @@ async function deleteEscalaConfirm(escalaId) {
     
     const confirmBtn = document.getElementById('confirmDeleteBtn');
     confirmBtn.onclick = async () => {
-        App.modal.close('deleteConfirmModal');
+        closeModal('deleteConfirmModal');
         
         try {
             const response = await fetch(`/delete_escala/${escalaId}`, {
@@ -1226,18 +1451,18 @@ async function deleteEscalaConfirm(escalaId) {
             const result = await response.json();
             
             if (response.ok) {
-                App.toast.success('Membro removido da escala com sucesso!');
+                showToast('Membro removido da escala com sucesso!', 'success');
                 loadEscalas();
             } else {
-                App.toast.error(result.message || 'Erro ao remover membro');
+                showToast(result.message || 'Erro ao remover membro', 'error');
             }
         } catch (error) {
             console.error('Erro:', error);
-            App.toast.error('Erro ao processar requisição');
+            showToast('Erro ao processar requisição', 'error');
         }
     };
     
-    App.modal.open('deleteConfirmModal');
+    openModal('deleteConfirmModal');
 }
 
 async function deleteEscalaCompletaConfirm(cultoIds, cultoName) {
@@ -1250,7 +1475,7 @@ async function deleteEscalaCompletaConfirm(cultoIds, cultoName) {
     
     const confirmBtn = document.getElementById('confirmDeleteBtn');
     confirmBtn.onclick = async () => {
-        App.modal.close('deleteConfirmModal');
+        closeModal('deleteConfirmModal');
         
         try {
             // Deletar escalas de todos os cultos do grupo
@@ -1262,21 +1487,21 @@ async function deleteEscalaCompletaConfirm(cultoIds, cultoName) {
             const allSuccess = responses.every(r => r.ok);
             
             if (allSuccess) {
-                App.toast.success('Escala completa removida com sucesso!');
+                showToast('Escala completa removida com sucesso!', 'success');
                 loadEscalas();
                 {% if current_user.is_authenticated and current_user.is_admin %}
                 loadCultosPendentes();
                 {% endif %}
             } else {
-                App.toast.error('Erro ao remover algumas escalas');
+                showToast('Erro ao remover algumas escalas', 'error');
             }
         } catch (error) {
             console.error('Erro:', error);
-            App.toast.error('Erro ao processar requisição');
+            showToast('Erro ao processar requisição', 'error');
         }
     };
     
-    App.modal.open('deleteConfirmModal');
+    openModal('deleteConfirmModal');
 }
 
 // ========================================
@@ -1307,10 +1532,10 @@ async function openAddSingleMember(cultoId, cultoName) {
             infoAlert.hidden = true;
         }
         
-        App.modal.open('addSingleMemberModal');
+        openModal('addSingleMemberModal');
     } catch (error) {
         console.error('Erro ao abrir modal:', error);
-        App.toast.error('Erro ao carregar dados');
+        showToast('Erro ao carregar dados', 'error');
     }
 }
 
@@ -1363,7 +1588,7 @@ async function saveSingleMember() {
     const role = document.getElementById('singleInstrument').value;
     
     if (!memberId || !role) {
-        App.toast.error('Preencha todos os campos');
+        showToast('Preencha todos os campos', 'error');
         return;
     }
     
@@ -1381,23 +1606,23 @@ async function saveSingleMember() {
         const result = await response.json();
         
         if (response.ok) {
-            App.toast.success('Membro adicionado à escala com sucesso!');
-            App.modal.close('addSingleMemberModal');
+            showToast('Membro adicionado à escala com sucesso!', 'success');
+            closeModal('addSingleMemberModal');
             loadEscalas();
             {% if current_user.is_authenticated and current_user.is_admin %}
             loadCultosPendentes();
             {% endif %}
         } else {
-            App.toast.error(result.message || 'Erro ao adicionar membro');
+            showToast(result.message || 'Erro ao adicionar membro', 'error');
         }
     } catch (error) {
         console.error('Erro:', error);
-        App.toast.error('Erro ao processar requisição');
+        showToast('Erro ao processar requisição', 'error');
     }
 }
 
 async function deleteAllEscalas() {
-    App.modal.close('deleteAllEscalasModal');
+    closeModal('deleteAllEscalasModal');
     
     try {
         const response = await fetch('/delete_all_escalas', {
@@ -1407,17 +1632,17 @@ async function deleteAllEscalas() {
         const result = await response.json();
         
         if (response.ok) {
-            App.toast.success(result.message || 'Todas as escalas foram removidas com sucesso!');
+            showToast(result.message || 'Todas as escalas foram removidas com sucesso!');
             loadEscalas();
             {% if current_user.is_authenticated and current_user.is_admin %}
             loadCultosPendentes();
             {% endif %}
         } else {
-            App.toast.error(result.message || 'Erro ao remover escalas');
+            showToast(result.message || 'Erro ao remover escalas', 'error');
         }
     } catch (error) {
         console.error('Erro:', error);
-        App.toast.error('Erro ao processar requisição');
+        showToast('Erro ao processar requisição', 'error');
     }
 }
 
@@ -1439,7 +1664,7 @@ async function openMusicasModal(cultoId, cultoName) {
     // Carregar músicas já selecionadas para este culto
     await loadMusicasCulto();
     
-    App.modal.open('musicasCultoModal');
+    openModal('musicasCultoModal');
 }
 
 // Variável global para armazenar todas as músicas do repertório
@@ -1476,7 +1701,7 @@ async function loadRepertorioDisponivel() {
         
     } catch (error) {
         console.error('Erro ao carregar repertório:', error);
-        App.toast.error('Erro ao carregar repertório: ' + error.message);
+        showToast('Erro ao carregar repertório: ' + error.message);
     }
 }
 
@@ -1565,7 +1790,7 @@ async function loadMusicasCulto() {
         `).join('');
     } catch (error) {
         console.error('Erro ao carregar músicas do culto:', error);
-        App.toast.error('Erro ao carregar músicas');
+        showToast('Erro ao carregar músicas', 'error');
     }
 }
 
@@ -1574,7 +1799,7 @@ async function addMusicaToCulto() {
     const musicaId = document.getElementById('selectMusicaRepertorio').value;
     
     if (!musicaId) {
-        App.toast.error('Selecione uma música');
+        showToast('Selecione uma música', 'success');
         return;
     }
     
@@ -1591,15 +1816,15 @@ async function addMusicaToCulto() {
         const result = await response.json();
         
         if (response.ok) {
-            App.toast.success('Música adicionada ao culto!');
+            showToast('Música adicionada ao culto!', 'success');
             document.getElementById('selectMusicaRepertorio').value = '';
             await loadMusicasCulto();
         } else {
-            App.toast.error(result.message || 'Erro ao adicionar música');
+            showToast(result.message || 'Erro ao adicionar música', 'error');
         }
     } catch (error) {
         console.error('Erro:', error);
-        App.toast.error('Erro ao processar requisição');
+        showToast('Erro ao processar requisição', 'error');
     }
 }
 
@@ -1619,14 +1844,14 @@ async function removeMusicaDoCulto(musicaId) {
         const result = await response.json();
         
         if (response.ok) {
-            App.toast.success('Música removida do culto!');
+            showToast('Música removida do culto!', 'success');
             await loadMusicasCulto();
         } else {
-            App.toast.error(result.message || 'Erro ao remover música');
+            showToast(result.message || 'Erro ao remover música', 'error');
         }
     } catch (error) {
         console.error('Erro:', error);
-        App.toast.error('Erro ao processar requisição');
+        showToast('Erro ao processar requisição', 'error');
     }
 }
 
@@ -1634,7 +1859,7 @@ async function removeMusicaDoCulto(musicaId) {
 function openAddMusicaRapidaModal() {
     // Limpar formulário
     document.getElementById('addMusicaRapidaForm').reset();
-    App.modal.open('addMusicaRapidaModal');
+    openModal('addMusicaRapidaModal');
 }
 
 // Salvar música cadastrada rapidamente
@@ -1650,7 +1875,7 @@ async function saveMusicaRapida(event) {
     const notes = document.getElementById('rapidaMusicaNotes').value.trim();
     
     if (!title) {
-        App.toast.error('O título da música é obrigatório!');
+        showToast('O título da música é obrigatório!', 'success');
         return;
     }
     
@@ -1672,10 +1897,10 @@ async function saveMusicaRapida(event) {
         const result = await response.json();
         
         if (response.ok && result.success) {
-            App.toast.success('Música cadastrada com sucesso!');
+            showToast('Música cadastrada com sucesso!', 'success');
             
             // Fechar modal
-            App.modal.close('addMusicaRapidaModal');
+            closeModal('addMusicaRapidaModal');
             
             // Limpar formulário
             document.getElementById('addMusicaRapidaForm').reset();
@@ -1685,11 +1910,11 @@ async function saveMusicaRapida(event) {
             
             App.toast.show('Música já está disponível no repertório!', 'success');
         } else {
-            App.toast.error(result.message || 'Erro ao cadastrar música');
+            showToast(result.message || 'Erro ao cadastrar música', 'error');
         }
     } catch (error) {
         console.error('Erro ao salvar música:', error);
-        App.toast.error('Erro ao processar requisição: ' + error.message);
+        showToast('Erro ao processar requisição: ' + error.message);
     }
 }
 

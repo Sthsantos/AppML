@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request, redirect, url_for, session, flash, send_from_directory
+﻿from flask import Flask, render_template, jsonify, request, redirect, url_for, session, flash, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_required, login_user, logout_user, current_user
 from datetime import datetime, date
@@ -865,7 +865,7 @@ def delete_escala(escala_id):
 @login_required
 @admin_required
 def delete_escalas_culto(culto_id):
-    """Remove todas as escalas de um culto específico (apenas para admins)."""
+    """Remove todas as escalas de um culto específico e limpa o repertório (apenas para admins)."""
     try:
         escalas = Escala.query.filter_by(culto_id=culto_id).all()
         if not escalas:
@@ -875,8 +875,13 @@ def delete_escalas_culto(culto_id):
         for escala in escalas:
             db.session.delete(escala)
         
+        # Limpar também o repertório do culto
+        db.session.execute(
+            culto_repertorio.delete().where(culto_repertorio.c.culto_id == culto_id)
+        )
+        
         db.session.commit()
-        return jsonify({'success': True, 'message': f'{count} escala(s) removida(s) com sucesso!'}), 200
+        return jsonify({'success': True, 'message': f'{count} escala(s) removida(s) e repertório limpo com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
         print(f"Erro ao excluir escalas: {str(e)}")
@@ -886,17 +891,22 @@ def delete_escalas_culto(culto_id):
 @login_required
 @admin_required
 def delete_all_escalas():
-    """Remove TODAS as escalas do sistema (apenas para admins)."""
+    """Remove TODAS as escalas do sistema e limpa todos os repertórios (apenas para admins)."""
     try:
         count = Escala.query.count()
         
         if count == 0:
             return jsonify({'success': False, 'message': 'Não há escalas para excluir'}), 404
         
+        # Remover todas as escalas
         Escala.query.delete()
+        
+        # Limpar também TODOS os repertórios de cultos
+        db.session.execute(culto_repertorio.delete())
+        
         db.session.commit()
         
-        return jsonify({'success': True, 'message': f'{count} escala(s) removida(s) com sucesso!'}), 200
+        return jsonify({'success': True, 'message': f'{count} escala(s) removida(s) e repertórios limpos com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
         print(f"Erro ao excluir todas as escalas: {str(e)}")

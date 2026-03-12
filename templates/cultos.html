@@ -12,7 +12,7 @@
         <p class="page-subtitle">Visualize e gerencie os cultos programados</p>
     </div>
     {% if current_user.is_authenticated and current_user.is_admin %}
-    <button class="btn btn-blue" onclick="App.modal.open('addCultoModal')">
+    <button class="btn btn-blue" onclick="if(typeof App !== 'undefined' && App.modal){App.modal.open('addCultoModal')}else{document.getElementById('addCultoModal').classList.add('active')}">
         <i class="fas fa-plus"></i>
         Novo Culto
     </button>
@@ -33,7 +33,7 @@
     <div class="modal">
         <div class="modal-header">
             <h2 class="modal-title">Agendar Novo Culto</h2>
-            <button class="modal-close" onclick="App.modal.close('addCultoModal')">
+            <button type="button" class="modal-close" onclick="if(typeof App !== 'undefined' && App.modal){App.modal.close('addCultoModal')}else{document.getElementById('addCultoModal').classList.remove('active')}">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -52,8 +52,8 @@
             </div>
         </form>
         <div class="modal-footer">
-            <button class="btn btn-outline" onclick="App.modal.close('addCultoModal')">Cancelar</button>
-            <button class="btn btn-blue" onclick="saveCulto()">
+            <button type="button" class="btn btn-outline" onclick="if(typeof App !== 'undefined' && App.modal){App.modal.close('addCultoModal')}else{document.getElementById('addCultoModal').classList.remove('active')}">Cancelar</button>
+            <button type="button" class="btn btn-blue" onclick="saveCulto()">
                 <i class="fas fa-save"></i>
                 Salvar Culto
             </button>
@@ -66,7 +66,7 @@
     <div class="modal">
         <div class="modal-header">
             <h2 class="modal-title">Editar Culto</h2>
-            <button class="modal-close" onclick="App.modal.close('editCultoModal')">
+            <button type="button" class="modal-close" onclick="if(typeof App !== 'undefined' && App.modal){App.modal.close('editCultoModal')}else{document.getElementById('editCultoModal').classList.remove('active')}">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -86,8 +86,8 @@
             </div>
         </form>
         <div class="modal-footer">
-            <button class="btn btn-outline" onclick="App.modal.close('editCultoModal')">Cancelar</button>
-            <button class="btn btn-blue" onclick="updateCulto()">
+            <button type="button" class="btn btn-outline" onclick="if(typeof App !== 'undefined' && App.modal){App.modal.close('editCultoModal')}else{document.getElementById('editCultoModal').classList.remove('active')}">Cancelar</button>
+            <button type="button" class="btn btn-blue" onclick="updateCulto()">
                 <i class="fas fa-save"></i>
                 Atualizar Culto
             </button>
@@ -100,7 +100,117 @@
 
 {% block extra_js %}
 <script>
+// Funções de formatação locais (fallback se App não carregar)
+function formatDate(dateString) {
+    if (typeof App !== 'undefined' && App.format) {
+        return App.format.date(dateString);
+    }
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR');
+}
+
+function formatMonthShort(dateString) {
+    if (typeof App !== 'undefined' && App.format) {
+        return App.format.monthShort(dateString);
+    }
+    const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const date = new Date(dateString);
+    return months[date.getMonth()];
+}
+
+function formatRelativeDate(dateTimeString) {
+    if (typeof App !== 'undefined' && App.format) {
+        return App.format.relativeDate(dateTimeString);
+    }
+    const date = new Date(dateTimeString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffDays === 0) return 'Hoje';
+    if (diffDays === 1) return 'Ontem';
+    if (diffDays === -1) return 'Amanhã';
+    if (diffDays < 0) return `Em ${Math.abs(diffDays)} dias`;
+    if (diffDays < 7) return `${diffDays} dias atrás`;
+    return date.toLocaleDateString('pt-BR');
+}
+
+function showToast(message, type = 'info', duration = 4000) {
+    if (typeof App !== 'undefined' && App.toast) {
+        App.toast.show(message, type, duration);
+    } else {
+        // Fallback moderno - criar toast standalone
+        let container = document.querySelector('.toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        
+        const icons = {
+            success: 'fa-check-circle',
+            error: 'fa-exclamation-circle',
+            warning: 'fa-exclamation-triangle',
+            info: 'fa-info-circle'
+        };
+
+        const titles = {
+            success: 'Sucesso!',
+            error: 'Erro!',
+            warning: 'Atenção!',
+            info: 'Informação'
+        };
+        
+        toast.innerHTML = `
+            <div class="toast-icon-wrapper">
+                <i class="fas ${icons[type]}"></i>
+            </div>
+            <div class="toast-content">
+                <div class="toast-title">${titles[type]}</div>
+                <div class="toast-message">${message}</div>
+            </div>
+            <button class="toast-close" aria-label="Fechar">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="toast-progress" style="animation-duration: ${duration}ms;"></div>
+        `;
+
+        const closeBtn = toast.querySelector('.toast-close');
+        closeBtn.addEventListener('click', () => {
+            toast.classList.add('removing');
+            setTimeout(() => toast.remove(), 300);
+        });
+        
+        container.appendChild(toast);
+        
+        // Auto remoção
+        setTimeout(() => {
+            toast.classList.add('removing');
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
+    }
+}
+
+let loadCultosAttempts = 0;
+const MAX_LOAD_ATTEMPTS = 10;
+
 async function loadCultos() {
+    // Aguardar App estar disponível (máximo 10 tentativas)
+    if (typeof App === 'undefined' || typeof App.format === 'undefined') {
+        loadCultosAttempts++;
+        if (loadCultosAttempts <= MAX_LOAD_ATTEMPTS) {
+            console.warn(`App ainda não carregado, tentativa ${loadCultosAttempts}/${MAX_LOAD_ATTEMPTS}`);
+            setTimeout(loadCultos, 200);
+            return;
+        } else {
+            console.error('App não carregou após múltiplas tentativas. Carregando sem formatação.');
+            // Continua sem formatação
+        }
+    }
+    
     try {
         const response = await fetch('/get_cultos');
         const data = await response.json();
@@ -201,17 +311,19 @@ async function loadCultos() {
         });
         
         grid.innerHTML = finalGroups.map(group => {
-            const isSantaCeia = group.cultos[0].name.toLowerCase().includes('santa ceia');
+            // Detecta Santa Ceia pela descrição (description)
+            const isSantaCeia = group.cultos[0].description && group.cultos[0].description.toLowerCase().includes('santa ceia');
             const firstDate = new Date(group.cultos[0].date_time);
             const isPast = firstDate < new Date();
             
-            // Remove "- Manhã", "- Noite" etc do nome quando agrupado
+            // Extrai o nome do culto da descrição
             let displayName = group.cultos[0].name;
-            if (group.cultos.length > 1) {
-                displayName = displayName
-                    .replace(/\s*-\s*(Manhã|manhã|MANHÃ)/g, '')
-                    .replace(/\s*-\s*(Noite|noite|NOITE)/g, '')
-                    .trim();
+            if (group.cultos[0].description) {
+                // Extrai o nome antes do " - " (ex: "Santa Ceia - Manhã - 05/01/2026" -> "Santa Ceia")
+                const match = group.cultos[0].description.match(/^([^-]+)/);
+                if (match) {
+                    displayName = match[1].trim();
+                }
             }
             
             // Se há múltiplos horários, mostra todos
@@ -220,33 +332,55 @@ async function loadCultos() {
                     const time = new Date(c.date_time);
                     return `<i class="fas fa-clock"></i> ${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}h`;
                 }).join(' <span style="color: var(--text-muted); margin: 0 0.5rem;">•</span> ')
-                : `<i class="fas fa-clock"></i> ${App.format.time(group.cultos[0].date_time)}`;
+                : `<i class="fas fa-clock"></i> ${group.cultos[0].time}`;
             
-            // Botões de edição para cada culto
-            const editButtons = {% if current_user.is_authenticated and current_user.is_admin %}
-                group.cultos.map(c => 
-                    `<button class="btn btn-sm btn-outline" onclick="openEditCultoModal(${c.id}, '${c.name.replace(/'/g, "\\'")}', '${c.date_time}', '${c.description ? c.description.replace(/'/g, "\\'"): ''}')" title="Editar ${c.name}">
-                        <i class="fas fa-edit"></i>
-                    </button>`
-                ).join('')
+            // Botões de edição/exclusão para admin
+            const actionButtons = {% if current_user.is_authenticated and current_user.is_admin %}
+                group.cultos.length === 1
+                    // Se há apenas 1 culto: 1 botão editar + 1 botão excluir
+                    ? `<button type="button" class="btn btn-sm btn-outline" onclick="openEditCultoModal(${group.cultos[0].id}, '${group.cultos[0].name.replace(/'/g, "\\'")}', '${group.cultos[0].date_time}', '${group.cultos[0].description ? group.cultos[0].description.replace(/'/g, "\\'"): ''}')" title="Editar culto">
+                            <i class="fas fa-edit"></i> Editar
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline" onclick="deleteCulto(${group.cultos[0].id}, '${group.cultos[0].name.replace(/'/g, "\\'")}', '${group.cultos[0].date_time}')" title="Excluir culto" style="color: #dc2626;">
+                            <i class="fas fa-trash"></i> Excluir
+                        </button>`
+                    // Se há múltiplos cultos: botões com horários
+                    : `<div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        ${group.cultos.map(c => {
+                            const time = new Date(c.date_time);
+                            const timeStr = `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}h`;
+                            return `
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <span style="font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); min-width: 45px;">${timeStr}</span>
+                                    <button type="button" class="btn btn-sm btn-outline" onclick="openEditCultoModal(${c.id}, '${c.name.replace(/'/g, "\\'")}', '${c.date_time}', '${c.description ? c.description.replace(/'/g, "\\'"): ''}')" title="Editar ${timeStr}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline" onclick="deleteCulto(${c.id}, '${c.name.replace(/'/g, "\\'")}', '${c.date_time}')" title="Excluir ${timeStr}" style="color: #dc2626;">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>`
             {% else %}
                 ''
             {% endif %};
+
             
             return `
                 <div class="card fade-in">
                     <div class="card-header" style="background: ${isPast ? 'var(--gray-100)' : 'var(--gradient-soft)'};">
                         <div style="flex: 1;">
                             <h3 class="card-title">${displayName}</h3>
-                            <p class="card-subtitle">${App.format.date(group.cultos[0].date_time)}</p>
+                            <p class="card-subtitle">${formatDate(group.cultos[0].date_time)}</p>
                             <div style="margin-top: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">
                                 ${timesHtml}
                             </div>
                         </div>
                         <div style="text-align: right;">
-                            <div class="culto-date-box" style="width: 56px; height: 56px; background: ${isSantaCeia ? 'linear-gradient(135deg, #dc2626, #b91c1c)' : '#6366f1'}; color: white; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                            <div class="culto-date-box" style="width: 56px; height: 56px; background: ${isSantaCeia ? 'linear-gradient(135deg, #dc2626, #b91c1c)' : '#6366f1'}; color: white; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: ${isPast ? '0.5' : '1'};">
                                 <div class="culto-day" style="font-size: 1.5rem; font-weight: 700; line-height: 1;">${firstDate.getDate()}</div>
-                                <div class="culto-month" style="font-size: 0.75rem; text-transform: uppercase; font-weight: 600;">${App.format.monthShort(group.cultos[0].date_time)}</div>
+                                <div class="culto-month" style="font-size: 0.75rem; text-transform: uppercase; font-weight: 600;">${formatMonthShort(group.cultos[0].date_time)}</div>
                             </div>
                         </div>
                     </div>
@@ -261,11 +395,11 @@ async function loadCultos() {
                                 ${group.cultos.length > 1 ? `<span class="badge" style="background-color: #6366f1; color: white;"><i class="fas fa-layer-group"></i> ${group.cultos.length} horários</span>` : ''}
                                 <span style="color: var(--gray-500); font-size: 0.875rem;">
                                     <i class="fas fa-calendar-day"></i>
-                                    ${App.format.relativeDate(group.cultos[0].date_time)}
+                                    ${formatRelativeDate(group.cultos[0].date_time)}
                                 </span>
                             </div>
-                            <div style="display: flex; gap: 0.5rem;">
-                                ${editButtons}
+                            <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
+                                ${actionButtons}
                             </div>
                         </div>
                     </div>
@@ -299,16 +433,20 @@ async function saveCulto() {
         const result = await response.json();
         
         if (response.ok) {
-            App.toast.success('Culto agendado com sucesso!');
-            App.modal.close('addCultoModal');
+            showToast('Culto agendado com sucesso!', 'success');
+            if (typeof App !== 'undefined' && App.modal) {
+                App.modal.close('addCultoModal');
+            } else {
+                document.getElementById('addCultoModal').classList.remove('active');
+            }
             form.reset();
             loadCultos();
         } else {
-            App.toast.error(result.message || 'Erro ao agendar culto');
+            showToast(result.message || 'Erro ao agendar culto', 'error');
         }
     } catch (error) {
         console.error('Erro:', error);
-        App.toast.error('Erro ao processar requisição');
+        showToast('Erro ao processar requisição', 'error');
     }
 }
 
@@ -317,8 +455,44 @@ function openEditCultoModal(id, name, dateTime, description) {
     document.getElementById('editCultoName').value = name;
     document.getElementById('editCultoDateTime').value = dateTime;
     document.getElementById('editCultoDescription').value = description || '';
-    App.modal.open('editCultoModal');
+    
+    if (typeof App !== 'undefined' && App.modal) {
+        App.modal.open('editCultoModal');
+    } else {
+        document.getElementById('editCultoModal').classList.add('active');
+    }
 }
+
+async function deleteCulto(id, name, dateTime) {
+    const date = new Date(dateTime);
+    const formattedDate = date.toLocaleDateString('pt-BR');
+    const formattedTime = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+    
+    const confirmMessage = `Tem certeza que deseja excluir o culto?\n\n${name}\n${formattedDate} às ${formattedTime}h`;
+    
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/delete_culto/${id}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showToast('Culto excluído com sucesso!', 'success');
+            loadCultos();
+        } else {
+            showToast(result.message || 'Erro ao excluir culto', 'error');
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        showToast('Erro ao processar requisição', 'error');
+    }
+}
+
 
 async function updateCulto() {
     const form = document.getElementById('editCultoForm');
@@ -343,16 +517,20 @@ async function updateCulto() {
         const result = await response.json();
         
         if (response.ok) {
-            App.toast.success('Culto atualizado com sucesso!');
-            App.modal.close('editCultoModal');
+            showToast('Culto atualizado com sucesso!', 'success');
+            if (typeof App !== 'undefined' && App.modal) {
+                App.modal.close('editCultoModal');
+            } else {
+                document.getElementById('editCultoModal').classList.remove('active');
+            }
             form.reset();
             loadCultos();
         } else {
-            App.toast.error(result.message || 'Erro ao atualizar culto');
+            showToast(result.message || 'Erro ao atualizar culto', 'error');
         }
     } catch (error) {
         console.error('Erro:', error);
-        App.toast.error('Erro ao processar requisição');
+        showToast('Erro ao processar requisição', 'error');
     }
 }
 
