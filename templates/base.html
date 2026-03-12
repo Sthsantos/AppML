@@ -39,6 +39,22 @@
     
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <!-- Inicialização Antecipada do Tema (previne flash) -->
+    <script>
+        (function() {
+            try {
+                const savedTheme = localStorage.getItem('theme');
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+                document.documentElement.setAttribute('data-theme', theme);
+                console.log('⚡ Tema aplicado antecipadamente:', theme);
+            } catch (e) {
+                console.error('❌ Erro ao aplicar tema:', e);
+            }
+        })();
+    </script>
+    
     {% block extra_css %}{% endblock %}
 </head>
 <body>

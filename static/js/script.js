@@ -785,8 +785,11 @@ async function loadDashboardStats() {
 // INICIALIZAÇÃO
 // ========================================
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('✅ Script carregado - Ministério de Louvor v1.4.0');
+    
     // Inicializar tema (PRIMEIRO)
     App.theme.init();
+    console.log('✅ Tema inicializado:', App.theme.current);
     
     // Inicializar PWA
     App.pwa.init();
