@@ -14,11 +14,27 @@ load_dotenv()
 
 # Configuração do Flask
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))  # Usa variável de ambiente ou gera uma chave
+
+# Validação do SECRET_KEY em produção
+secret_key = os.environ.get('SECRET_KEY')
+flask_env = os.environ.get('FLASK_ENV', 'development')
+
+if flask_env == 'production' and not secret_key:
+    print("⚠️  AVISO: SECRET_KEY não definido em produção! Usando chave temporária.")
+    print("⚠️  Configure a variável de ambiente SECRET_KEY no Render!")
+    secret_key = secrets.token_hex(32)
+elif not secret_key:
+    secret_key = secrets.token_hex(16)
+
+app.secret_key = secret_key
 
 # Configura o banco de dados SQLite na pasta 'instance'
-# Em produção, use DATABASE_URL do ambiente (ex: PostgreSQL do Heroku)
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(app.instance_path, 'ministry.db'))
+# Em produção, use DATABASE_URL do ambiente (ex: PostgreSQL do Render/Heroku)
+database_url = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(app.instance_path, 'ministry.db'))
+# Render usa postgres:// mas SQLAlchemy 1.4+ requer postgresql://
+if database_url and database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Desativa notificações de modificação para performance
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')  # Pasta para uploads de áudio
 app.config['MAX_CONTENT_LENGTH'] = int(os.environ.get('MAX_CONTENT_LENGTH', 50 * 1024 * 1024))  # 50 MB max file size
@@ -227,33 +243,34 @@ def create_admin():
 # Função para verificar e garantir a criação do banco de dados
 def ensure_database_exists():
     """Verifica se o banco de dados existe e o cria, se necessário."""
-    # Garantir que a pasta instance existe
-    try:
-        os.makedirs(app.instance_path, exist_ok=True)
-        print(f"Pasta instance criada/verificada em: {app.instance_path}")
-    except Exception as e:
-        print(f"Erro ao criar pasta instance: {e}")
-        raise
+    # Garantir que a pasta instance existe (apenas para SQLite local)
+    database_uri = app.config['SQLALCHEMY_DATABASE_URI']
+    is_sqlite = database_uri.startswith('sqlite:///')
+    
+    if is_sqlite:
+        try:
+            os.makedirs(app.instance_path, exist_ok=True)
+            print(f"Pasta instance criada/verificada em: {app.instance_path}")
+        except Exception as e:
+            print(f"Erro ao criar pasta instance: {e}")
+            raise
     
     # Garantir que a pasta de uploads existe
     try:
         os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
         print(f"Pasta uploads criada/verificada em: {app.config['UPLOAD_FOLDER']}")
     except Exception as e:
-        print(f"Erro ao criar pasta uploads: {e}")
+        print(f"Aviso: Erro ao criar pasta uploads: {e}")
     
-    db_path = os.path.join(app.instance_path, 'ministry.db')
-    if not os.path.exists(db_path):
+    # Criar todas as tabelas no banco de dados
+    try:
         with app.app_context():
             db.create_all()
-            print(f"Banco de dados 'ministry.db' criado em: {db_path}")
-            create_admin()  # Cria o admin imediatamente após criar o banco
-    else:
-        print(f"Banco de dados 'ministry.db' já existe em: {db_path}")
-        # Garantir que todas as tabelas existam (para novos modelos adicionados)
-        with app.app_context():
-            db.create_all()
-            print("Verificação de tabelas concluída.")
+            print(f"Tabelas do banco de dados criadas/verificadas.")
+            print(f"Usando banco de dados: {'SQLite' if is_sqlite else 'PostgreSQL'}")
+    except Exception as e:
+        print(f"ERRO ao criar tabelas do banco de dados: {e}")
+        raise
 
 # Rotas principais
 @app.route('/')
@@ -2234,13 +2251,22 @@ def manifest():
     """Serve o manifest.json da raiz do site."""
     return send_from_directory('static', 'manifest.json', mimetype='application/manifest+json')
 
-if __name__ == '__main__':
-    # Garante que o banco de dados seja criado antes de rodar o servidor
+# ========================================
+# INICIALIZAÇÃO DO BANCO DE DADOS
+# ========================================
+# Este código roda tanto em desenvolvimento quanto em produção (Gunicorn)
+try:
     ensure_database_exists()
     with app.app_context():
         create_admin()  # Adiciona o administrador padrão
-    
-    # Configuração de ambiente
+    print("✅ Aplicação inicializada com sucesso!")
+except Exception as e:
+    print(f"❌ ERRO na inicialização: {e}")
+    import traceback
+    traceback.print_exc()
+
+if __name__ == '__main__':
+    # Configuração de ambiente para execução local
     port = int(os.environ.get('PORT', 5000))
     debug_mode = os.environ.get('FLASK_ENV', 'development') == 'development'
     

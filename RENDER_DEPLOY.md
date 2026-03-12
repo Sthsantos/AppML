@@ -20,14 +20,16 @@ MAX_CONTENT_LENGTH=52428800
 
 ### 2. Banco de Dados
 
-**Opção 1: SQLite (Para testes - não recomendado para produção)**
-- O Render pode ter problemas com SQLite pois o filesystem é efêmero
-- Deixe `DATABASE_URL` sem configurar para usar SQLite
+**✅ RECOMENDADO: PostgreSQL (Produção)**
+1. No Render, crie um PostgreSQL Database
+2. Conecte ao seu Web Service
+3. O Render criará automaticamente a variável `DATABASE_URL`
+4. A aplicação detectará e converterá automaticamente para o formato correto
+5. **IMPORTANTE:** O app já possui `psycopg2-binary` nas dependências para PostgreSQL
 
-**Opção 2: PostgreSQL (Recomendado para produção)**
-- No Render, crie um PostgreSQL Database
-- O Render criará automaticamente a variável `DATABASE_URL`
-- O app detectará e usará automaticamente
+**Opção alternativa: SQLite (Apenas testes - NÃO recomendado)**
+- O Render pode ter problemas com SQLite pois o filesystem é efêmero
+- Deixe `DATABASE_URL` sem configurar para usar SQLite (não recomendado)
 
 ### 3. Build e Deploy
 
