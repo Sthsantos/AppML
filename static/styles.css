@@ -135,6 +135,56 @@
     box-sizing: border-box;
 }
 
+/* ========================================
+   iOS/Safari FIXES - CRÍTICO PARA MOBILE
+   ======================================== */
+* {
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    -webkit-touch-callout: none;
+}
+
+button, a, input, select, textarea {
+    -webkit-tap-highlight-color: rgba(102, 126, 234, 0.3);
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+button, a[href], input[type="submit"], input[type="button"], 
+.clickable, .btn, .bottom-nav-item, .theme-toggle, .pwa-install-btn {
+    cursor: pointer;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
+}
+
+/* Fix para overflow no iOS */
+html, body {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+}
+
+/* Fix para inputs no iOS */
+input, textarea, select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    border-radius: 0;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="tel"],
+input[type="search"],
+textarea {
+    -webkit-appearance: none;
+    appearance: none;
+    border-radius: var(--radius-md);
+}
+
 html {
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
@@ -1232,6 +1282,10 @@ select.form-control {
     box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08);
     display: none;
     z-index: 1000;
+    /* iOS fixes */
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
 }
 
 @media (max-width: 768px) {
@@ -1266,6 +1320,17 @@ select.form-control {
     position: relative;
     max-width: 200px;
     margin: 0 auto;
+    /* iOS click fixes */
+    cursor: pointer;
+    -webkit-tap-highlight-color: rgba(102, 126, 234, 0.3);
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
+    /* Garantir área clicável */
+    min-height: 50px;
+    background: transparent;
+    border: none;
+    outline: none;
 }
 
 .bottom-nav-item i {

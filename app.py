@@ -28,6 +28,17 @@ elif not secret_key:
 
 app.secret_key = secret_key
 
+# Configurações de sessão para manter login persistente (especialmente em mobile)
+app.config['SESSION_COOKIE_SECURE'] = flask_env == 'production'  # HTTPS em produção
+app.config['SESSION_COOKIE_HTTPONLY'] = True  # Protege contra XSS
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Proteção CSRF básica
+app.config['PERMANENT_SESSION_LIFETIME'] = 2592000  # 30 dias em segundos
+app.config['SESSION_COOKIE_NAME'] = 'ministry_session'  # Nome customizado
+app.config['REMEMBER_COOKIE_DURATION'] = 2592000  # 30 dias para "lembrar-me"
+app.config['REMEMBER_COOKIE_SECURE'] = flask_env == 'production'
+app.config['REMEMBER_COOKIE_HTTPONLY'] = True
+app.config['REMEMBER_COOKIE_SAMESITE'] = 'Lax'
+
 # Configura o banco de dados SQLite na pasta 'instance'
 # Em produção, use DATABASE_URL do ambiente (ex: PostgreSQL do Render/Heroku)
 database_url = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(app.instance_path, 'ministry.db'))
@@ -301,10 +312,13 @@ def login():
                     flash('Sua conta foi suspensa. Entre em contato com o administrador.', 'error')
                     return render_template('login.html')
                 
-                login_user(user)
+                # Marca sessão como permanente (mantém login por 30 dias)
+                session.permanent = True
+                
+                login_user(user, remember=True)  # remember=True ativa cookie "lembrar-me"
                 session['user_id'] = user.id
                 session['is_admin'] = getattr(user, 'is_admin', False)  # Verifica se é admin (só User tem is_admin)
-                print(f"✅ Login bem-sucedido: {email} (Admin: {session['is_admin']})")
+                print(f"✅ Login bem-sucedido: {email} (Admin: {session['is_admin']}) - Sessão permanente ativada")
                 return redirect(url_for('index'))
             
             flash('Login falhou. Verifique email e senha.', 'error')

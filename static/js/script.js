@@ -16,11 +16,18 @@ const App = {
     // Sistema de Tema Dark/Light
     theme: {
         current: 'light',
+        storageAvailable: false,
 
         init() {
+            // Verificar se localStorage está disponível (iOS modo privado pode bloquear)
+            this.storageAvailable = this.checkStorageAvailable();
+            
             // Carregar tema salvo ou detectar preferência do sistema
-            const savedTheme = localStorage.getItem('theme');
-            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            let savedTheme = null;
+            if (this.storageAvailable) {
+                savedTheme = localStorage.getItem('theme');
+            }
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
             
             this.current = savedTheme || (prefersDark ? 'dark' : 'light');
             this.apply(this.current);
@@ -29,10 +36,28 @@ const App = {
             this.updateIcon();
         },
 
+        checkStorageAvailable() {
+            try {
+                const test = '__storage_test__';
+                localStorage.setItem(test, test);
+                localStorage.removeItem(test);
+                return true;
+            } catch(e) {
+                console.warn('⚠️ localStorage não disponível (iOS modo privado?)');
+                return false;
+            }
+        },
+
         apply(theme) {
             document.documentElement.setAttribute('data-theme', theme);
             this.current = theme;
-            localStorage.setItem('theme', theme);
+            if (this.storageAvailable) {
+                try {
+                    localStorage.setItem('theme', theme);
+                } catch(e) {
+                    console.warn('⚠️ Não foi possível salvar tema:', e);
+                }
+            }
         },
 
         toggle() {
@@ -41,7 +66,9 @@ const App = {
             this.updateIcon();
             
             // Feedback visual
-            App.toast.success(`Tema ${newTheme === 'dark' ? 'escuro' : 'claro'} ativado!`);
+            if (App.toast && App.toast.success) {
+                App.toast.success(`Tema ${newTheme === 'dark' ? 'escuro' : 'claro'} ativado!`);
+            }
         },
 
         updateIcon() {

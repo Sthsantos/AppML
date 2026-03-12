@@ -44,13 +44,35 @@
     <script>
         (function() {
             try {
-                const savedTheme = localStorage.getItem('theme');
-                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+                // Suporte para iOS/Safari - verifica se localStorage está disponível
+                const storageAvailable = (function() {
+                    try {
+                        const test = '__storage_test__';
+                        localStorage.setItem(test, test);
+                        localStorage.removeItem(test);
+                        return true;
+                    } catch(e) {
+                        return false;
+                    }
+                })();
+                
+                let theme = 'light';
+                
+                if (storageAvailable) {
+                    const savedTheme = localStorage.getItem('theme');
+                    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    theme = savedTheme || (prefersDark ? 'dark' : 'light');
+                } else {
+                    // Fallback para iOS em modo privado
+                    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    theme = prefersDark ? 'dark' : 'light';
+                }
+                
                 document.documentElement.setAttribute('data-theme', theme);
-                console.log('⚡ Tema aplicado antecipadamente:', theme);
+                console.log('⚡ Tema aplicado (iOS-safe):', theme);
             } catch (e) {
                 console.error('❌ Erro ao aplicar tema:', e);
+                document.documentElement.setAttribute('data-theme', 'light');
             }
         })();
     </script>
