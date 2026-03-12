@@ -226,19 +226,21 @@ def admin_required(f):
 # Criar um administrador padrão
 def create_admin():
     """Cria um administrador padrão se não existir."""
-    email = "admin@ministeriodelouvor.com"
+    email = "admin@ministry.com"
     password = "admin123"
-    with db.session.no_autoflush:
+    try:
         existing_admin = User.query.filter_by(email=email).first()
         if not existing_admin:
-            new_admin = User(email=email)
+            new_admin = User(email=email, is_admin=True)
             new_admin.set_password(password)
-            new_admin.is_admin = True
             db.session.add(new_admin)
             db.session.commit()
-            print("Administrador criado com sucesso.")
+            print(f"✅ Administrador criado: {email} / {password}")
         else:
-            print("Administrador já existente.")
+            print(f"ℹ️ Administrador já existe: {email}")
+    except Exception as e:
+        db.session.rollback()
+        print(f"⚠️ Erro ao criar admin: {e}")
 
 # Função para verificar e garantir a criação do banco de dados
 def ensure_database_exists():
@@ -287,19 +289,33 @@ def login():
         email = request.form.get('email')
         password = request.form.get('password')
         
-        # Tenta encontrar o usuário como User ou Member
-        with db.session.no_autoflush:
+        try:
+            # Tenta encontrar o usuário como User ou Member
             user = User.query.filter_by(email=email).first()
             if not user:
                 user = Member.query.filter_by(email=email).first()
-        
-        if user and user.check_password(password):
-            login_user(user)
-            session['user_id'] = user.id
-            session['is_admin'] = getattr(user, 'is_admin', False)  # Verifica se é admin (só User tem is_admin)
-            print(f"Login bem-sucedido para {email}, is_admin: {session['is_admin']}")  # Depuração
-            return redirect(url_for('index'))
-        flash('Login falhou. Verifique email e senha.', 'error')
+            
+            if user and user.check_password(password):
+                # Verifica se é membro suspenso
+                if isinstance(user, Member) and user.suspended:
+                    flash('Sua conta foi suspensa. Entre em contato com o administrador.', 'error')
+                    return render_template('login.html')
+                
+                login_user(user)
+                session['user_id'] = user.id
+                session['is_admin'] = getattr(user, 'is_admin', False)  # Verifica se é admin (só User tem is_admin)
+                print(f"✅ Login bem-sucedido: {email} (Admin: {session['is_admin']})")
+                return redirect(url_for('index'))
+            
+            flash('Login falhou. Verifique email e senha.', 'error')
+            print(f"❌ Login falhou para: {email}")
+            
+        except Exception as e:
+            print(f"⚠️ Erro no login: {e}")
+            import traceback
+            traceback.print_exc()
+            flash('Erro ao processar login. Tente novamente.', 'error')
+    
     return render_template('login.html')
 
 @app.route('/logout')
