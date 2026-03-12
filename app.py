@@ -227,6 +227,21 @@ def create_admin():
 # Função para verificar e garantir a criação do banco de dados
 def ensure_database_exists():
     """Verifica se o banco de dados existe e o cria, se necessário."""
+    # Garantir que a pasta instance existe
+    try:
+        os.makedirs(app.instance_path, exist_ok=True)
+        print(f"Pasta instance criada/verificada em: {app.instance_path}")
+    except Exception as e:
+        print(f"Erro ao criar pasta instance: {e}")
+        raise
+    
+    # Garantir que a pasta de uploads existe
+    try:
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+        print(f"Pasta uploads criada/verificada em: {app.config['UPLOAD_FOLDER']}")
+    except Exception as e:
+        print(f"Erro ao criar pasta uploads: {e}")
+    
     db_path = os.path.join(app.instance_path, 'ministry.db')
     if not os.path.exists(db_path):
         with app.app_context():
