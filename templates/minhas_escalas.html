@@ -1,0 +1,391 @@
+{% extends "base.html" %}
+
+{% block title %}Minhas Escalas - Ministério de Louvor{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <i class="fas fa-user-check"></i>
+            Minhas Escalas
+        </h1>
+        <p class="page-subtitle">Visualize os cultos onde você está escalado</p>
+    </div>
+</div>
+
+<!-- Minhas Escalas -->
+<div class="section" style="margin-bottom: 3rem;">
+    <div class="section-header">
+        <h2 class="section-title">
+            <i class="fas fa-calendar-check"></i>
+            Escalas Onde Você Está Escalado
+        </h2>
+        <p class="section-subtitle">Confira suas próximas participações nos cultos</p>
+    </div>
+    <div id="escalasContainer">
+        <div class="empty-state">
+            <i class="fas fa-spinner fa-spin"></i>
+            <h3>Carregando suas escalas...</h3>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Reaproveitando estilos do escalas.html */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    color: var(--text-muted);
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-state h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.btn-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    font-size: 0.9rem;
+}
+
+.btn-icon:hover {
+    transform: scale(1.1);
+}
+
+.grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.grid-2 {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+.flex {
+    display: flex;
+}
+
+.items-center {
+    align-items: center;
+}
+
+.gap-2 {
+    gap: 0.5rem;
+}
+</style>
+
+<script>
+// Timeout wrapper para fetch
+const fetchWithTimeout = (url, timeout = 10000) => {
+    return Promise.race([
+        fetch(url),
+        new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout')), timeout)
+        )
+    ]);
+};
+
+async function loadMinhasEscalas() {
+    console.log('🔄 Carregando minhas escalas...');
+    const container = document.getElementById('escalasContainer');
+    
+    if (!container) {
+        console.error('❌ Container não encontrado!');
+        return;
+    }
+    
+    try {
+        console.log('📡 Buscando escalas e repertório...');
+        
+        const [escalasResponse, repertorioResponse] = await Promise.all([
+            fetchWithTimeout('/get_minhas_escalas'),
+            fetchWithTimeout('/get_repertorio')
+        ]);
+        
+        console.log('✓ Respostas recebidas');
+        
+        if (!escalasResponse.ok || !repertorioResponse.ok) {
+            throw new Error('Erro ao buscar dados do servidor');
+        }
+        
+        const data = await escalasResponse.json();
+        const repertorioData = await repertorioResponse.json();
+        const escalas = data.escalas || [];
+        
+        console.log(`📊 Total de minhas escalas: ${escalas.length}`);
+        
+        if (escalas.length === 0) {
+            console.log('ℹ️ Nenhuma escala encontrada');
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-calendar-times"></i>
+                    <h3>Você não está escalado em nenhum culto</h3>
+                    <p>Quando você for escalado para um culto, ele aparecerá aqui</p>
+                </div>
+            `;
+            return;
+        }
+        
+        console.log('✓ Processando escalas...');
+        
+        // Agrupar por culto
+        const byCulto = {};
+        escalas.forEach(escala => {
+            if (!byCulto[escala.culto_id]) {
+                byCulto[escala.culto_id] = {
+                    culto_id: escala.culto_id,
+                    name: escala.culto_name,
+                    date: escala.culto_date,
+                    dateOnly: escala.culto_date.split('T')[0],
+                    time: escala.culto_date.split('T')[1],
+                    escalas: []
+                };
+            }
+            byCulto[escala.culto_id].escalas.push(escala);
+        });
+        
+        // Agrupar por data
+        const byDate = {};
+        Object.values(byCulto).forEach(culto => {
+            if (!byDate[culto.dateOnly]) {
+                byDate[culto.dateOnly] = [];
+            }
+            byDate[culto.dateOnly].push(culto);
+        });
+        
+        // Buscar músicas para cada culto
+        const musicasPorCulto = {};
+        const cultoIds = [...new Set(escalas.map(e => e.culto_id))];
+        
+        console.log(`🎵 Buscando músicas para ${cultoIds.length} cultos...`);
+        await Promise.all(cultoIds.map(async (cultoId) => {
+            try {
+                const response = await fetchWithTimeout(`/get_culto_musicas/${cultoId}`, 10000);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const data = await response.json();
+                musicasPorCulto[cultoId] = data.musicas || [];
+            } catch (error) {
+                console.error(`Erro ao buscar músicas do culto ${cultoId}:`, error);
+                musicasPorCulto[cultoId] = [];
+            }
+        }));
+        
+        console.log('✓ Músicas carregadas');
+        
+        // Renderizar escalas
+        const finalGroups = Object.values(byCulto);
+        
+        container.innerHTML = finalGroups.map(group => {
+            const timeStr = App.format.datetime(group.date);
+            const musicas = musicasPorCulto[group.culto_id] || [];
+            
+            // Encontrar a escala do usuário atual
+            const minhaEscala = group.escalas[0]; // Como só retorna escalas do usuário, pegamos a primeira
+            
+            return `
+                <div class="card mb-3 fade-in">
+                    <div class="card-header">
+                        <div>
+                            <h3 class="card-title">${group.name}</h3>
+                            <p class="card-subtitle">${timeStr}</p>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <!-- Sua Função -->
+                        <div style="margin-bottom: 1.5rem; padding: 1.5rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.05)); border-radius: var(--radius-lg); border: 2px solid var(--accent-success);">
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <div style="width: 50px; height: 50px; border-radius: 50%; background: var(--gradient-success); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.5rem;">
+                                    ${minhaEscala.member_name.charAt(0).toUpperCase()}
+                                </div>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 700; color: var(--gray-900); font-size: 1.1rem; margin-bottom: 0.25rem;">
+                                        Você está escalado como:
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <i class="fas fa-music" style="color: var(--accent-success);"></i>
+                                        <span style="font-size: 1rem; font-weight: 600; color: var(--accent-success);">
+                                            ${minhaEscala.role}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Outras Escalas do Culto -->
+                        ${group.escalas.length > 1 ? `
+                            <div style="margin-bottom: 1.5rem;">
+                                <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: var(--gray-900);">
+                                    <i class="fas fa-users"></i>
+                                    Outros Membros da Equipe
+                                </h4>
+                                <div class="grid grid-2">
+                                    ${group.escalas.slice(1).map(e => `
+                                        <div style="padding: 1rem; background: var(--gray-50); border-radius: var(--radius-lg);">
+                                            <div class="flex items-center gap-2">
+                                                <div style="width: 40px; height: 40px; border-radius: var(--radius-md); background: var(--gradient-primary); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700;">
+                                                    ${e.member_name.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div style="flex: 1;">
+                                                    <div style="font-weight: 600; color: var(--gray-900);">${e.member_name}</div>
+                                                    <div style="font-size: 0.875rem; color: var(--gray-600);">
+                                                        <i class="fas fa-music"></i>
+                                                        ${e.role}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        <!-- Músicas do Culto -->
+                        ${musicas.length > 0 ? `
+                            <div>
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                                    <h4 style="font-size: 1.1rem; font-weight: 600; color: var(--gray-900); margin: 0;">
+                                        <i class="fas fa-music" style="color: var(--accent-success);"></i>
+                                        Repertório do Culto
+                                        <span style="background: var(--accent-success); color: white; padding: 0.125rem 0.5rem; border-radius: 1rem; font-size: 0.875rem; margin-left: 0.5rem;">${musicas.length}</span>
+                                    </h4>
+                                </div>
+                                <div style="display: grid; gap: 0.75rem;">
+                                    ${musicas.map((m, index) => `
+                                        <div style="padding: 1rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(5, 150, 105, 0.02)); border-radius: var(--radius-lg); border-left: 3px solid var(--accent-success);">
+                                            <div style="display: flex; align-items: flex-start; gap: 1rem;">
+                                                <div style="width: 32px; height: 32px; background: var(--gradient-success); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0;">
+                                                    ${index + 1}
+                                                </div>
+                                                <div style="flex: 1;">
+                                                    <div style="font-weight: 600; color: var(--gray-900); font-size: 1rem; margin-bottom: 0.25rem;">
+                                                        ${m.title}
+                                                    </div>
+                                                    <div style="display: flex; flex-wrap: wrap; gap: 1rem; font-size: 0.875rem; color: var(--gray-600);">
+                                                        ${m.artist ? `<span><i class="fas fa-user"></i> ${m.artist}</span>` : ''}
+                                                        ${m.key_tone ? `<span><i class="fas fa-music"></i> Tom: <strong style="color: var(--accent-success);">${m.key_tone}</strong></span>` : ''}
+                                                        ${m.tempo ? `<span><i class="fas fa-drum"></i> ${m.tempo}</span>` : ''}
+                                                        ${m.category ? `<span style="background: var(--gray-100); padding: 0.125rem 0.5rem; border-radius: 0.25rem;"><i class="fas fa-tag"></i> ${m.category}</span>` : ''}
+                                                    </div>
+                                                    ${(m.link_video || m.link_audio || m.audio_file) ? `
+                                                        <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap;">
+                                                            ${m.link_video ? `
+                                                                <a href="${m.link_video}" target="_blank" class="btn btn-sm" style="background: #ff0000; color: white; padding: 0.375rem 0.75rem; font-size: 0.875rem; text-decoration: none;">
+                                                                    <i class="fab fa-youtube"></i>
+                                                                    YouTube
+                                                                </a>
+                                                            ` : ''}
+                                                            ${m.link_audio ? `
+                                                                <a href="${m.link_audio}" target="_blank" class="btn btn-sm btn-outline" style="padding: 0.375rem 0.75rem; font-size: 0.875rem; text-decoration: none;">
+                                                                    <i class="fas fa-link"></i>
+                                                                    Áudio Online
+                                                                </a>
+                                                            ` : ''}
+                                                            ${m.audio_file ? `
+                                                                <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(16, 185, 129, 0.1); padding: 0.5rem; border-radius: 0.5rem;">
+                                                                    <i class="fas fa-headphones" style="color: var(--accent-success);"></i>
+                                                                    <span style="font-size: 0.875rem; font-weight: 500; color: var(--accent-success);">VS:</span>
+                                                                    <audio controls style="height: 32px; max-width: 250px;">
+                                                                        <source src="/uploads/${m.audio_file}" type="audio/mpeg">
+                                                                        Seu navegador não suporta o player de áudio.
+                                                                    </audio>
+                                                                </div>
+                                                            ` : ''}
+                                                        </div>
+                                                    ` : ''}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : `
+                            <div style="padding: 1.5rem; background: rgba(239, 68, 68, 0.05); border-radius: var(--radius-lg); border: 1px dashed rgba(239, 68, 68, 0.3); text-align: center;">
+                                <i class="fas fa-music" style="font-size: 2rem; color: var(--gray-400); margin-bottom: 0.5rem;"></i>
+                                <p style="color: var(--gray-600); margin: 0;">Nenhuma música selecionada para este culto</p>
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        console.log('✅ Minhas escalas renderizadas com sucesso!');
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar minhas escalas:', error);
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-exclamation-triangle" style="color: var(--danger-color);"></i>
+                <h3>Erro ao carregar escalas</h3>
+                <p>Ocorreu um erro ao buscar suas escalas. Por favor, recarregue a página.</p>
+                <button class="btn btn-primary" onclick="loadMinhasEscalas()">
+                    <i class="fas fa-sync"></i>
+                    Tentar Novamente
+                </button>
+            </div>
+        `;
+        App.toast.error('Erro ao carregar escalas');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('🚀 Página carregada, iniciando...');
+    loadMinhasEscalas().catch(error => {
+        console.error('❌ Erro crítico ao carregar minhas escalas:', error);
+        const container = document.getElementById('escalasContainer');
+        if (container) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-exclamation-triangle" style="color: var(--danger-color);"></i>
+                    <h3>Erro ao carregar escalas</h3>
+                    <p>Por favor, recarregue a página. Se o erro persistir, contate o administrador.</p>
+                    <button class="btn btn-primary" onclick="location.reload()">
+                        <i class="fas fa-sync"></i>
+                        Recarregar Página
+                    </button>
+                </div>
+            `;
+        }
+    });
+});
+</script>
+{% endblock %}

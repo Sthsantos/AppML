@@ -1,0 +1,1458 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <i class="fas fa-chart-line"></i>
+            Painel de Controle
+        </h1>
+        <p class="page-subtitle">Análises e estatísticas do ministério</p>
+    </div>
+</div>
+
+<!-- Sistema de Tabs -->
+<div class="tabs-container">
+    <div class="tabs" style="display: flex; gap: 1rem; border-bottom: 2px solid var(--border-color); margin-bottom: 1.5rem;">
+        <button class="tab-button active" onclick="switchTab('rankings')" style="padding: 0.75rem 1.5rem; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-weight: 600; color: var(--text-secondary); transition: all 0.3s;">
+            <i class="fas fa-trophy"></i> Rankings
+        </button>
+        <button class="tab-button" onclick="switchTab('indisponibilidades')" style="padding: 0.75rem 1.5rem; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-weight: 600; color: var(--text-secondary); transition: all 0.3s;">
+            <i class="fas fa-calendar-times"></i> Indisponibilidades
+        </button>
+        <button class="tab-button" onclick="switchTab('distribuicao')" style="padding: 0.75rem 1.5rem; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-weight: 600; color: var(--text-secondary); transition: all 0.3s;">
+            <i class="fas fa-chart-pie"></i> Distribuição
+        </button>
+        <button class="tab-button" onclick="switchTab('configuracoes')" style="padding: 0.75rem 1.5rem; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-weight: 600; color: var(--text-secondary); transition: all 0.3s;">
+            <i class="fas fa-cog"></i> Configurações
+        </button>
+        <button class="tab-button" onclick="switchTab('musicas')" style="padding: 0.75rem 1.5rem; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-weight: 600; color: var(--text-secondary); transition: all 0.3s;">
+            <i class="fas fa-music"></i> Estatísticas de Músicas
+        </button>
+    </div>
+
+    <!-- Tab: Rankings -->
+    <div class="tab-content active" id="tab-rankings">
+        <!-- Seletor de Período para Rankings de Escalas -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+            <div class="card-body">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <label style="font-weight: 600; color: var(--text-color);">
+                        <i class="fas fa-calendar"></i> Período:
+                    </label>
+                    <select id="periodoRanking" onchange="loadRankingEscalas()" style="padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: var(--border-radius); background: var(--bg-primary); color: var(--text-color); cursor: pointer;">
+                        <option value="mes">Mês Atual</option>
+                        <option value="ano">Ano Atual</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rankings de Escalas -->
+        <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+            <!-- Top 10 Mais Escalados -->
+            <div class="section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-award" style="color: #10b981;"></i>
+                        Top 10 - Mais Escalados
+                    </h2>
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <canvas id="rankingMaisChart" style="max-height: 500px;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top 10 Menos Escalados -->
+            <div class="section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-exclamation-triangle" style="color: #ef4444;"></i>
+                        Top 10 - Menos Escalados
+                    </h2>
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <canvas id="rankingMenosChart" style="max-height: 500px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Indisponibilidades -->
+    <div class="tab-content" id="tab-indisponibilidades" style="display: none;">
+        <!-- Gráficos de Indisponibilidades -->
+        <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+            <!-- Ranking por Membro -->
+            <div class="section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-user-times" style="color: #f59e0b;"></i>
+                        Membros com Mais Indisponibilidades
+                    </h2>
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <canvas id="rankingIndisponibilidadesMembrosChart" style="max-height: 400px;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cultos Mais Afetados -->
+            <div class="section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-church" style="color: #ef4444;"></i>
+                        Cultos Mais Afetados
+                    </h2>
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <canvas id="rankingCultosAfetadosChart" style="max-height: 400px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Indisponibilidades Próximas -->
+        <div class="section">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">
+                        <i class="fas fa-calendar-times"></i>
+                        Indisponibilidades Próximas
+                    </h2>
+                    <p class="section-subtitle">Membros que não poderão participar dos próximos cultos</p>
+                </div>
+                <a href="{{ url_for('indisponibilidade') }}" class="btn btn-outline">
+                    <i class="fas fa-eye"></i> Ver Todas
+                </a>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <div id="indisponibilidadesList" style="display: flex; flex-direction: column; gap: 1rem;">
+                        <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                            <i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i>
+                            <p style="margin-top: 1rem;">Carregando...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Distribuição -->
+    <div class="tab-content" id="tab-distribuicao" style="display: none;">
+        <!-- Membros por Instrumento -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-chart-bar"></i>
+                    Distribuição de Instrumentos
+                </h2>
+                <p class="section-subtitle">Quantidade de membros por instrumento</p>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <canvas id="instrumentChart" style="max-height: 350px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Configurações -->
+    <div class="tab-content" id="tab-configuracoes" style="display: none;">
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-cog"></i>
+                    Configurações do Sistema
+                </h2>
+                <p class="section-subtitle">Gerencie as configurações administrativas</p>
+            </div>
+
+            <!-- Controle de Indisponibilidade -->
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="card-body">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 2rem;">
+                        <div style="flex: 1;">
+                            <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: var(--text-color); display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-calendar-times" style="color: var(--primary-color);"></i>
+                                Período de Registro de Indisponibilidade
+                            </h3>
+                            <p style="margin: 0; color: var(--text-secondary); font-size: 0.95rem;">
+                                Controle quando os membros podem registrar suas indisponibilidades para os cultos
+                            </p>
+                            <div id="statusPeriodo" style="margin-top: 1rem; padding: 0.75rem; border-radius: 6px; font-weight: 600;">
+                                <i class="fas fa-spinner fa-spin"></i> Verificando...
+                            </div>
+                        </div>
+                        <div>
+                            <button id="btnTogglePeriodo" onclick="togglePeriodoIndisponibilidade()" 
+                                    class="btn btn-primary" 
+                                    style="padding: 1rem 2rem; font-size: 1rem; min-width: 150px;">
+                                <i class="fas fa-sync-alt"></i> <span id="btnText">Carregar...</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gerenciar Indisponibilidades -->
+            <div class="card">
+                <div class="card-body">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                        <h3 style="margin: 0; font-size: 1.1rem; color: var(--text-color); display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-list" style="color: var(--primary-color);"></i>
+                            Indisponibilidades Cadastradas
+                        </h3>
+                        <button onclick="loadTodasIndisponibilidades()" class="btn btn-outline" style="padding: 0.5rem 1rem;">
+                            <i class="fas fa-sync-alt"></i> Atualizar
+                        </button>
+                    </div>
+                    <p style="margin: 0 0 1rem 0; color: var(--text-secondary); font-size: 0.95rem;">
+                        Visualize e gerencie todas as indisponibilidades registradas pelos membros
+                    </p>
+                    <div id="listaTodasIndisponibilidades">
+                        <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                            <i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i>
+                            <p style="margin-top: 1rem;">Carregando indisponibilidades...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Estatísticas de Músicas -->
+    <div class="tab-content" id="tab-musicas" style="display: none;">
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-music"></i>
+                    Estatísticas de Músicas
+                </h2>
+                <p class="section-subtitle">Histórico de músicas mais cantadas nos cultos</p>
+            </div>
+
+            <!-- Filtros -->
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="card-body">
+                    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-color);">
+                                <i class="fas fa-calendar-alt"></i> Mês
+                            </label>
+                            <select id="filterMes" onchange="loadEstatisticasMusicas()" 
+                                    style="width: 100%; padding: 0.75rem; border: 2px solid var(--border-color); border-radius: 8px; background: var(--background-color); color: var(--text-color);">
+                                <option value="">Todos os meses</option>
+                                <option value="1">Janeiro</option>
+                                <option value="2">Fevereiro</option>
+                                <option value="3">Março</option>
+                                <option value="4">Abril</option>
+                                <option value="5">Maio</option>
+                                <option value="6">Junho</option>
+                                <option value="7">Julho</option>
+                                <option value="8">Agosto</option>
+                                <option value="9">Setembro</option>
+                                <option value="10">Outubro</option>
+                                <option value="11">Novembro</option>
+                                <option value="12">Dezembro</option>
+                            </select>
+                        </div>
+                        <div style="flex: 1; min-width: 200px;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-color);">
+                                <i class="fas fa-calendar"></i> Ano
+                            </label>
+                            <select id="filterAno" onchange="loadEstatisticasMusicas()" 
+                                    style="width: 100%; padding: 0.75rem; border: 2px solid var(--border-color); border-radius: 8px; background: var(--background-color); color: var(--text-color);">
+                                <!-- Será preenchido por JavaScript -->
+                            </select>
+                        </div>
+                        <div style="flex: 1; min-width: 150px; display: flex; align-items: flex-end;">
+                            <button onclick="loadEstatisticasMusicas()" 
+                                    style="padding: 0.75rem 1.5rem; background: var(--primary-color); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s;">
+                                <i class="fas fa-sync-alt"></i> Atualizar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cards de Resumo -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(59, 130, 246, 0.1);">
+                        <i class="fas fa-music" style="color: rgb(59, 130, 246);"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="totalMusicasUsadas" class="stat-value">0</h3>
+                        <p class="stat-label">Músicas Diferentes</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1);">
+                        <i class="fas fa-calendar-check" style="color: rgb(16, 185, 129);"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="totalCultos" class="stat-value">0</h3>
+                        <p class="stat-label">Total de Cultos</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1);">
+                        <i class="fas fa-trophy" style="color: rgb(245, 158, 11);"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="musicaMaisPopular" class="stat-value">-</h3>
+                        <p class="stat-label">Música Mais Cantada</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gráfico Top 10 -->
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-chart-bar"></i>
+                        Top 10 Músicas Mais Cantadas
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <canvas id="chartTop10Musicas" style="max-height: 400px;"></canvas>
+                </div>
+            </div>
+
+            <!-- Tabela Ranking Completo -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-list-ol"></i>
+                        Ranking Completo
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div id="tabelaRankingMusicas" style="overflow-x: auto;">
+                        <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                            <i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i>
+                            <p style="margin-top: 1rem;">Carregando estatísticas...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .tab-button.active {
+        color: var(--primary-color) !important;
+        border-bottom-color: var(--primary-color) !important;
+    }
+    
+    .tab-button:hover {
+        color: var(--primary-color) !important;
+    }
+    
+    .tab-content {
+        animation: fadeIn 0.3s ease-in-out;
+    }
+
+    /* Modal */
+    .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+    }
+
+    .modal-content {
+        position: relative;
+        background: var(--bg-primary);
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        max-width: 90%;
+        max-height: 90vh;
+        overflow: auto;
+        animation: modalSlideIn 0.3s ease-out;
+    }
+
+    @keyframes modalSlideIn {
+        from {
+            transform: translateY(-50px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .modal-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-body {
+        padding: 1.5rem;
+    }
+
+    .modal-footer {
+        padding: 1.5rem;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: var(--text-muted);
+        transition: color 0.2s;
+    }
+
+    .modal-close:hover {
+        color: var(--text-color);
+    }
+
+    /* Tabela de indisponibilidades */
+    .indisp-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+    }
+
+    .indisp-table th {
+        background: var(--bg-secondary);
+        padding: 0.75rem;
+        text-align: left;
+        font-weight: 600;
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .indisp-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .indisp-table tr:hover {
+        background: var(--bg-secondary);
+    }
+
+    .btn-icon {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0.5rem;
+        color: var(--text-muted);
+        transition: all 0.2s;
+        border-radius: 6px;
+    }
+
+    .btn-icon:hover {
+        background: var(--bg-secondary);
+        color: var(--primary-color);
+    }
+
+    .btn-icon.btn-danger:hover {
+        color: #ef4444;
+    }
+    
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes slideInRight {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideOutRight {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+        }
+        
+        .tabs {
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        
+        .grid {
+            grid-template-columns: 1fr !important;
+        }
+    }
+</style>
+
+<!-- Modal de Confirmação -->
+<div id="confirmModal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="closeConfirmModal()"></div>
+    <div class="modal-content" style="max-width: 450px;">
+        <div class="modal-header">
+            <h3 id="confirmModalTitle" style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fas fa-question-circle" style="color: #f59e0b;"></i>
+                Confirmação
+            </h3>
+            <button class="modal-close" onclick="closeConfirmModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <p id="confirmModalMessage" style="margin: 0; font-size: 1rem; line-height: 1.6;"></p>
+        </div>
+        <div class="modal-footer" style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+            <button class="btn btn-outline" onclick="closeConfirmModal()">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+            <button id="confirmModalButton" class="btn btn-primary">
+                <i class="fas fa-check"></i> Confirmar
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let instrumentChartInstance = null;
+let rankingMaisChartInstance = null;
+let rankingMenosChartInstance = null;
+let rankingIndisponibilidadesMembrosChartInstance = null;
+let rankingCultosAfetadosChartInstance = null;
+let chartTop10MusicasInstance = null;
+
+// Função para trocar de tab
+function switchTab(tabName) {
+    // Remover classe active de todos os botões e conteúdos
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.style.display = 'none';
+    });
+    
+    // Ativar o tab selecionado
+    event.target.classList.add('active');
+    document.getElementById(`tab-${tabName}`).style.display = 'block';
+    
+    // Carregar dados específicos do tab se necessário
+    if (tabName === 'rankings') {
+        loadRankingEscalas();
+    } else if (tabName === 'indisponibilidades') {
+        loadRankingIndisponibilidades();
+        loadIndisponibilidades();
+    } else if (tabName === 'distribuicao') {
+        loadDistribuicaoInstrumentos();
+    } else if (tabName === 'musicas') {
+        preencherAnosMusicas();
+        loadEstatisticasMusicas();
+    }
+}
+
+// Carregar distribuição de instrumentos
+async function loadDistribuicaoInstrumentos() {
+    try {
+        const response = await fetch('/get_dashboard_stats');
+        const stats = await response.json();
+        
+        // Renderizar gráfico de instrumentos
+        renderInstrumentChart(stats.membros_por_instrumento || []);
+        
+    } catch (error) {
+        console.error('Erro ao carregar distribuição de instrumentos:', error);
+        App.toast.show('Erro ao carregar dados', 'error');
+    }
+}
+
+// Renderizar gráfico de instrumentos
+function renderInstrumentChart(data) {
+    const ctx = document.getElementById('instrumentChart');
+    if (!ctx) return;
+    
+    // Destruir gráfico anterior se existir
+    if (instrumentChartInstance) {
+        instrumentChartInstance.destroy();
+    }
+    
+    const labels = data.map(item => item.instrumento);
+    const values = data.map(item => item.quantidade);
+    
+    const colors = [
+        'rgba(99, 102, 241, 0.8)',
+        'rgba(139, 92, 246, 0.8)',
+        'rgba(236, 72, 153, 0.8)',
+        'rgba(245, 158, 11, 0.8)',
+        'rgba(16, 185, 129, 0.8)',
+        'rgba(59, 130, 246, 0.8)',
+        'rgba(6, 182, 212, 0.8)'
+    ];
+    
+    instrumentChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Quantidade de Membros',
+                data: values,
+                backgroundColor: colors,
+                borderRadius: 8,
+                borderWidth: 0,
+                barThickness: 40,  // Barras mais finas
+                maxBarThickness: 50
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1,
+                        font: {
+                            family: "'Inter', sans-serif"
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    ticks: {
+                        font: {
+                            size: 12,
+                            family: "'Inter', sans-serif"
+                        }
+                    },
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Carregar ranking de escalas
+async function loadRankingEscalas() {
+    try {
+        const periodo = document.getElementById('periodoRanking').value;
+        const response = await fetch(`/get_ranking_escalas?periodo=${periodo}`);
+        const data = await response.json();
+        
+        if (!data.ranking || data.ranking.length === 0) {
+            renderEmptyRankingChart('rankingMaisChart', 'Nenhum dado disponível para o período');
+            renderEmptyRankingChart('rankingMenosChart', 'Nenhum dado disponível para o período');
+            return;
+        }
+        
+        // Ordenar: mais escalados (top 10)
+        const maisEscalados = data.ranking.sort((a, b) => b.total_escalas - a.total_escalas).slice(0, 10);
+        
+        // Ordenar: menos escalados (top 10 com menos participações)
+        const menosEscalados = data.ranking.sort((a, b) => a.total_escalas - b.total_escalas).slice(0, 10);
+        
+        renderRankingBarChart(
+            'rankingMaisChart', 
+            maisEscalados, 
+            'Participações',
+            'rgba(16, 185, 129, 0.8)',  // Verde
+            'rgba(16, 185, 129, 0.2)'
+        );
+        
+        renderRankingBarChart(
+            'rankingMenosChart', 
+            menosEscalados, 
+            'Participações',
+            'rgba(239, 68, 68, 0.8)',   // Vermelho
+            'rgba(239, 68, 68, 0.2)'
+        );
+        
+    } catch (error) {
+        console.error('Erro ao carregar ranking de escalas:', error);
+        App.toast.show('Erro ao carregar rankings', 'error');
+    }
+}
+
+// Carregar ranking de indisponibilidades
+async function loadRankingIndisponibilidades() {
+    try {
+        const response = await fetch('/get_ranking_indisponibilidades');
+        const data = await response.json();
+        
+        // Ranking por membros
+        if (data.ranking_membros && data.ranking_membros.length > 0) {
+            renderRankingBarChart(
+                'rankingIndisponibilidadesMembrosChart',
+                data.ranking_membros,
+                'Indisponibilidades',
+                'rgba(245, 158, 11, 0.8)',  // Laranja
+                'rgba(245, 158, 11, 0.2)'
+            );
+        } else {
+            renderEmptyRankingChart('rankingIndisponibilidadesMembrosChart', 'Nenhuma indisponibilidade registrada');
+        }
+        
+        // Ranking por cultos
+        if (data.ranking_cultos && data.ranking_cultos.length > 0) {
+            const cultosLabels = data.ranking_cultos.map(c => `${c.description} (${c.date})`);
+            const cultosValues = data.ranking_cultos.map(c => c.total);
+            
+            const ctx = document.getElementById('rankingCultosAfetadosChart');
+            if (!ctx) return;
+            
+            if (rankingCultosAfetadosChartInstance) {
+                rankingCultosAfetadosChartInstance.destroy();
+            }
+            
+            rankingCultosAfetadosChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: cultosLabels,
+                    datasets: [{
+                        label: 'Indisponibilidades',
+                        data: cultosValues,
+                        backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1 }
+                        }
+                    }
+                }
+            });
+        } else {
+            renderEmptyRankingChart('rankingCultosAfetadosChart', 'Nenhum culto afetado');
+        }
+        
+    } catch (error) {
+        console.error('Erro ao carregar ranking de indisponibilidades:', error);
+    }
+}
+
+// Renderizar gráfico de barras horizontal para rankings
+function renderRankingBarChart(canvasId, data, label, bgColor, borderColor) {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return;
+    
+    // Destruir instância anterior
+    if (canvasId === 'rankingMaisChart' && rankingMaisChartInstance) {
+        rankingMaisChartInstance.destroy();
+    } else if (canvasId === 'rankingMenosChart' && rankingMenosChartInstance) {
+        rankingMenosChartInstance.destroy();
+    } else if (canvasId === 'rankingIndisponibilidadesMembrosChart' && rankingIndisponibilidadesMembrosChartInstance) {
+        rankingIndisponibilidadesMembrosChartInstance.destroy();
+    }
+    
+    const labels = data.map(item => `${item.name} (${item.instrument})`);
+    const values = data.map(item => item.total_escalas !== undefined ? item.total_escalas : item.total);
+    
+    const chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: label,
+                data: values,
+                backgroundColor: bgColor,
+                borderRadius: 8
+            }]
+        },
+        options: {
+            indexAxis: 'y',  // Horizontal
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1 }
+                }
+            }
+        }
+    });
+    
+    // Armazenar instância
+    if (canvasId === 'rankingMaisChart') {
+        rankingMaisChartInstance = chartInstance;
+    } else if (canvasId === 'rankingMenosChart') {
+        rankingMenosChartInstance = chartInstance;
+    } else if (canvasId === 'rankingIndisponibilidadesMembrosChart') {
+        rankingIndisponibilidadesMembrosChartInstance = chartInstance;
+    }
+}
+
+// Renderizar gráfico vazio quando não há dados
+function renderEmptyRankingChart(canvasId, message) {
+    const container = document.getElementById(canvasId)?.parentElement;
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div class="empty-state" style="padding: 3rem;">
+            <i class="fas fa-chart-bar" style="font-size: 3rem; color: var(--text-muted);"></i>
+            <h3>${message}</h3>
+        </div>
+    `;
+}
+
+// Carregar indisponibilidades (admin)
+async function loadIndisponibilidades() {
+    try {
+        const response = await fetch('/get_indisponibilidades_admin');
+        const indisponibilidades = await response.json();
+        
+        const container = document.getElementById('indisponibilidadesList');
+        if (!container) return;
+        
+        // Mostrar apenas as próximas 10
+        const recentIndisponibilidades = indisponibilidades.slice(0, 10);
+        
+        if (recentIndisponibilidades.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-calendar-check"></i>
+                    <h3>Nenhuma indisponibilidade registrada</h3>
+                    <p>Todos os membros estão disponíveis para os próximos cultos</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Mapear instrumento para ícone
+        const instrumentIcons = {
+            'Guitarrista': 'fa-guitar',
+            'Violonista': 'fa-guitar',
+            'Baterista': 'fa-drum',
+            'Tecladista': 'fa-keyboard',
+            'Baixista': 'fa-guitar',
+        };
+        
+        container.innerHTML = recentIndisponibilidades.map(ind => {
+            const icon = instrumentIcons[ind.member_instrument] || 'fa-user';
+            return `
+                <div style="display: flex; align-items: start; gap: 1rem; padding: 1rem; background: var(--bg-secondary); border-radius: var(--border-radius); border-left: 3px solid #ef4444;">
+                    <div style="flex-shrink: 0; width: 40px; height: 40px; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; display: flex; align-items: center; justify-content: center; border-radius: 8px;">
+                        <i class="fas ${icon}"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                            <strong style="color: var(--text-color);">${ind.member_name}</strong>
+                            <span style="padding: 0.125rem 0.5rem; background: var(--gray-200); color: var(--gray-700); border-radius: 4px; font-size: 0.75rem; font-weight: 600;">
+                                ${ind.member_instrument}
+                            </span>
+                        </div>
+                        <div style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                            <i class="fas fa-church"></i> ${ind.culto_description}
+                            <span style="margin-left: 0.5rem;">
+                                <i class="fas fa-calendar"></i> ${ind.culto_date_formatted} às ${ind.culto_time}
+                            </span>
+                        </div>
+                        ${ind.motivo ? `
+                            <div style="font-size: 0.85rem; color: var(--text-muted); font-style: italic;">
+                                <i class="fas fa-comment"></i> ${ind.motivo}
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+    } catch (error) {
+        console.error('Erro ao carregar indisponibilidades:', error);
+        const container = document.getElementById('indisponibilidadesList');
+        if (container) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>Erro ao carregar dados</h3>
+                    <p>Tente novamente mais tarde</p>
+                </div>
+            `;
+        }
+    }
+}
+
+// Carregar status do período de indisponibilidade
+async function loadStatusPeriodo() {
+    try {
+        const response = await fetch('/get_periodo_indisponibilidade');
+        const data = await response.json();
+        
+        const statusDiv = document.getElementById('statusPeriodo');
+        const btnText = document.getElementById('btnText');
+        const btnToggle = document.getElementById('btnTogglePeriodo');
+        
+        if (data.periodo_aberto) {
+            statusDiv.innerHTML = `
+                <i class="fas fa-check-circle" style="color: #10b981;"></i>
+                <span style="color: #10b981;">PERÍODO ABERTO</span>
+                <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; font-weight: normal; color: var(--text-secondary);">
+                    Membros podem registrar indisponibilidades
+                </p>
+            `;
+            statusDiv.style.background = 'rgba(16, 185, 129, 0.1)';
+            statusDiv.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+            btnText.textContent = 'Fechar Período';
+            btnToggle.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+        } else {
+            statusDiv.innerHTML = `
+                <i class="fas fa-times-circle" style="color: #ef4444;"></i>
+                <span style="color: #ef4444;">PERÍODO FECHADO</span>
+                <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; font-weight: normal; color: var(--text-secondary);">
+                    Membros não podem registrar indisponibilidades
+                </p>
+            `;
+            statusDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+            statusDiv.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+            btnText.textContent = 'Abrir Período';
+            btnToggle.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+        }
+        
+        if (data.atualizado_em) {
+            const atualizadoP = document.createElement('p');
+            atualizadoP.style.margin = '0.5rem 0 0 0';
+            atualizadoP.style.fontSize = '0.85rem';
+            atualizadoP.style.color = 'var(--text-muted)';
+            atualizadoP.innerHTML = `<i class="fas fa-clock"></i> Última atualização: ${data.atualizado_em}`;
+            statusDiv.appendChild(atualizadoP);
+        }
+    } catch (error) {
+        console.error('Erro ao carregar status do período:', error);
+        document.getElementById('statusPeriodo').innerHTML = `
+            <i class="fas fa-exclamation-triangle" style="color: #f59e0b;"></i>
+            <span style="color: #f59e0b;">Erro ao carregar status</span>
+        `;
+    }
+}
+
+// Alternar período de indisponibilidade
+async function togglePeriodoIndisponibilidade() {
+    console.log('Função togglePeriodoIndisponibilidade chamada!');
+    
+    const btnToggle = document.getElementById('btnTogglePeriodo');
+    const btnText = document.getElementById('btnText');
+    
+    if (!btnToggle || !btnText) {
+        console.error('Botão não encontrado!');
+        GlobalModals.alert('Erro: Botão não encontrado', 'error');
+        return;
+    }
+    
+    // Verificar estado atual
+    const response = await fetch('/get_periodo_indisponibilidade');
+    const data = await response.json();
+    
+    const novoStatus = data.periodo_aberto ? 'FECHAR' : 'ABRIR';
+    const mensagem = `Deseja realmente ${novoStatus} o período de registro de indisponibilidades?`;
+    
+    // Mostrar modal de confirmação
+    showConfirmModal(
+        'Confirmar Alteração',
+        mensagem,
+        async () => {
+            // Função executada ao confirmar
+            btnToggle.disabled = true;
+            btnText.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Alterando...';
+            
+            try {
+                const toggleResponse = await fetch('/toggle_periodo_indisponibilidade', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!toggleResponse.ok) {
+                    throw new Error(`HTTP error! status: ${toggleResponse.status}`);
+                }
+                
+                const toggleData = await toggleResponse.json();
+                
+                if (toggleData.success) {
+                    // Recarregar status
+                    await loadStatusPeriodo();
+                    
+                    // Mostrar notificação de sucesso
+                    showSuccessNotification(toggleData.mensagem);
+                } else {
+                    throw new Error(toggleData.mensagem || 'Erro ao alterar período');
+                }
+            } catch (error) {
+                console.error('Erro ao alternar período:', error);
+                GlobalModals.alert('Erro ao alterar período: ' + error.message, 'error');
+            } finally {
+                btnToggle.disabled = false;
+            }
+        }
+    );
+}
+
+// === FUNÇÕES DO MODAL ===
+function showConfirmModal(title, message, onConfirm) {
+    document.getElementById('confirmModalTitle').innerHTML = `<i class="fas fa-question-circle" style="color: #f59e0b;"></i> ${title}`;
+    document.getElementById('confirmModalMessage').textContent = message;
+    
+    const confirmButton = document.getElementById('confirmModalButton');
+    confirmButton.onclick = () => {
+        closeConfirmModal();
+        onConfirm();
+    };
+    
+    document.getElementById('confirmModal').style.display = 'flex';
+}
+
+function closeConfirmModal() {
+    document.getElementById('confirmModal').style.display = 'none';
+}
+
+function showSuccessNotification(message) {
+    // Criar div de notificação
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10000;
+        animation: slideInRight 0.3s ease-out;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    `;
+    notification.innerHTML = `
+        <i class="fas fa-check-circle" style="font-size: 1.25rem;"></i>
+        <span>${message}</span>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.animation = 'slideOutRight 0.3s ease-out';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+// === FUNÇÕES DE GERENCIAMENTO DE INDISPONIBILIDADES ===
+async function loadTodasIndisponibilidades() {
+    const container = document.getElementById('listaTodasIndisponibilidades');
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+            <i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i>
+            <p style="margin-top: 1rem;">Carregando indisponibilidades...</p>
+        </div>
+    `;
+    
+    try {
+        const response = await fetch('/get_todas_indisponibilidades_admin');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Verificar se data e data.indisponibilidades existem
+        if (!data || !data.indisponibilidades) {
+            throw new Error('Resposta inválida do servidor');
+        }
+        
+        if (data.indisponibilidades.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                    <i class="fas fa-calendar-check" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                    <h3 style="margin: 0 0 0.5rem 0;">Nenhuma indisponibilidade cadastrada</h3>
+                    <p style="margin: 0;">Não há registros de indisponibilidade no sistema</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Criar tabela HTML
+        let tableHTML = `
+            <div style="overflow-x: auto;">
+                <table class="indisp-table">
+                    <thead>
+                        <tr>
+                            <th>Membro</th>
+                            <th>Data</th>
+                            <th>Culto</th>
+                            <th>Motivo</th>
+                            <th>Status</th>
+                            <th>Cadastrado em</th>
+                            <th style="text-align: center;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        data.indisponibilidades.forEach(ind => {
+            // Status badge
+            const statusColors = {
+                'approved': { bg: '#10b981', text: 'Aprovado' },
+                'pending': { bg: '#f59e0b', text: 'Pendente' },
+                'rejected': { bg: '#ef4444', text: 'Rejeitado' }
+            };
+            const statusInfo = statusColors[ind.status] || statusColors['pending'];
+            
+            tableHTML += `
+                <tr>
+                    <td><strong>${ind.member_name}</strong></td>
+                    <td>${ind.date_formatted}</td>
+                    <td>${ind.culto_description || '-'}</td>
+                    <td>${ind.reason || '<em style="color: var(--text-muted);">Sem motivo</em>'}</td>
+                    <td>
+                        <span style="
+                            display: inline-block;
+                            padding: 0.25rem 0.75rem;
+                            border-radius: 12px;
+                            font-size: 0.75rem;
+                            font-weight: 600;
+                            background: ${statusInfo.bg}22;
+                            color: ${statusInfo.bg};
+                            border: 1px solid ${statusInfo.bg};
+                        ">
+                            ${statusInfo.text}
+                        </span>
+                    </td>
+                    <td>${ind.created_at_formatted}</td>
+                    <td style="text-align: center;">
+                        <button 
+                            onclick="excluirIndisponibilidade(${ind.id}, '${ind.member_name}', '${ind.date_formatted}')" 
+                            class="btn-icon btn-danger"
+                            title="Excluir"
+                        >
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        tableHTML += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+        container.innerHTML = tableHTML;
+    } catch (error) {
+        console.error('Erro ao carregar indisponibilidades:', error);
+        container.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: #ef4444;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                <p>Erro ao carregar indisponibilidades: ${error.message}</p>
+            </div>
+        `;
+    }
+}
+
+async function excluirIndisponibilidade(id, memberName, date) {
+    showConfirmModal(
+        'Confirmar Exclusão',
+        `Deseja realmente excluir a indisponibilidade de ${memberName} para ${date}?`,
+        async () => {
+            try {
+                const response = await fetch(`/delete_indisponibilidade_admin/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccessNotification(data.message);
+                    // Recarregar lista
+                    await loadTodasIndisponibilidades();
+                } else {
+                    throw new Error(data.error || 'Erro ao excluir');
+                }
+            } catch (error) {
+                console.error('Erro ao excluir indisponibilidade:', error);
+                GlobalModals.alert('Erro ao excluir indisponibilidade: ' + error.message, 'error');
+            }
+        }
+    );
+}
+
+// ========== ESTATÍSTICAS DE MÚSICAS ==========
+
+// Preencher anos no select
+function preencherAnosMusicas() {
+    const selectAno = document.getElementById('filterAno');
+    if (!selectAno || selectAno.options.length > 0) return; // Já foi preenchido
+    
+    const anoAtual = new Date().getFullYear();
+    let html = '<option value="">Todos os anos</option>';
+    
+    for (let ano = anoAtual; ano >= 2020; ano--) {
+        html += `<option value="${ano}"${ano === anoAtual ? ' selected' : ''}>${ano}</option>`;
+    }
+    
+    selectAno.innerHTML = html;
+}
+
+// Carregar estatísticas de músicas
+async function loadEstatisticasMusicas() {
+    try {
+        const mes = document.getElementById('filterMes').value;
+        const ano = document.getElementById('filterAno').value;
+        
+        let url = '/get_estatisticas_musicas?';
+        if (mes) url += `mes=${mes}&`;
+        if (ano) url += `ano=${ano}`;
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data.success) {
+            // Atualizar cards de resumo
+            document.getElementById('totalMusicasUsadas').textContent = data.total_musicas_diferentes || 0;
+            document.getElementById('totalCultos').textContent = data.total_cultos || 0;
+            document.getElementById('musicaMaisPopular').textContent = data.musica_mais_popular || '-';
+            
+            // Atualizar gráfico Top 10
+            atualizarGraficoTop10Musicas(data.top_10 || []);
+            
+            // Atualizar tabela ranking
+            atualizarTabelaRankingMusicas(data.ranking_completo || []);
+        } else {
+            throw new Error(data.error || 'Erro ao carregar estatísticas');
+        }
+    } catch (error) {
+        console.error('Erro ao carregar estatísticas de músicas:', error);
+        document.getElementById('tabelaRankingMusicas').innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                <i class="fas fa-exclamation-triangle" style="font-size: 2rem; color: var(--danger-color);"></i>
+                <p style="margin-top: 1rem;">Erro ao carregar estatísticas</p>
+                <button onclick="loadEstatisticasMusicas()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: var(--primary-color); color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    <i class="fas fa-sync-alt"></i> Tentar Novamente
+                </button>
+            </div>
+        `;
+    }
+}
+
+// Atualizar gráfico Top 10
+function atualizarGraficoTop10Musicas(top10) {
+    const ctx = document.getElementById('chartTop10Musicas');
+    if (!ctx) return;
+    
+    // Destruir gráfico anterior se existir
+    if (chartTop10MusicasInstance) {
+        chartTop10MusicasInstance.destroy();
+    }
+    
+    // Criar novo gráfico
+    chartTop10MusicasInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: top10.map(m => m.titulo),
+            datasets: [{
+                label: 'Vezes Cantada',
+                data: top10.map(m => m.vezes),
+                backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                borderColor: 'rgba(59, 130, 246, 1)',
+                borderWidth: 2,
+                borderRadius: 8,
+                hoverBackgroundColor: 'rgba(59, 130, 246, 1)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 12,
+                    titleFont: { size: 14, weight: 'bold' },
+                    bodyFont: { size: 13 },
+                    callbacks: {
+                        label: function(context) {
+                            const musica = top10[context.dataIndex];
+                            return [
+                                `Vezes: ${musica.vezes}`,
+                                `Artista: ${musica.artista}`,
+                                `Tom: ${musica.tom}`
+                            ];
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1,
+                        font: { size: 12 }
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    ticks: {
+                        font: { size: 11 },
+                        maxRotation: 45,
+                        minRotation: 45
+                    },
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Atualizar tabela de ranking
+function atualizarTabelaRankingMusicas(ranking) {
+    const container = document.getElementById('tabelaRankingMusicas');
+    if (!container) return;
+    
+    if (ranking.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                <i class="fas fa-music" style="font-size: 2rem;"></i>
+                <p style="margin-top: 1rem;">Nenhuma música encontrada para o período selecionado</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = `
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: rgba(59, 130, 246, 0.1); border-bottom: 2px solid var(--primary-color);">
+                    <th style="padding: 1rem; text-align: left; font-weight: 700; color: var(--text-color);">#</th>
+                    <th style="padding: 1rem; text-align: left; font-weight: 700; color: var(--text-color);">Música</th>
+                    <th style="padding: 1rem; text-align: left; font-weight: 700; color: var(--text-color);">Artista</th>
+                    <th style="padding: 1rem; text-align: center; font-weight: 700; color: var(--text-color);">Tom</th>
+                    <th style="padding: 1rem; text-align: center; font-weight: 700; color: var(--text-color);">Vezes</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    ranking.forEach((musica, index) => {
+        let medalha = '';
+        if (index === 0) medalha = '🥇';
+        else if (index === 1) medalha = '🥈';
+        else if (index === 2) medalha = '🥉';
+        
+        const posicao = medalha || (index + 1);
+        
+        html += `
+            <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.2s;" 
+                onmouseover="this.style.background='rgba(59, 130, 246, 0.05)'" 
+                onmouseout="this.style.background='transparent'">
+                <td style="padding: 1rem; font-weight: 600; color: var(--text-color); font-size: 1.1rem;">${posicao}</td>
+                <td style="padding: 1rem; font-weight: 600; color: var(--text-color);">${musica.titulo}</td>
+                <td style="padding: 1rem; color: var(--text-secondary);">${musica.artista}</td>
+                <td style="padding: 1rem; text-align: center; font-weight: 600; color: var(--primary-color);">${musica.tom}</td>
+                <td style="padding: 1rem; text-align: center; font-weight: 700; font-size: 1.1rem; color: var(--primary-color);">${musica.vezes}</td>
+            </tr>
+        `;
+    });
+    
+    html += `
+            </tbody>
+        </table>
+    `;
+    
+    container.innerHTML = html;
+}
+
+// Carregar tudo quando a página carregar
+document.addEventListener('DOMContentLoaded', () => {
+    // Carregar rankings por padrão (tab ativa)
+    loadRankingEscalas();
+    
+    // Carregar status do período
+    loadStatusPeriodo();
+    
+    // Carregar indisponibilidades
+    loadTodasIndisponibilidades();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,25 @@
+# Flask e extensões principais
+Flask==3.0.0
+Flask-SQLAlchemy==3.1.1
+Flask-Login==0.6.3
+Flask-Cors==4.0.0
+Flask-WTF==1.2.1
+
+# Servidor WSGI
+gunicorn==21.2.0
+
+# Segurança e senhas
+Werkzeug==3.0.1
+
+# Sessões
+Flask-Session==0.5.0
+
+# Firebase (opcional - para notificações push)
+firebase-admin==6.3.0
+
+# Banco de dados
+SQLAlchemy==2.0.23
+
+# Utilitários
+python-dotenv==1.0.0
+email-validator==2.1.0

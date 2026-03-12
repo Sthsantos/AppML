@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Ministério de Louvor</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Sistema completo de gestão para Ministério de Louvor - Escalas, Cultos, Repertório e Membros">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Min. Louvor">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23667eea'/%3E%3Cpath d='M50 20c-4.418 0-8 3.582-8 8v32c0 4.418 3.582 8 8 8s8-3.582 8-8V28c0-4.418-3.582-8-8-8zm0 56c-4.418 0-8-3.582-8-8s3.582-8 8-8 8 3.582 8 8-3.582 8-8 8z' fill='%23fff'/%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' fill='%23667eea' rx='40'/%3E%3Cpath d='M90 50c-8.837 0-16 7.163-16 16v48c0 8.837 7.163 16 16 16s16-7.163 16-16V66c0-8.837-7.163-16-16-16z' fill='%23fff'/%3E%3C/svg%3E">
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.05)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,138.7C960,139,1056,117,1152,112C1248,107,1344,117,1392,122.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>');
+            background-size: cover;
+            background-position: bottom;
+            opacity: 0.3;
+            animation: wave 10s linear infinite;
+        }
+        
+        @keyframes wave {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        
+        .login-box {
+            background: var(--white);
+            border-radius: var(--radius-2xl);
+            box-shadow: var(--shadow-2xl);
+            padding: 3rem 2.5rem;
+            width: 100%;
+            max-width: 450px;
+            position: relative;
+            z-index: 1;
+            animation: slideUp 0.5s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+        
+        .login-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--gradient-primary);
+            border-radius: var(--radius-xl);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            box-shadow: var(--shadow-blue);
+        }
+        
+        .login-icon i {
+            font-size: 2.5rem;
+            color: var(--white);
+        }
+        
+        .login-title {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--gray-900);
+            margin-bottom: 0.5rem;
+        }
+        
+        .login-subtitle {
+            color: var(--gray-600);
+            font-size: 0.95rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .form-label i {
+            color: var(--primary-600);
+        }
+        
+        .form-input-group {
+            position: relative;
+        }
+        
+        .form-input-group i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-400);
+            font-size: 1.1rem;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 0.875rem 1rem 0.875rem 3rem;
+            font-size: 1rem;
+            border: 2px solid var(--gray-300);
+            border-radius: var(--radius-lg);
+            background: var(--white);
+            color: var(--gray-900);
+            transition: var(--transition-fast);
+            font-family: inherit;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-500);
+            box-shadow: 0 0 0 4px var(--primary-100);
+        }
+        
+        .form-control::placeholder {
+            color: var(--gray-400);
+        }
+        
+        .btn-login {
+            width: 100%;
+            padding: 01rem;
+            font-size: 1.05rem;
+            font-weight: 700;
+            background: var(--gradient-primary);
+            color: var(--white);
+            border: none;
+            border-radius: var(--radius-lg);
+            cursor: pointer;
+            transition: var(--transition-base);
+            box-shadow: var(--shadow-blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-top: 2rem;
+        }
+        
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 50px -10px rgba(59, 130, 246, 0.6);
+        }
+        
+        .btn-login:active {
+            transform: translateY(0);
+        }
+        
+        .login-footer {
+            text-align: center;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--gray-200);
+        }
+        
+        .login-footer p {
+            color: var(--gray-600);
+            font-size: 0.9rem;
+        }
+        
+        .login-footer i {
+            color: var(--danger);
+            animation: heartbeat 1.5s ease infinite;
+        }
+        
+        @keyframes heartbeat {
+            0%, 100% { transform: scale(1); }
+            10%, 30% { transform: scale(1.1); }
+            20%, 40% { transform: scale(1); }
+        }
+        
+        .alert {
+ margin-bottom: 1.5rem;
+            padding: 1rem 1.25rem;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            animation: slideDown 0.3s ease-out;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .alert-success {
+            background: var(--success-light);
+            color: #065f46;
+            border-left: 4px solid var(--success);
+        }
+        
+        .alert-danger {
+            background: var(--danger-light);
+            color: #991b1b;
+            border-left: 4px solid var(--danger);
+        }
+        
+        .alert i {
+            font-size: 1.25rem;
+        }
+        
+        .floating-particles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: 0;
+            pointer-events: none;
+        }
+        
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            animation: float 15s infinite;
+        }
+        
+        .particle:nth-child(1) {
+            width: 10px;
+            height: 10px;
+            top: 20%;
+            left: 20%;
+            animation-delay: 0s;
+        }
+        
+        .particle:nth-child(2) {
+            width: 15px;
+            height: 15px;
+            top: 60%;
+            left: 80%;
+            animation-delay: 2s;
+        }
+        
+        .particle:nth-child(3) {
+            width: 8px;
+            height: 8px;
+            top: 80%;
+            left: 30%;
+            animation-delay: 4s;
+        }
+        
+        .particle:nth-child(4) {
+            width: 12px;
+            height: 12px;
+            top: 40%;
+            left: 70%;
+            animation-delay: 1s;
+        }
+        
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 0.5;
+            }
+            50% {
+                transform: translateY(-50px) rotate(180deg);
+                opacity: 1;
+            }
+        }
+        
+        /* Botão de Tema */
+        .theme-toggle-login {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--primary-600);
+            font-size: 1.25rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            transition: var(--transition-base);
+            z-index: 100;
+        }
+        
+        .theme-toggle-login:hover {
+            transform: scale(1.1) rotate(20deg);
+            background: rgba(255, 255, 255, 1);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        [data-theme="dark"] .theme-toggle-login {
+            background: rgba(30, 41, 59, 0.95);
+            border-color: rgba(148, 163, 184, 0.3);
+            color: #fbbf24;
+        }
+        
+        [data-theme="dark"] .theme-toggle-login:hover {
+            background: rgba(30, 41, 59, 1);
+        }
+        
+        [data-theme="dark"] .login-box {
+            background: var(--card-bg);
+        }
+        
+        [data-theme="dark"] .login-title {
+            color: var(--text-color);
+        }
+        
+        [data-theme="dark"] .login-subtitle {
+            color: var(--text-secondary);
+        }
+        
+        [data-theme="dark"] .form-label {
+            color: var(--text-color);
+        }
+        
+        [data-theme="dark"] .form-control {
+            background: var(--bg-secondary);
+            border-color: var(--border-color);
+            color: var(--text-color);
+        }
+    </style>
+</head>
+<body>
+    <!-- Botão de Tema -->
+    <button class="theme-toggle-login" onclick="App.theme.toggle()" title="Alternar tema">
+        <i class="fas fa-moon"></i>
+    </button>
+    
+    <!-- Floating particles -->
+    <div class="floating-particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+    
+    <!-- Login Box -->
+    <div class="login-box">
+        <div class="login-header">
+            <div class="login-icon">
+                <i class="fas fa-music"></i>
+            </div>
+            <h1 class="login-title">Bem-vindo de Volta!</h1>
+            <p class="login-subtitle">Entre com suas credenciais para acessar o sistema</p>
+        </div>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        <i class="fas fa-{{ 'exclamation-circle' if category == 'danger' else 'check-circle' }}"></i>
+                        <span>{{ message }}</span>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <form method="POST" action="{{ url_for('login') }}">
+            <div class="form-group">
+                <label for="email" class="form-label">
+                    <i class="fas fa-envelope"></i>
+                    E-mail
+                </label>
+                <div class="form-input-group">
+                    <i class="fas fa-at"></i>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        class="form-control" 
+                        placeholder="seu@email.com"
+                        required 
+                        autofocus
+                    >
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="password" class="form-label">
+                    <i class="fas fa-lock"></i>
+                    Senha
+                </label>
+                <div class="form-input-group">
+                    <i class="fas fa-key"></i>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        class="form-control" 
+                        placeholder="••••••••"
+                        required
+                    >
+                </div>
+            </div>
+            
+            <button type="submit" class="btn-login">
+                <i class="fas fa-sign-in-alt"></i>
+                Entrar no Sistema
+            </button>
+        </form>
+    </div>
+    
+    <!-- PWA Install Prompt -->
+    <div id="pwaInstallPrompt" style="display: none; position: fixed; bottom: 1rem; left: 1rem; right: 1rem; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%); color: white; padding: 1.5rem; border-radius: 1rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); z-index: 9999; animation: slideInUp 0.4s ease-out; border: 1px solid rgba(255, 255, 255, 0.1);">
+        <button onclick="closePWAPrompt()" style="position: absolute; top: 0.75rem; right: 0.75rem; background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; backdrop-filter: blur(10px); transition: all 0.2s;">
+            <i class="fas fa-times"></i>
+        </button>
+        <div style="display: flex; align-items: flex-start; gap: 1rem;">
+            <div style="background: rgba(255,255,255,0.2); padding: 1rem; border-radius: 0.75rem; backdrop-filter: blur(10px); flex-shrink: 0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                <i class="fas fa-mobile-alt" style="font-size: 1.75rem;"></i>
+            </div>
+            <div style="flex: 1; padding-right: 2rem;">
+                <h3 style="margin: 0 0 0.5rem 0; font-size: 1.25rem; font-weight: 700; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);">Instalar Aplicativo</h3>
+                <p style="margin: 0 0 1.25rem 0; font-size: 0.925rem; opacity: 0.95; line-height: 1.5;">Adicione à tela inicial para acesso rápido, notificações e uso offline!</p>
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                    <button onclick="installPWA()" class="btn-install" style="background: white; color: #2563eb; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; font-size: 0.925rem; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); transition: all 0.2s; font-family: 'Inter', sans-serif;">
+                        <i class="fas fa-download"></i> Instalar Agora
+                    </button>
+                    <button onclick="closePWAPrompt()" class="btn-dismiss" style="background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 500; cursor: pointer; font-size: 0.925rem; backdrop-filter: blur(10px); transition: all 0.2s; font-family: 'Inter', sans-serif;">
+                        Depois
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes slideOutDown {
+            from {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateY(100%);
+            }
+        }
+        
+        @media (min-width: 640px) {
+            #pwaInstallPrompt {
+                max-width: 520px;
+                left: auto;
+                right: 1.5rem;
+                bottom: 1.5rem;
+            }
+        }
+        
+        #pwaInstallPrompt button:hover {
+            transform: translateY(-2px);
+        }
+        
+        #pwaInstallPrompt button:active {
+            transform: translateY(0);
+        }
+        
+        #pwaInstallPrompt button:first-of-type:hover {
+            background: rgba(255, 255, 255, 0.3) !important;
+        }
+        
+        #pwaInstallPrompt .btn-install:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+            transform: translateY(-2px);
+        }
+        
+        #pwaInstallPrompt .btn-dismiss:hover {
+            background: rgba(255, 255, 255, 0.25) !important;
+            border-color: rgba(255, 255, 255, 0.5) !important;
+        }
+    </style>
+
+    <script>
+        // PWA Installation Logic
+        let deferredPrompt;
+        const installPrompt = document.getElementById('pwaInstallPrompt');
+        
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('✅ Service Worker registrado com sucesso:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('❌ Falha ao registrar Service Worker:', error);
+                    });
+            });
+        }
+        
+        // Capture beforeinstallprompt event
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Check if user has dismissed the prompt before
+            const dismissed = localStorage.getItem('pwa-prompt-dismissed');
+            const dismissedTime = localStorage.getItem('pwa-prompt-dismissed-time');
+            
+            // Show prompt if not dismissed or dismissed more than 7 days ago
+            if (!dismissed || (dismissedTime && Date.now() - parseInt(dismissedTime) > 7 * 24 * 60 * 60 * 1000)) {
+                setTimeout(() => {
+                    installPrompt.style.display = 'block';
+                }, 3000); // Show after 3 seconds
+            }
+        });
+        
+        // Install PWA
+        async function installPWA() {
+            if (!deferredPrompt) {
+                alert('A instalação não está disponível neste navegador ou o aplicativo já foi instalado.');
+                return;
+            }
+            
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            
+            if (outcome === 'accepted') {
+                console.log('✅ PWA instalado com sucesso!');
+                alert('Aplicativo instalado com sucesso! 🎉');
+            }
+            
+            deferredPrompt = null;
+            installPrompt.style.display = 'none';
+        }
+        
+        // Close PWA Prompt
+        function closePWAPrompt() {
+            installPrompt.style.animation = 'slideOutDown 0.3s ease-out';
+            setTimeout(() => {
+                installPrompt.style.display = 'none';
+                installPrompt.style.animation = 'slideInUp 0.4s ease-out';
+            }, 300);
+            
+            // Save dismissal
+            localStorage.setItem('pwa-prompt-dismissed', 'true');
+            localStorage.setItem('pwa-prompt-dismissed-time', Date.now().toString());
+        }
+        
+        // Check if already installed
+        window.addEventListener('appinstalled', () => {
+            console.log('✅ PWA instalado!');
+            installPrompt.style.display = 'none';
+            localStorage.setItem('pwa-installed', 'true');
+            alert('Aplicativo instalado com sucesso! Agora você pode acessar diretamente da tela inicial. 🎉');
+        });
+        
+        // Detect standalone mode (already installed)
+        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+            console.log('✅ Executando em modo standalone (PWA instalado)');
+        }
+        
+        // For iOS - Manual installation instructions
+        function showIOSInstallInstructions() {
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            const isStandalone = window.navigator.standalone;
+            
+            if (isIOS && !isStandalone && !localStorage.getItem('ios-install-shown')) {
+                setTimeout(() => {
+                    alert(
+                        'Para instalar no iOS:\n\n' +
+                        '1. Toque no ícone de compartilhar (quadrado com seta)\n' +
+                        '2. Role para baixo e toque em "Adicionar à Tela de Início"\n' +
+                        '3. Toque em "Adicionar"'
+                    );
+                    localStorage.setItem('ios-install-shown', 'true');
+                }, 5000);
+            }
+        }
+        
+        // Check for iOS
+        window.addEventListener('load', showIOSInstallInstructions);
+    </script>
+    
+    <!-- Script.js para funcionalidade do tema -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

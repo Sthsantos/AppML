@@ -1,0 +1,558 @@
+{% extends "base.html" %}
+
+{% block title %}Membros - Ministério de Louvor{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-bottom: 100px;">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">
+                <i class="fas fa-users"></i>
+                Membros do Ministério
+            </h1>
+            <p class="page-subtitle">Gerencie todos os membros cadastrados</p>
+        </div>
+        {% if current_user.is_authenticated and current_user.is_admin %}
+        <button class="btn btn-blue" onclick="openAddModal()">
+            <i class="fas fa-user-plus"></i>
+            Adicionar Membro
+        </button>
+        {% endif %}
+    </div>
+
+<!-- Filters -->
+<div class="filters-bar">
+    <div class="filter-group">
+        <label for="filterFuncao">Função:</label>
+        <select id="filterFuncao" class="form-control" onchange="filterMembers()">
+            <option value="">Todas</option>
+            <option value="Vocalista">Vocalista</option>
+            <option value="Guitarrista">Guitarrista</option>
+            <option value="Baixista">Baixista</option>
+            <option value="Baterista">Baterista</option>
+            <option value="Tecladista">Tecladista</option>
+            <option value="Violonista">Violonista</option>
+        </select>
+    </div>
+    <div class="filter-group" style="flex: 2;">
+        <label for="searchMember">Buscar:</label>
+        <input type="text" id="searchMember" class="form-control" placeholder="Digite o nome..." oninput="filterMembers()">
+    </div>
+</div>
+
+<!-- Members Grid -->
+<div class="grid" id="membersGrid">
+    <div class="empty-state">
+        <i class="fas fa-spinner fa-spin"></i>
+        <h3>Carregando membros...</h3>
+    </div>
+</div>
+</div>
+
+<!-- Add Member Modal -->
+{% if current_user.is_authenticated and current_user.is_admin %}
+<div class="modal-overlay" id="addMemberModal" onclick="closeModalOnOverlay(event, 'addMemberModal')">
+    <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h2 class="modal-title">Adicionar Novo Membro</h2>
+            <button class="modal-close" onclick="closeAddModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="addMemberForm" class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Nome Completo</label>
+                <input type="text" name="name" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">E-mail</label>
+                <input type="email" name="email" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Telefone</label>
+                <input type="tel" name="phone" class="form-control" placeholder="(00) 00000-0000">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Função Principal</label>
+                <select name="instrument" class="form-control" required>
+                    <option value="">Selecione...</option>
+                    <option value="Vocalista">Vocalista</option>
+                    <option value="Guitarrista">Guitarrista</option>
+                    <option value="Baixista">Baixista</option>
+                    <option value="Baterista">Baterista</option>
+                    <option value="Tecladista">Tecladista</option>
+                    <option value="Violonista">Violonista</option>
+                </select>
+            </div>
+        </form>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeAddModal()">Cancelar</button>
+            <button class="btn btn-blue" onclick="saveMember()">
+                <i class="fas fa-save"></i>
+                Salvar Membro
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Member Modal -->
+<div class="modal-overlay" id="editMemberModal" onclick="closeModalOnOverlay(event, 'editMemberModal')">
+    <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h2 class="modal-title">Editar Membro</h2>
+            <button class="modal-close" onclick="closeEditModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="editMemberForm" class="modal-body">
+            <input type="hidden" id="editMemberId" name="id">
+            <div class="form-group">
+                <label class="form-label">Nome Completo</label>
+                <input type="text" id="editMemberName" name="name" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">E-mail</label>
+                <input type="email" id="editMemberEmail" name="email" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Telefone</label>
+                <input type="tel" id="editMemberPhone" name="phone" class="form-control" placeholder="(00) 00000-0000">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Função Principal</label>
+                <select id="editMemberInstrument" name="instrument" class="form-control" required>
+                    <option value="">Selecione...</option>
+                    <option value="Vocalista">Vocalista</option>
+                    <option value="Guitarrista">Guitarrista</option>
+                    <option value="Baixista">Baixista</option>
+                    <option value="Baterista">Baterista</option>
+                    <option value="Tecladista">Tecladista</option>
+                    <option value="Violonista">Violonista</option>
+                </select>
+            </div>
+        </form>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeEditModal()">Cancelar</button>
+            <button class="btn btn-blue" onclick="updateMember()">
+                <i class="fas fa-save"></i>
+                Atualizar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Suspend Modal -->
+<div class="modal-overlay" id="confirmSuspendModal" onclick="closeModalOnOverlay(event, 'confirmSuspendModal')">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width: 500px;">
+        <div class="modal-header">
+            <h2 class="modal-title">
+                <i class="fas fa-exclamation-circle" style="color: var(--accent-warning);"></i>
+                Confirmar Ação
+            </h2>
+            <button class="modal-close" onclick="closeSuspendModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <p id="suspendModalMessage" style="font-size: 1.05rem; color: var(--text-color); margin: 0;"></p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeSuspendModal()">Cancelar</button>
+            <button class="btn" id="confirmSuspendBtn" onclick="confirmSuspendAction()">
+                <i class="fas fa-check"></i>
+                Confirmar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Delete Modal -->
+<div class="modal-overlay" id="confirmDeleteModal" onclick="closeModalOnOverlay(event, 'confirmDeleteModal')">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width: 500px;">
+        <div class="modal-header" style="background: rgba(239, 68, 68, 0.1);">
+            <h2 class="modal-title">
+                <i class="fas fa-trash-alt" style="color: var(--accent-danger);"></i>
+                Excluir Membro
+            </h2>
+            <button class="modal-close" onclick="closeDeleteModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div style="padding: 1rem; background: rgba(239, 68, 68, 0.05); border-radius: var(--border-radius-sm); border-left: 4px solid var(--accent-danger); margin-bottom: 1rem;">
+                <p style="margin: 0; color: var(--accent-danger); font-weight: 600;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    ATENÇÃO: Esta ação não pode ser desfeita!
+                </p>
+            </div>
+            <p id="deleteModalMessage" style="font-size: 1.05rem; color: var(--text-color); margin: 0;"></p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeDeleteModal()">Cancelar</button>
+            <button class="btn btn-danger" id="confirmDeleteBtn" onclick="confirmDeleteAction()">
+                <i class="fas fa-trash"></i>
+                Excluir Permanentemente
+            </button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let allMembers = [];
+const isAdmin = {{ 'true' if current_user.is_authenticated and current_user.is_admin else 'false' }};
+let pendingSuspendAction = null;
+let pendingDeleteAction = null;
+
+// Modal Management
+function openAddModal() {
+    document.getElementById('addMemberModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeAddModal() {
+    document.getElementById('addMemberModal').classList.remove('active');
+    document.getElementById('addMemberForm').reset();
+    document.body.style.overflow = 'auto';
+}
+
+function openEditModal(memberId) {
+    const member = allMembers.find(m => m.id === memberId);
+    if (!member) return;
+    
+    document.getElementById('editMemberId').value = member.id;
+    document.getElementById('editMemberName').value = member.name;
+    document.getElementById('editMemberEmail').value = member.email;
+    document.getElementById('editMemberPhone').value = member.phone || '';
+    document.getElementById('editMemberInstrument').value = member.instrument || '';
+    
+    document.getElementById('editMemberModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeEditModal() {
+    document.getElementById('editMemberModal').classList.remove('active');
+    document.getElementById('editMemberForm').reset();
+    document.body.style.overflow = 'auto';
+}
+
+function closeModalOnOverlay(event, modalId) {
+    if (event.target.id === modalId) {
+        if (modalId === 'addMemberModal') closeAddModal();
+        if (modalId === 'editMemberModal') closeEditModal();
+        if (modalId === 'confirmSuspendModal') closeSuspendModal();
+        if (modalId === 'confirmDeleteModal') closeDeleteModal();
+    }
+}
+
+function closeSuspendModal() {
+    document.getElementById('confirmSuspendModal').classList.remove('active');
+    document.body.style.overflow = 'auto';
+    pendingSuspendAction = null;
+}
+
+function closeDeleteModal() {
+    document.getElementById('confirmDeleteModal').classList.remove('active');
+    document.body.style.overflow = 'auto';
+    pendingDeleteAction = null;
+}
+
+// Load Members
+async function loadMembers() {
+    try {
+        const response = await fetch('/get_members');
+        const data = await response.json();
+        allMembers = data.members || [];
+        renderMembers(allMembers);
+    } catch (error) {
+        console.error('Erro ao carregar membros:', error);
+        document.getElementById('membersGrid').innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Erro ao carregar membros</h3>
+                <p>Não foi possível carregar os membros</p>
+            </div>
+        `;
+    }
+}
+
+// Render Members
+function renderMembers(members) {
+    const grid = document.getElementById('membersGrid');
+    
+    if (members.length === 0) {
+        grid.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-users"></i>
+                <h3>Nenhum membro encontrado</h3>
+                <p>Não há membros cadastrados no sistema</p>
+            </div>
+        `;
+        return;
+    }
+    
+    grid.innerHTML = members.map(member => {
+        const statusBadge = member.suspended 
+            ? '<span class="badge" style="background: var(--accent-danger); color: white;">Suspenso</span>'
+            : '<span class="badge" style="background: var(--accent-success); color: white;">Ativo</span>';
+        
+        const adminButtons = isAdmin ? `
+            <div style="display: flex; gap: 0.5rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                <button class="btn btn-sm btn-outline" onclick="openEditModal(${member.id})" title="Editar">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm ${member.suspended ? 'btn-success' : 'btn-warning'}" 
+                        onclick="toggleSuspend(${member.id}, ${member.suspended})" 
+                        title="${member.suspended ? 'Reativar' : 'Suspender'}">
+                    <i class="fas fa-${member.suspended ? 'check' : 'ban'}"></i>
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="deleteMember(${member.id}, '${member.name}')" title="Excluir">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        ` : '';
+        
+        return `
+            <div class="card" style="${member.suspended ? 'opacity: 0.6;' : ''}">
+                <div class="card-body">
+                    <div style="display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1rem;">
+                        <div style="width: 56px; height: 56px; border-radius: var(--border-radius); background: linear-gradient(135deg, #6366f1, #8b5cf6); display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 1.5rem; font-weight: 700; flex-shrink: 0; box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);">
+                            ${member.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div style="flex: 1; min-width: 0;">
+                            <h3 style="font-family: 'Poppins', sans-serif; font-size: 1.1rem; font-weight: 600; color: var(--text-color); margin: 0 0 0.5rem 0;">
+                                ${member.name}
+                            </h3>
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                <span class="badge badge-primary">${member.instrument || 'Sem função'}</span>
+                                ${statusBadge}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">
+                            <i class="fas fa-envelope" style="width: 16px;"></i>
+                            <span style="word-break: break-all;">${member.email}</span>
+                        </div>
+                        ${member.phone ? `
+                            <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">
+                                <i class="fas fa-phone" style="width: 16px;"></i>
+                                <span>${member.phone}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    ${adminButtons}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Filter Members
+function filterMembers() {
+    const funcao = document.getElementById('filterFuncao').value;
+    const search = document.getElementById('searchMember').value.toLowerCase();
+    
+    let filtered = allMembers;
+    
+    if (funcao) {
+        filtered = filtered.filter(m => m.instrument === funcao);
+    }
+    
+    if (search) {
+        filtered = filtered.filter(m => 
+            m.name.toLowerCase().includes(search) || 
+            (m.email && m.email.toLowerCase().includes(search))
+        );
+    }
+    
+    renderMembers(filtered);
+}
+
+// Save Member
+async function saveMember() {
+    const form = document.getElementById('addMemberForm');
+    const formData = new FormData(form);
+    
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    const data = {
+        name: formData.get('name'),
+        email: formData.get('email'),
+        phone: formData.get('phone'),
+        instrument: formData.get('instrument')
+    };
+    
+    try {
+        const response = await fetch('/add_member', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showToast('success', result.message || 'Membro adicionado com sucesso!');
+            closeAddModal();
+            loadMembers();
+        } else {
+            showToast('error', result.message || 'Erro ao adicionar membro');
+        }
+    } catch (error) {
+        console.error('Erro ao salvar membro:', error);
+        showToast('error', 'Erro ao processar requisição');
+    }
+}
+
+// Update Member
+async function updateMember() {
+    const form = document.getElementById('editMemberForm');
+    
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    const data = {
+        id: parseInt(document.getElementById('editMemberId').value),
+        name: document.getElementById('editMemberName').value,
+        email: document.getElementById('editMemberEmail').value,
+        phone: document.getElementById('editMemberPhone').value,
+        instrument: document.getElementById('editMemberInstrument').value
+    };
+    
+    try {
+        const response = await fetch('/update_member', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showToast('success', result.message || 'Membro atualizado com sucesso!');
+            closeEditModal();
+            loadMembers();
+        } else {
+            showToast('error', result.message || 'Erro ao atualizar membro');
+        }
+    } catch (error) {
+        console.error('Erro ao atualizar membro:', error);
+        showToast('error', 'Erro ao processar requisição');
+    }
+}
+
+// Toggle Suspend
+function toggleSuspend(memberId, currentStatus) {
+    const member = allMembers.find(m => m.id === memberId);
+    const action = currentStatus ? 'reativar' : 'suspender';
+    const actionUpper = currentStatus ? 'Reativar' : 'Suspender';
+    
+    pendingSuspendAction = { memberId, currentStatus };
+    
+    document.getElementById('suspendModalMessage').innerHTML = `
+        Deseja realmente <strong>${action}</strong> o membro <strong>${member.name}</strong>?
+    `;
+    
+    const confirmBtn = document.getElementById('confirmSuspendBtn');
+    confirmBtn.className = currentStatus ? 'btn btn-success' : 'btn btn-warning';
+    confirmBtn.innerHTML = `<i class="fas fa-${currentStatus ? 'check' : 'ban'}"></i> ${actionUpper}`;
+    
+    document.getElementById('confirmSuspendModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+async function confirmSuspendAction() {
+    if (!pendingSuspendAction) return;
+    
+    const { memberId } = pendingSuspendAction;
+    
+    try {
+        const response = await fetch(`/toggle_suspend_member/${memberId}`, {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showToast('success', result.message || 'Status atualizado com sucesso!');
+            closeSuspendModal();
+            loadMembers();
+        } else {
+            showToast('error', result.message || 'Erro ao atualizar status');
+        }
+    } catch (error) {
+        console.error('Erro ao suspender/reativar membro:', error);
+        showToast('error', 'Erro ao processar requisição');
+    }
+}
+
+// Delete Member
+function deleteMember(memberId, memberName) {
+    pendingDeleteAction = { memberId, memberName };
+    
+    document.getElementById('deleteModalMessage').innerHTML = `
+        Tem certeza que deseja excluir permanentemente o membro <strong>${memberName}</strong>?
+    `;
+    
+    document.getElementById('confirmDeleteModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+async function confirmDeleteAction() {
+    if (!pendingDeleteAction) return;
+    
+    const { memberId } = pendingDeleteAction;
+    
+    try {
+        const response = await fetch(`/delete_member/${memberId}`, {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showToast('success', result.message || 'Membro excluído com sucesso!');
+            closeDeleteModal();
+            loadMembers();
+        } else {
+            showToast('error', result.message || 'Erro ao excluir membro');
+        }
+    } catch (error) {
+        console.error('Erro ao excluir membro:', error);
+        showToast('error', 'Erro ao processar requisição');
+    }
+}
+
+// Toast Notification
+function showToast(type, message) {
+    // Usar o sistema de toast do App se disponível
+    if (typeof App !== 'undefined' && App.toast) {
+        App.toast[type](message);
+    } else if (typeof GlobalModals !== 'undefined') {
+        // Usar GlobalModals se disponível
+        GlobalModals.toast(message, type);
+    } else {
+        // Fallback simples
+        alert(message);
+    }
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', loadMembers);
+</script>
+{% endblock %}

@@ -1,0 +1,377 @@
+{% extends "base.html" %}
+
+{% block title %}Indisponibilidade - Ministério de Louvor{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <i class="fas fa-calendar-times"></i>
+            Registrar Indisponibilidade
+        </h1>
+        <p class="page-subtitle">Informe quando não poderá participar dos cultos</p>
+    </div>
+    <button class="btn btn-blue" onclick="App.modal.open('addIndisponibilidadeModal')" id="btnNovaIndisponibilidade">
+        <i class="fas fa-plus"></i>
+        Nova Indisponibilidade
+    </button>
+</div>
+
+<!-- Banner de Status do Período -->
+<div id="periodoStatus" class="alert" style="margin-bottom: 2rem;">
+    <i class="fas fa-spinner fa-spin"></i> Verificando período...
+</div>
+
+<!-- Indisponibilidades List -->
+<div class="grid grid-auto" id="indisponibilidadesGrid">
+    <div class="empty-state">
+        <i class="fas fa-spinner fa-spin"></i>
+        <h3>Carregando indisponibilidades...</h3>
+    </div>
+</div>
+
+<!-- Add Indisponibilidade Modal -->
+<div class="modal-overlay" id="addIndisponibilidadeModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 class="modal-title">Registrar Indisponibilidade</h2>
+            <button class="modal-close" onclick="App.modal.close('addIndisponibilidadeModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="addIndisponibilidadeForm" class="modal-body">
+            <div class="form-group">
+                <label class="form-label" style="font-weight: 600; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-church"></i>
+                    Selecione os Cultos que você NÃO poderá participar
+                </label>
+                <div id="cultosCheckboxList" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--gray-300); border-radius: var(--radius-md); padding: 1rem;">
+                    <div style="text-align: center; padding: 2rem; color: var(--gray-500);">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p style="margin-top: 0.5rem;">Carregando cultos...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group" style="margin-top: 1.5rem;">
+                <label class="form-label">
+                    <i class="fas fa-comment"></i>
+                    Motivo *
+                </label>
+                <textarea name="motivo" id="motivoIndisponibilidade" class="form-control" rows="3" placeholder="Informe o motivo da sua indisponibilidade..." required></textarea>
+            </div>
+            
+            <div class="alert alert-info" style="margin-top: 1rem;">
+                <i class="fas fa-info-circle"></i>
+                <div>
+                    <strong>Atenção:</strong> Você só pode registrar indisponibilidades durante os <strong>2 primeiros dias de cada mês</strong>.
+                </div>
+            </div>
+        </form>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="App.modal.close('addIndisponibilidadeModal')">Cancelar</button>
+            <button class="btn btn-blue" onclick="saveIndisponibilidade()">
+                <i class="fas fa-save"></i>
+                Registrar
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Variável global para armazenar status do período
+let periodoAberto = false;
+
+// Carregar status do período
+async function loadPeriodoStatus() {
+    try {
+        const response = await fetch('/get_periodo_indisponibilidade');
+        const data = await response.json();
+        
+        periodoAberto = data.periodo_aberto;
+        const periodoDiv = document.getElementById('periodoStatus');
+        const btnNova = document.getElementById('btnNovaIndisponibilidade');
+        
+        if (periodoAberto) {
+            periodoDiv.className = 'alert alert-success';
+            periodoDiv.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <i class="fas fa-unlock" style="font-size: 2rem;"></i>
+                    <div>
+                        <strong style="font-size: 1.25rem;">Período ABERTO!</strong>
+                        <p style="margin: 0.25rem 0 0 0; opacity: 0.9;">${data.mensagem}</p>
+                    </div>
+                </div>
+            `;
+            btnNova.disabled = false;
+            btnNova.style.opacity = '1';
+        } else {
+            periodoDiv.className = 'alert alert-warning';
+            periodoDiv.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <i class="fas fa-lock" style="font-size: 2rem;"></i>
+                    <div>
+                        <strong style="font-size: 1.25rem;">Período FECHADO</strong>
+                        <p style="margin: 0.25rem 0 0 0;">${data.mensagem}</p>
+                    </div>
+                </div>
+            `;
+            btnNova.disabled = true;
+            btnNova.style.opacity = '0.5';
+        }
+    } catch (error) {
+        console.error('Erro ao carregar status do período:', error);
+        const periodoDiv = document.getElementById('periodoStatus');
+        periodoDiv.className = 'alert alert-danger';
+        periodoDiv.innerHTML = `
+            <i class="fas fa-exclamation-triangle"></i>
+            Erro ao verificar período de registro
+        `;
+    }
+}
+
+// Carregar cultos disponíveis
+async function loadCultosDisponiveis() {
+    try {
+        const response = await fetch('/get_cultos_disponiveis');
+        const data = await response.json();
+        const cultos = data.cultos || [];
+        
+        const container = document.getElementById('cultosCheckboxList');
+        
+        if (cultos.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-calendar-times"></i>
+                    <p>Nenhum culto futuro cadastrado</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = cultos.map((culto, index) => `
+            <label style="
+                display: flex;
+                align-items: start;
+                padding: 1rem;
+                border-bottom: 1px solid var(--gray-200);
+                cursor: pointer;
+                transition: background 0.2s;
+            " onmouseover="this.style.background='var(--gray-50)'" onmouseout="this.style.background='transparent'">
+                <input 
+                    type="checkbox" 
+                    name="culto_checkbox" 
+                    value="${culto.id}" 
+                    style="margin-top: 0.25rem; margin-right: 1rem; width: 18px; height: 18px; cursor: pointer;"
+                >
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; color: var(--gray-900); margin-bottom: 0.25rem;">
+                        ${culto.description}
+                    </div>
+                    <div style="display: flex; gap: 1.5rem; font-size: 0.875rem; color: var(--gray-600);">
+                        <span>
+                            <i class="fas fa-calendar"></i>
+                            ${culto.date_formatted}
+                        </span>
+                        <span>
+                            <i class="fas fa-clock"></i>
+                            ${culto.time}
+                        </span>
+                    </div>
+                </div>
+            </label>
+        `).join('');
+        
+    } catch (error) {
+        console.error('Erro ao carregar cultos:', error);
+        const container = document.getElementById('cultosCheckboxList');
+        container.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle"></i>
+                Erro ao carregar cultos
+            </div>
+        `;
+    }
+}
+
+// Carregar indisponibilidades registradas
+async function loadIndisponibilidades() {
+    try {
+        const response = await fetch('/get_indisponibilidades');
+        const indisponibilidades = await response.json();
+        
+        const grid = document.getElementById('indisponibilidadesGrid');
+        
+        if (indisponibilidades.length === 0) {
+            grid.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-calendar-check"></i>
+                    <h3>Sem indisponibilidades</h3>
+                    <p>Você está disponível para todos os cultos</p>
+                </div>
+            `;
+            return;
+        }
+        
+        grid.innerHTML = indisponibilidades.map(item => {
+            const hoje = new Date();
+            const dataInicio = new Date(item.data_inicio);
+            const isAtivo = hoje >= dataInicio;
+            const isPast = hoje > new Date(item.data_fim || item.data_inicio);
+            
+            return `
+                <div class="card fade-in">
+                    <div class="card-header" style="background: ${isPast ? 'var(--gray-50)' : 'var(--gradient-soft)'}; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <i class="fas fa-calendar-times" style="color: ${isPast ? 'var(--gray-600)' : 'var(--primary-600)'}; font-size: 1.5rem;"></i>
+                            <div>
+                                <div style="font-weight: 600; color: var(--gray-900);">
+                                    ${item.culto_description || 'Indisponibilidade'}
+                                </div>
+                                <div style="font-size: 0.875rem; color: var(--gray-600);">
+                                    ${item.culto_date || App.format.date(item.data_inicio)} às ${item.culto_time || ''}
+                                </div>
+                            </div>
+                        </div>
+                        <span class="badge ${isPast ? 'badge-secondary' : 'badge-primary'}">
+                            ${isPast ? 'FINALIZADO' : 'REGISTRADO'}
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        ${item.motivo ? `
+                            <div style="padding: 0.75rem; background: var(--gray-50); border-radius: var(--radius-md); border-left: 3px solid var(--primary-500);">
+                                <div style="font-size: 0.75rem; color: var(--gray-600); margin-bottom: 0.25rem; font-weight: 600; text-transform: uppercase;">
+                                    Motivo
+                                </div>
+                                <div style="font-size: 0.875rem; color: var(--gray-700);">
+                                    ${item.motivo}
+                                </div>
+                            </div>
+                        ` : ''}
+                        ${periodoAberto && !isPast ? `
+                            <button class="btn btn-outline btn-sm" onclick="deleteIndisponibilidade(${item.id})" style="margin-top: 1rem; width: 100%;">
+                                <i class="fas fa-trash"></i>
+                                Remover
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Erro ao carregar indisponibilidades:', error);
+        const grid = document.getElementById('indisponibilidadesGrid');
+        grid.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Erro ao carregar dados</h3>
+                <p>Tente novamente mais tarde</p>
+            </div>
+        `;
+    }
+}
+
+// Salvar indisponibilidade
+async function saveIndisponibilidade() {
+    const checkboxes = document.querySelectorAll('input[name="culto_checkbox"]:checked');
+    const motivo = document.getElementById('motivoIndisponibilidade').value.trim();
+    
+    if (checkboxes.length === 0) {
+        App.toast.error('Selecione pelo menos um culto');
+        return;
+    }
+    
+    if (!motivo) {
+        App.toast.error('Informe o motivo da indisponibilidade');
+        return;
+    }
+    
+    const cultosIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+    
+    try {
+        const response = await fetch('/add_indisponibilidade', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                cultos_ids: cultosIds,
+                motivo: motivo
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            App.toast.success(data.message);
+            App.modal.close('addIndisponibilidadeModal');
+            document.getElementById('addIndisponibilidadeForm').reset();
+            loadIndisponibilidades();
+        } else {
+            App.toast.error(data.message || 'Erro ao registrar indisponibilidade');
+        }
+    } catch (error) {
+        console.error('Erro ao salvar indisponibilidade:', error);
+        App.toast.error('Erro ao processar requisição');
+    }
+}
+
+// Deletar indisponibilidade
+async function deleteIndisponibilidade(id) {
+    GlobalModals.confirm(
+        'Tem certeza que deseja remover esta indisponibilidade?',
+        async () => {
+            try {
+                const response = await fetch(`/delete_indisponibilidade/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    GlobalModals.toast('Indisponibilidade removida com sucesso!', 'success');
+                    loadIndisponibilidades();
+                } else {
+                    GlobalModals.toast(data.message || 'Erro ao remover indisponibilidade', 'error');
+                }
+            } catch (error) {
+                GlobalModals.toast('Erro ao remover indisponibilidade', 'error');
+            }
+        },
+        'Confirmar Exclusão'
+    );
+}
+
+// Inicializar quando modal abre
+document.getElementById('addIndisponibilidadeModal').addEventListener('click', function(e) {
+    if (e.target.id === 'addIndisponibilidadeModal' || e.target.closest('.modal-close')) {
+        return;
+    }
+    
+    // Carregar cultos quando modal é aberto
+    const cultosContainer = document.getElementById('cultosCheckboxList');
+    if (cultosContainer && cultosContainer.children.length === 1 && cultosContainer.textContent.includes('Carregando')) {
+        loadCultosDisponiveis();
+    }
+});
+
+// Event listener para abrir modal
+const btnNova = document.getElementById('btnNovaIndisponibilidade');
+if (btnNova) {
+    btnNova.addEventListener('click', function() {
+        if (periodoAberto) {
+            loadCultosDisponiveis();
+        }
+    });
+}
+
+// Carregar ao abrir página
+document.addEventListener('DOMContentLoaded', function() {
+    loadPeriodoStatus();
+    loadIndisponibilidades();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+
+{% block title %}Estatísticas - Ministério de Louvor{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <i class="fas fa-chart-bar"></i>
+            Estatísticas de Músicas
+        </h1>
+        <p class="page-subtitle">Análise das músicas mais cantadas</p>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card" style="margin-bottom: 2rem;">
+    <div class="card-body">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; align-items: end;">
+            <div class="form-group" style="margin: 0;">
+                <label class="form-label">
+                    <i class="fas fa-calendar"></i>
+                    Mês
+                </label>
+                <select id="filterMes" class="form-control" onchange="loadEstatisticas()">
+                    <option value="">Todos os meses</option>
+                    <option value="1">Janeiro</option>
+                    <option value="2">Fevereiro</option>
+                    <option value="3">Março</option>
+                    <option value="4">Abril</option>
+                    <option value="5">Maio</option>
+                    <option value="6">Junho</option>
+                    <option value="7">Julho</option>
+                    <option value="8">Agosto</option>
+                    <option value="9">Setembro</option>
+                    <option value="10">Outubro</option>
+                    <option value="11">Novembro</option>
+                    <option value="12">Dezembro</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin: 0;">
+                <label class="form-label">
+                    <i class="fas fa-calendar-alt"></i>
+                    Ano
+                </label>
+                <select id="filterAno" class="form-control" onchange="loadEstatisticas()">
+                    <!-- Preenchido via JavaScript -->
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="loadEstatisticas()">
+                <i class="fas fa-sync"></i>
+                Atualizar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Cards de Resumo -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+    <div class="card">
+        <div class="card-body" style="text-align: center;">
+            <i class="fas fa-music" style="font-size: 3rem; color: var(--primary-500); margin-bottom: 1rem;"></i>
+            <h3 id="totalMusicasUsadas" style="font-size: 2.5rem; font-weight: bold; color: var(--primary-600); margin: 0;">0</h3>
+            <p style="color: var(--gray-600); margin: 0.5rem 0 0;">Músicas Diferentes</p>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-body" style="text-align: center;">
+            <i class="fas fa-calendar-check" style="font-size: 3rem; color: var(--accent-success); margin-bottom: 1rem;"></i>
+            <h3 id="totalCultos" style="font-size: 2.5rem; font-weight: bold; color: var(--accent-success); margin: 0;">0</h3>
+            <p style="color: var(--gray-600); margin: 0.5rem 0 0;">Cultos Realizados</p>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-body" style="text-align: center;">
+            <i class="fas fa-fire" style="font-size: 3rem; color: var(--accent-danger); margin-bottom: 1rem;"></i>
+            <h3 id="musicaMaisPopular" style="font-size: 1.2rem; font-weight: bold; color: var(--accent-danger); margin: 0.5rem 0;">-</h3>
+            <p style="color: var(--gray-600); margin: 0.5rem 0 0;">Música Mais Cantada</p>
+        </div>
+    </div>
+</div>
+
+<!-- Gráficos -->
+<div style="display: grid; grid-template-columns: 1fr; gap: 2rem;">
+    <!-- Gráfico de Barras - Top 10 -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-chart-bar"></i>
+                Top 10 Músicas Mais Cantadas
+            </h3>
+        </div>
+        <div class="card-body">
+            <canvas id="chartTop10" style="max-height: 400px;"></canvas>
+        </div>
+    </div>
+
+    <!-- Tabela Detalhada -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-list"></i>
+                Ranking Completo
+            </h3>
+        </div>
+        <div class="card-body">
+            <div id="tabelaRanking" style="overflow-x: auto;">
+                <div class="empty-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <h3>Carregando estatísticas...</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+let chartTop10 = null;
+
+// Preencher anos disponíveis
+function preencherAnos() {
+    const selectAno = document.getElementById('filterAno');
+    const anoAtual = new Date().getFullYear();
+    
+    for (let ano = anoAtual; ano >= 2020; ano--) {
+        const option = document.createElement('option');
+        option.value = ano;
+        option.textContent = ano;
+        if (ano === anoAtual) option.selected = true;
+        selectAno.appendChild(option);
+    }
+}
+
+// Carregar estatísticas
+async function loadEstatisticas() {
+    try {
+        const mes = document.getElementById('filterMes').value;
+        const ano = document.getElementById('filterAno').value;
+        
+        const url = `/get_estatisticas_musicas?mes=${mes}&ano=${ano}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (!data.success) {
+            App.toast.error(data.message || 'Erro ao carregar estatísticas');
+            return;
+        }
+        
+        // Atualizar cards de resumo
+        document.getElementById('totalMusicasUsadas').textContent = data.total_musicas_diferentes;
+        document.getElementById('totalCultos').textContent = data.total_cultos;
+        document.getElementById('musicaMaisPopular').textContent = data.musica_mais_popular || 'Nenhuma';
+        
+        // Atualizar gráfico de barras
+        atualizarGraficoTop10(data.top_10);
+        
+        // Atualizar tabela
+        atualizarTabelaRanking(data.ranking_completo);
+        
+    } catch (error) {
+        console.error('Erro ao carregar estatísticas:', error);
+        App.toast.error('Erro ao carregar estatísticas');
+    }
+}
+
+// Atualizar gráfico Top 10
+function atualizarGraficoTop10(top10) {
+    const ctx = document.getElementById('chartTop10');
+    
+    // Destruir gráfico anterior se existir
+    if (chartTop10) {
+        chartTop10.destroy();
+    }
+    
+    if (!top10 || top10.length === 0) {
+        ctx.parentElement.innerHTML = '<div class="empty-state"><p>Nenhum dado para exibir</p></div>';
+        return;
+    }
+    
+    chartTop10 = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: top10.map(m => m.titulo),
+            datasets: [{
+                label: 'Vezes Cantada',
+                data: top10.map(m => m.vezes),
+                backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                borderColor: 'rgba(59, 130, 246, 1)',
+                borderWidth: 2,
+                borderRadius: 8,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.parsed.y + (context.parsed.y === 1 ? ' vez' : ' vezes');
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Atualizar tabela de ranking
+function atualizarTabelaRanking(ranking) {
+    const container = document.getElementById('tabelaRanking');
+    
+    if (!ranking || ranking.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-music"></i>
+                <h3>Nenhuma música encontrada</h3>
+                <p>Não há dados para o período selecionado</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = `
+        <table class="table">
+            <thead>
+                <tr>
+                    <th style="width: 60px; text-align: center;">Posição</th>
+                    <th>Música</th>
+                    <th>Artista</th>
+                    <th>Tom</th>
+                    <th style="width: 120px; text-align: center;">Vezes Cantada</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    ranking.forEach((musica, index) => {
+        const medalha = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+        html += `
+            <tr>
+                <td style="text-align: center; font-weight: bold; font-size: 1.2rem;">
+                    ${medalha} ${index + 1}º
+                </td>
+                <td style="font-weight: 600;">${musica.titulo}</td>
+                <td>${musica.artista || '-'}</td>
+                <td><span style="background: var(--primary-100); color: var(--primary-700); padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600;">${musica.tom || '-'}</span></td>
+                <td style="text-align: center;">
+                    <span style="background: var(--gradient-primary); color: white; padding: 0.375rem 0.75rem; border-radius: 1rem; font-weight: 600;">
+                        ${musica.vezes}
+                    </span>
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += `
+            </tbody>
+        </table>
+    `;
+    
+    container.innerHTML = html;
+}
+
+// Inicializar ao carregar página
+document.addEventListener('DOMContentLoaded', () => {
+    preencherAnos();
+    
+    // Definir mês atual por padrão
+    const mesAtual = new Date().getMonth() + 1;
+    document.getElementById('filterMes').value = mesAtual;
+    
+    loadEstatisticas();
+});
+</script>
+{% endblock %}

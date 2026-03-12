@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+
+{% block title %}Cultos - Ministério de Louvor{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <i class="fas fa-calendar-alt"></i>
+            Cultos e Eventos
+        </h1>
+        <p class="page-subtitle">Visualize e gerencie os cultos programados</p>
+    </div>
+    {% if current_user.is_authenticated and current_user.is_admin %}
+    <button class="btn btn-blue" onclick="App.modal.open('addCultoModal')">
+        <i class="fas fa-plus"></i>
+        Novo Culto
+    </button>
+    {% endif %}
+</div>
+
+<!-- Calendar View -->
+<div class="grid grid-auto" id="cultosGrid">
+    <div class="empty-state">
+        <i class="fas fa-spinner fa-spin"></i>
+        <h3>Carregando cultos...</h3>
+    </div>
+</div>
+
+<!-- Add Culto Modal -->
+{% if current_user.is_authenticated and current_user.is_admin %}
+<div class="modal-overlay" id="addCultoModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 class="modal-title">Agendar Novo Culto</h2>
+            <button class="modal-close" onclick="App.modal.close('addCultoModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="addCultoForm" class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Nome do Culto</label>
+                <input type="text" name="name" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Data e Hora</label>
+                <input type="datetime-local" name="date_time" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Descrição</label>
+                <textarea name="description" class="form-control" rows="3"></textarea>
+            </div>
+        </form>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="App.modal.close('addCultoModal')">Cancelar</button>
+            <button class="btn btn-blue" onclick="saveCulto()">
+                <i class="fas fa-save"></i>
+                Salvar Culto
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Culto Modal -->
+<div class="modal-overlay" id="editCultoModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 class="modal-title">Editar Culto</h2>
+            <button class="modal-close" onclick="App.modal.close('editCultoModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="editCultoForm" class="modal-body">
+            <input type="hidden" id="editCultoId" name="id">
+            <div class="form-group">
+                <label class="form-label">Nome do Culto</label>
+                <input type="text" id="editCultoName" name="name" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Data e Hora</label>
+                <input type="datetime-local" id="editCultoDateTime" name="date_time" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Descrição</label>
+                <textarea id="editCultoDescription" name="description" class="form-control" rows="3"></textarea>
+            </div>
+        </form>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="App.modal.close('editCultoModal')">Cancelar</button>
+            <button class="btn btn-blue" onclick="updateCulto()">
+                <i class="fas fa-save"></i>
+                Atualizar Culto
+            </button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function loadCultos() {
+    try {
+        const response = await fetch('/get_cultos');
+        const data = await response.json();
+        const cultos = data.cultos || [];
+        
+        const grid = document.getElementById('cultosGrid');
+        
+        if (cultos.length === 0) {
+            grid.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-calendar-alt"></i>
+                    <h3>Nenhum culto cadastrado</h3>
+                    <p>Não há cultos programados</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Agrupar cultos por data (ignorando horário)
+        const groupedByDate = {};
+        cultos.forEach(culto => {
+            const date = new Date(culto.date_time);
+            const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+            
+            if (!groupedByDate[dateKey]) {
+                groupedByDate[dateKey] = [];
+            }
+            groupedByDate[dateKey].push(culto);
+        });
+        
+        // Agrupar ainda mais por nome base (Domingo, Santa Ceia, etc)
+        const finalGroups = [];
+        Object.entries(groupedByDate).forEach(([dateKey, cultosOnDate]) => {
+            // Se há apenas 1 culto nessa data, adiciona direto
+            if (cultosOnDate.length === 1) {
+                finalGroups.push({
+                    cultos: cultosOnDate,
+                    date: dateKey
+                });
+                return;
+            }
+            
+            // Se há múltiplos cultos, tenta agrupar por nome base
+            const nameGroups = {};
+            cultosOnDate.forEach(culto => {
+                // Extrai nome base (remove horários e descritivos)
+                let baseName = culto.name;
+                
+                // Normaliza o nome para agrupar
+                const lowerName = baseName.toLowerCase();
+                
+                // Detecta dia da semana pela data (mais confiável que nome)
+                const cultoDate = new Date(culto.date_time);
+                const weekday = cultoDate.getDay(); // 0=Domingo, 1=Segunda, 2=Terça, 4=Quinta, etc.
+                
+                // Santa Ceia sempre agrupa (primeiro domingo do mês)
+                if (lowerName.includes('santa ceia') || lowerName.includes('ceia')) {
+                    baseName = 'Santa Ceia';
+                }
+                // Domingo: detecta por weekday OU por nome "celebração" (domingos regulares)
+                else if (weekday === 0 || lowerName.includes('celebração')) {
+                    baseName = 'Domingo';
+                }
+                // Quinta: detecta por weekday OU por nome (cura e libertação)
+                else if (weekday === 4 || lowerName.includes('quinta') || lowerName.includes('cura')) {
+                    baseName = 'Quinta de Oração';
+                }
+                // Terça: detecta por weekday OU por nome (escola bíblica)
+                else if (weekday === 2 || lowerName.includes('terça') || lowerName.includes('escola')) {
+                    baseName = 'Escola Bíblica';
+                }
+                // Se o nome contém apenas horário (09:00, 18:00) e nada mais específico
+                // Assume que são cultos regulares do mesmo dia que devem agrupar
+                else {
+                    // Remove horários do nome (padrão HH:MM)
+                    const cleanName = baseName.replace(/\d{1,2}:\d{2}/g, '').trim();
+                    // Se após remover horários fica vazio ou muito curto, usa a data como base
+                    if (cleanName.length < 3) {
+                        baseName = 'Culto Regular';
+                    } else {
+                        baseName = cleanName;
+                    }
+                }
+                
+                if (!nameGroups[baseName]) {
+                    nameGroups[baseName] = [];
+                }
+                nameGroups[baseName].push(culto);
+            });
+            
+            // Adiciona cada grupo
+            Object.values(nameGroups).forEach(group => {
+                finalGroups.push({
+                    cultos: group,
+                    date: dateKey
+                });
+            });
+        });
+        
+        grid.innerHTML = finalGroups.map(group => {
+            const isSantaCeia = group.cultos[0].name.toLowerCase().includes('santa ceia');
+            const firstDate = new Date(group.cultos[0].date_time);
+            const isPast = firstDate < new Date();
+            
+            // Remove "- Manhã", "- Noite" etc do nome quando agrupado
+            let displayName = group.cultos[0].name;
+            if (group.cultos.length > 1) {
+                displayName = displayName
+                    .replace(/\s*-\s*(Manhã|manhã|MANHÃ)/g, '')
+                    .replace(/\s*-\s*(Noite|noite|NOITE)/g, '')
+                    .trim();
+            }
+            
+            // Se há múltiplos horários, mostra todos
+            const timesHtml = group.cultos.length > 1
+                ? group.cultos.map(c => {
+                    const time = new Date(c.date_time);
+                    return `<i class="fas fa-clock"></i> ${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}h`;
+                }).join(' <span style="color: var(--text-muted); margin: 0 0.5rem;">•</span> ')
+                : `<i class="fas fa-clock"></i> ${App.format.time(group.cultos[0].date_time)}`;
+            
+            // Botões de edição para cada culto
+            const editButtons = {% if current_user.is_authenticated and current_user.is_admin %}
+                group.cultos.map(c => 
+                    `<button class="btn btn-sm btn-outline" onclick="openEditCultoModal(${c.id}, '${c.name.replace(/'/g, "\\'")}', '${c.date_time}', '${c.description ? c.description.replace(/'/g, "\\'"): ''}')" title="Editar ${c.name}">
+                        <i class="fas fa-edit"></i>
+                    </button>`
+                ).join('')
+            {% else %}
+                ''
+            {% endif %};
+            
+            return `
+                <div class="card fade-in">
+                    <div class="card-header" style="background: ${isPast ? 'var(--gray-100)' : 'var(--gradient-soft)'};">
+                        <div style="flex: 1;">
+                            <h3 class="card-title">${displayName}</h3>
+                            <p class="card-subtitle">${App.format.date(group.cultos[0].date_time)}</p>
+                            <div style="margin-top: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">
+                                ${timesHtml}
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="culto-date-box" style="width: 56px; height: 56px; background: ${isSantaCeia ? 'linear-gradient(135deg, #dc2626, #b91c1c)' : '#6366f1'}; color: white; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                                <div class="culto-day" style="font-size: 1.5rem; font-weight: 700; line-height: 1;">${firstDate.getDate()}</div>
+                                <div class="culto-month" style="font-size: 0.75rem; text-transform: uppercase; font-weight: 600;">${App.format.monthShort(group.cultos[0].date_time)}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        ${group.cultos[0].description ? `<p style="color: var(--gray-700); margin-bottom: 1rem;">${group.cultos[0].description}</p>` : ''}
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                                <span class="badge" style="background-color: ${isPast ? '#10b981' : '#f59e0b'}; color: white;">
+                                    <i class="fas fa-${isPast ? 'check' : 'calendar'}"></i>
+                                    ${isPast ? 'Realizado' : 'Programado'}
+                                </span>
+                                ${group.cultos.length > 1 ? `<span class="badge" style="background-color: #6366f1; color: white;"><i class="fas fa-layer-group"></i> ${group.cultos.length} horários</span>` : ''}
+                                <span style="color: var(--gray-500); font-size: 0.875rem;">
+                                    <i class="fas fa-calendar-day"></i>
+                                    ${App.format.relativeDate(group.cultos[0].date_time)}
+                                </span>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem;">
+                                ${editButtons}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Erro ao carregar cultos:', error);
+    }
+}
+
+async function saveCulto() {
+    const form = document.getElementById('addCultoForm');
+    const formData = new FormData(form);
+    
+    const data = {
+        name: formData.get('name'),
+        date_time: formData.get('date_time'),
+        description: formData.get('description')
+    };
+    
+    try {
+        const response = await fetch('/add_culto', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            App.toast.success('Culto agendado com sucesso!');
+            App.modal.close('addCultoModal');
+            form.reset();
+            loadCultos();
+        } else {
+            App.toast.error(result.message || 'Erro ao agendar culto');
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        App.toast.error('Erro ao processar requisição');
+    }
+}
+
+function openEditCultoModal(id, name, dateTime, description) {
+    document.getElementById('editCultoId').value = id;
+    document.getElementById('editCultoName').value = name;
+    document.getElementById('editCultoDateTime').value = dateTime;
+    document.getElementById('editCultoDescription').value = description || '';
+    App.modal.open('editCultoModal');
+}
+
+async function updateCulto() {
+    const form = document.getElementById('editCultoForm');
+    const formData = new FormData(form);
+    
+    const data = {
+        id: parseInt(formData.get('id')),
+        name: formData.get('name'),
+        date_time: formData.get('date_time'),
+        description: formData.get('description')
+    };
+    
+    try {
+        const response = await fetch('/edit_culto', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            App.toast.success('Culto atualizado com sucesso!');
+            App.modal.close('editCultoModal');
+            form.reset();
+            loadCultos();
+        } else {
+            App.toast.error(result.message || 'Erro ao atualizar culto');
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        App.toast.error('Erro ao processar requisição');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadCultos);
+</script>
+{% endblock %}

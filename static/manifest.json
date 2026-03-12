@@ -1,0 +1,70 @@
+{
+    "name": "Ministério de Louvor - Sistema de Gestão",
+    "short_name": "Min. Louvor",
+    "description": "Sistema completo de gestão para Ministério de Louvor - Escalas, Cultos, Repertório e Membros",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "portrait-primary",
+    "background_color": "#1a1a2e",
+    "theme_color": "#667eea",
+    "categories": ["productivity", "music", "utilities"],
+    "lang": "pt-BR",
+    "dir": "ltr",
+    "icons": [
+        {
+            "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%23667eea'/%3E%3Cpath d='M96 40c-8.837 0-16 7.163-16 16v64c0 8.837 7.163 16 16 16s16-7.163 16-16V56c0-8.837-7.163-16-16-16zm0 112c-8.837 0-16-7.163-16-16s7.163-16 16-16 16 7.163 16 16-7.163 16-16 16z' fill='%23fff'/%3E%3C/svg%3E",
+            "sizes": "192x192",
+            "type": "image/svg+xml",
+            "purpose": "any"
+        },
+        {
+            "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%23667eea'/%3E%3Cpath d='M256 107c-23.559 0-42.667 19.108-42.667 42.667v170.666c0 23.559 19.108 42.667 42.667 42.667s42.667-19.108 42.667-42.667V149.667c0-23.559-19.108-42.667-42.667-42.667zm0 298.667c-23.559 0-42.667-19.108-42.667-42.667s19.108-42.667 42.667-42.667 42.667 19.108 42.667 42.667-19.108 42.667-42.667 42.667z' fill='%23fff'/%3E%3C/svg%3E",
+            "sizes": "512x512",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ],
+    "screenshots": [],
+    "shortcuts": [
+        {
+            "name": "Escalas",
+            "short_name": "Escalas",
+            "description": "Acessar escalas de louvor",
+            "url": "/escalas",
+            "icons": [
+                {
+                    "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' fill='%23667eea'/%3E%3Cpath d='M24 20h48v8H24zm0 16h48v8H24zm0 16h48v8H24zm0 16h48v8H24z' fill='%23fff'/%3E%3C/svg%3E",
+                    "sizes": "96x96",
+                    "type": "image/svg+xml"
+                }
+            ]
+        },
+        {
+            "name": "Repertório",
+            "short_name": "Músicas",
+            "description": "Acessar repertório musical",
+            "url": "/repertorio",
+            "icons": [
+                {
+                    "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' fill='%23667eea'/%3E%3Cpath d='M48 20c-4.418 0-8 3.582-8 8v32c0 4.418 3.582 8 8 8s8-3.582 8-8V28c0-4.418-3.582-8-8-8zm0 56c-4.418 0-8-3.582-8-8s3.582-8 8-8 8 3.582 8 8-3.582 8-8 8z' fill='%23fff'/%3E%3C/svg%3E",
+                    "sizes": "96x96",
+                    "type": "image/svg+xml"
+                }
+            ]
+        },
+        {
+            "name": "Cultos",
+            "short_name": "Cultos",
+            "description": "Acessar agenda de cultos",
+            "url": "/cultos",
+            "icons": [
+                {
+                    "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' fill='%23667eea'/%3E%3Cpath d='M20 24h56v8H20zm0 16h56v32H20z' fill='%23fff'/%3E%3C/svg%3E",
+                    "sizes": "96x96",
+                    "type": "image/svg+xml"
+                }
+            ]
+        }
+    ]
+}

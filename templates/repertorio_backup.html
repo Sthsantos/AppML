@@ -1,0 +1,562 @@
+{% extends "base.html" %}
+
+{% block title %}Repertório - Ministério de Louvor{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <i class="fas fa-guitar"></i>
+            Repertório Musical
+        </h1>
+        <p class="page-subtitle">Biblioteca completa de músicas do ministério</p>
+    </div>
+    {% if current_user.is_authenticated and current_user.is_admin %}
+    <button class="btn btn-blue" onclick="App.modal.open('addSongModal')">
+        <i class="fas fa-plus"></i>
+        Adicionar Música
+    </button>
+    {% endif %}
+</div>
+
+<!-- Filters -->
+<div class="filters-bar">
+    <div class="filter-group" style="flex: 2;">
+        <label for="searchSong">Buscar:</label>
+        <input type="text" id="searchSong" class="form-control" placeholder="Título, artista ou tom..." oninput="filterSongs()">
+    </div>
+    <div class="filter-group">
+        <label for="filterTom">Tom:</label>
+        <select id="filterTom" class="form-control" onchange="filterSongs()">
+            <option value="">Todos</option>
+            <option value="C">C</option>
+            <option value="C#">C#</option>
+            <option value="D">D</option>
+            <option value="D#">D#</option>
+            <option value="E">E</option>
+            <option value="F">F</option>
+            <option value="F#">F#</option>
+            <option value="G">G</option>
+            <option value="G#">G#</option>
+            <option value="A">A</option>
+            <option value="A#">A#</option>
+            <option value="B">B</option>
+        </select>
+    </div>
+</div>
+
+<!-- Songs Grid -->
+<div class="grid grid-auto" id="songsGrid">
+    <div class="empty-state">
+        <i class="fas fa-spinner fa-spin"></i>
+        <h3>Carregando repertório...</h3>
+    </div>
+</div>
+
+<!-- Add Song Modal -->
+{% if current_user.is_authenticated and current_user.is_admin %}
+<div class="modal-overlay" id="addSongModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 class="modal-title">Adicionar Nova Música</h2>
+            <button class="modal-close" onclick="App.modal.close('addSongModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="addSongForm" class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Título</label>
+                <input type="text" name="title" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Artista</label>
+                <input type="text" name="artist" class="form-control" required>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Tom</label>
+                    <select name="key" class="form-control" required>
+                        <option value="">Selecione...</option>
+                        <option value="C">C</option>
+                        <option value="C#">C#</option>
+                        <option value="D">D</option>
+                        <option value="D#">D#</option>
+                        <option value="E">E</option>
+                        <option value="F">F</option>
+                        <option value="F#">F#</option>
+                        <option value="G">G</option>
+                        <option value="G#">G#</option>
+                        <option value="A">A</option>
+                        <option value="A#">A#</option>
+                        <option value="B">B</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">BPM</label>
+                    <input type="number" name="bpm" class="form-control" placeholder="120">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Link (YouTube/Cifra Club)</label>
+                <input type="url" name="link" class="form-control" placeholder="https://...">
+            </div>
+        </form>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="App.modal.close('addSongModal')">Cancelar</button>
+            <button class="btn btn-blue" onclick="saveSong()">
+                <i class="fas fa-save"></i>
+                Salvar Música
+            </button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let allSongs = [];
+
+async function loadSongs() {
+    try {
+        const response = await fetch('/get_repertorio');
+        const data = await response.json();
+        allSongs = data.songs || [];
+        renderSongs(allSongs);
+    } catch (error) {
+        console.error('Erro ao carregar músicas:', error);
+        document.getElementById('songsGrid').innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Erro ao carregar repertório</h3>
+            </div>
+        `;
+    }
+}
+
+function renderSongs(songs) {
+    const grid = document.getElementById('songsGrid');
+    
+    if (songs.length === 0) {
+        grid.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-guitar"></i>
+                <h3>Nenhuma música encontrada</h3>
+                <p>O repertório está vazio</p>
+            </div>
+        `;
+        return;
+    }
+    
+    grid.innerHTML = songs.map(song => `
+        <div class="card fade-in">
+            <div class="card-body">
+                <div class="flex items-center gap-2 mb-2">
+                    <div style="width: 56px; height: 56px; border-radius: var(--radius-lg); background: var(--gradient-primary); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem;">
+                        <i class="fas fa-music"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <h3 style="font-family: 'Poppins', sans-serif; font-size: 1.1rem; font-weight: 600; color: var(--gray-900); margin: 0 0 0.25rem 0;">
+                            ${song.title}
+                        </h3>
+                        <p style="color: var(--gray-600); font-size: 0.875rem; margin: 0;">
+                            ${song.artist}
+                        </p>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                    <span class="badge badge-primary">
+                        <i class="fas fa-key"></i>
+                        Tom: ${song.key}
+                    </span>
+                    ${song.bpm ? `<span class="badge badge-secondary">
+                        <i class="fas fa-heart-pulse"></i>
+                        ${song.bpm} BPM
+                    </span>` : ''}
+                </div>
+                ${song.link ? `
+                    <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--gray-200);">
+                        <a href="${song.link}" target="_blank" class="btn btn-outline btn-sm" style="width: 100%;">
+                            <i class="fas fa-external-link-alt"></i>
+                            Ver Cifra/Vídeo
+                        </a>
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+function filterSongs() {
+    const search = document.getElementById('searchSong').value.toLowerCase();
+    const tom = document.getElementById('filterTom').value;
+    
+    let filtered = allSongs;
+    
+    if (search) {
+        filtered = filtered.filter(s => 
+            s.title.toLowerCase().includes(search) || 
+            s.artist.toLowerCase().includes(search) ||
+            (s.key && s.key.toLowerCase().includes(search))
+        );
+    }
+    
+    if (tom) {
+        filtered = filtered.filter(s => s.key === tom);
+    }
+    
+    renderSongs(filtered);
+}
+
+async function saveSong() {
+    const form = document.getElementById('addSongForm');
+    const formData = new FormData(form);
+    
+    try {
+        const response = await fetch('/add_song', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (response.ok) {
+            App.toast.success('Música  adicionada com sucesso!');
+            App.modal.close('addSongModal');
+            form.reset();
+            loadSongs();
+        } else {
+            App.toast.error('Erro ao adicionar música');
+        }
+    } catch (error) {
+        App.toast.error('Erro ao processar requisição');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadSongs);
+</script>
+{% endblock %}
+        <section class="hero">
+            <h1 class="animate-text">
+                <i class="fas fa-music"></i> Repertório Musical
+            </h1>
+            <p style="margin-top: 1rem; color: var(--text-secondary);">Músicas do ministério</p>
+        </section>
+
+        <!-- Botão Adicionar Música (Admin) -->
+        {% if current_user.is_admin %}
+        <div class="text-center mb-3">
+            <button onclick="openAddMusicaModal()" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Adicionar Música
+            </button>
+        </div>
+        {% endif %}
+
+        <!-- Filtros e Busca -->
+        <div class="members-section mb-3">
+            <div class="d-flex gap-2" style="flex-wrap: wrap;">
+                <input type="text" id="searchInput" class="form-control" placeholder="🔍 Buscar música..." style="flex: 1; min-width: 250px;" oninput="filterRepertorio()">
+                <select id="categoryFilter" class="form-control" style="max-width: 200px;" onchange="filterRepertorio()">
+                    <option value="">Todas as Categorias</option>
+                    <option value="louvor">Louvor</option>
+                    <option value="adoracao">Adoração</option>
+                    <option value="ofertorio">Ofertório</option>
+                    <option value="outros">Outros</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Lista de Músicas -->
+        <section class="members-section">
+            <h2 class="section-title"><i class="fas fa-list"></i> Músicas</h2>
+            <div id="repertorioList" class="members-list">
+                <div class="d-flex justify-center align-center" style="padding: 2rem;">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Bottom Navigation (Mobile) -->
+    <nav class="bottom-nav">
+        <a href="{{ url_for('index') }}" class="nav-item">
+            <i class="fas fa-home"></i>
+            <span>Início</span>
+        </a>
+        <a href="{{ url_for('membros') }}" class="nav-item">
+            <i class="fas fa-users"></i>
+            <span>Membros</span>
+        </a>
+        <a href="{{ url_for('repertorio') }}" class="nav-item active">
+            <i class="fas fa-music"></i>
+            <span>Repertório</span>
+        </a>
+        <a href="{{ url_for('avisos') }}" class="nav-item">
+            <i class="fas fa-bullhorn"></i>
+            <span>Avisos</span>
+        </a>
+        <a href="{{ url_for('feedback') }}" class="nav-item">
+            <i class="fas fa-comments"></i>
+            <span>Feedback</span>
+        </a>
+    </nav>
+
+    <!-- Modal Adicionar Música -->
+    <div id="addMusicaModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-music"></i> Nova Música</h2>
+                <button class="modal-close" onclick="App.modal.close('addMusicaModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form onsubmit="submitMusica(event)">
+                <div class="form-group">
+                    <label class="form-label"><i class="fas fa-heading"></i> Título *</label>
+                    <input type="text" id="musicaTitle" class="form-control" required placeholder="Nome da música">
+                </div>
+                <div class="form-group">
+                    <label class="form-label"><i class="fas fa-user"></i> Artista</label>
+                    <input type="text" id="musicaArtist" class="form-control" placeholder="Nome do artista">
+                </div>
+                <div class="form-group">
+                    <label class="form-label"><i class="fas fa-key"></i> Tom</label>
+                    <input type="text" id="musicaKey" class="form-control" placeholder="Ex: C, D, Em">
+                </div>
+                <div class="form-group">
+                    <label class="form-label"><i class="fas fa-tachometer-alt"></i> Tempo</label>
+                    <input type="text" id="musicaTempo" class="form-control" placeholder="Ex: 120 BPM">
+                </div>
+                <div class="form-group">
+                    <label class="form-label"><i class="fab fa-youtube"></i> Link Vídeo</label>
+                    <input type="url" id="musicaVideoLink" class="form-control" placeholder="https://youtube.com/...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label"><i class="fas fa-headphones"></i> Link Áudio</label>
+                    <input type="url" id="musicaAudioLink" class="form-control" placeholder="https://...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label"><i class="fas fa-file-audio"></i> Arquivo de Áudio (VS/Playback)</label>
+                    <input type="file" id="musicaAudioFile" class="form-control" accept="audio/*">
+                    <small class="form-text text-muted">MP3, WAV, OGG, M4A, AAC, FLAC (máx 50MB)</small>
+                </div>
+                <div class="form-group">
+                    <label class="form-label"><i class="fas fa-tag"></i> Categoria</label>
+                    <select id="musicaCategory" class="form-control">
+                        <option value="">Selecione...</option>
+                        <option value="louvor">Louvor</option>
+                        <option value="adoracao">Adoração</option>
+                        <option value="ofertorio">Ofertório</option>
+                        <option value="outros">Outros</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label"><i class="fas fa-align-left"></i> Letra</label>
+                    <textarea id="musicaLyrics" class="form-control" rows="4" placeholder="Cole a letra da música aqui..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label"><i class="fas fa-sticky-note"></i> Observações</label>
+                    <textarea id="musicaNotes" class="form-control" rows="2" placeholder="Observações sobre a música..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">
+                    <i class="fas fa-save"></i> Salvar Música
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='../js/script.js') }}"></script>
+    <script>
+        let musicasData = [];
+
+        // Abrir modal
+        function openAddMusicaModal() {
+            App.modal.open('addMusicaModal');
+        }
+
+        // Filtrar repertório
+        function filterRepertorio() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const category = document.getElementById('categoryFilter').value;
+            
+            const filtered = musicasData.filter(musica => {
+                const matchesSearch = musica.title.toLowerCase().includes(searchTerm) || 
+                                    (musica.artist && musica.artist.toLowerCase().includes(searchTerm));
+                const matchesCategory = !category || musica.category === category;
+                return matchesSearch && matchesCategory;
+            });
+            
+            displayMusicas(filtered);
+        }
+
+        // Exibir músicas
+        function displayMusicas(musicas) {
+            const repertorioList = document.getElementById('repertorioList');
+            
+            if (musicas.length === 0) {
+                repertorioList.innerHTML = '<p class="no-announcements">Nenhuma música encontrada.</p>';
+                return;
+            }
+            
+            repertorioList.innerHTML = '';
+            musicas.forEach((musica, index) => {
+                const div = document.createElement('div');
+                div.className = 'member-item animate-scale';
+                div.style.animationDelay = `${index * 0.03}s`;
+                
+                const categoryBadge = musica.category ? 
+                    `<span class="badge badge-primary">${musica.category}</span>` : '';
+                
+                div.innerHTML = `
+                    <div class="member-info">
+                        <strong><i class="fas fa-music"></i> ${musica.title}</strong> ${categoryBadge}
+                        ${musica.artist ? `<br><span><i class="fas fa-user"></i> ${musica.artist}</span>` : ''}
+                        ${musica.key_tone ? `<br><span><i class="fas fa-key"></i> Tom: ${musica.key_tone}</span>` : ''}
+                        ${musica.tempo ? `<span style="margin-left: 1rem;"><i class="fas fa-tachometer-alt"></i> ${musica.tempo}</span>` : ''}
+                        ${musica.audio_file ? `
+                            <div style="margin-top: 1rem; padding: 0.75rem; background: var(--gray-50); border-radius: var(--radius-lg);">
+                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                    <i class="fas fa-volume-up" style="color: var(--primary-color);"></i>
+                                    <strong style="font-size: 0.875rem;">Arquivo de Áudio (VS/Playback)</strong>
+                                </div>
+                                <audio controls style="width: 100%; max-width: 500px;">
+                                    <source src="/uploads/${musica.audio_file}" type="audio/mpeg">
+                                    Seu navegador não suporta o player de áudio.
+                                </audio>
+                            </div>
+                        ` : ''}
+                        <br>
+                        <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            ${musica.link_video ? `<a href="${musica.link_video}" target="_blank" class="btn btn-sm btn-secondary"><i class="fab fa-youtube"></i> Vídeo</a>` : ''}
+                            ${musica.link_audio ? `<a href="${musica.link_audio}" target="_blank" class="btn btn-sm btn-secondary"><i class="fas fa-headphones"></i> Áudio</a>` : ''}
+                            ${musica.lyrics ? `<button onclick="showLyrics(${musica.id})" class="btn btn-sm btn-outline"><i class="fas fa-file-alt"></i> Letra</button>` : ''}
+                            {% if current_user.is_admin %}
+                            <button onclick="deleteMusica(${musica.id})" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
+                            {% endif %}
+                        </div>
+                    </div>
+                `;
+                repertorioList.appendChild(div);
+            });
+        }
+
+        // Carregar repertório
+        async function loadRepertorio() {
+            const result = await App.api.get('/get_repertorio');
+            
+            if (result.success) {
+                musicasData = result.data;
+                displayMusicas(musicasData);
+            }
+        }
+
+        // Enviar nova música
+        async function submitMusica(event) {
+            event.preventDefault();
+            
+            const audioFile = document.getElementById('musicaAudioFile').files[0];
+            
+            // Se houver arquivo, usar FormData; senão, usar JSON
+            if (audioFile) {
+                const formData = new FormData();
+                formData.append('title', document.getElementById('musicaTitle').value);
+                formData.append('artist', document.getElementById('musicaArtist').value);
+                formData.append('key_tone', document.getElementById('musicaKey').value);
+                formData.append('tempo', document.getElementById('musicaTempo').value);
+                formData.append('link_video', document.getElementById('musicaVideoLink').value);
+                formData.append('link_audio', document.getElementById('musicaAudioLink').value);
+                formData.append('lyrics', document.getElementById('musicaLyrics').value);
+                formData.append('notes', document.getElementById('musicaNotes').value);
+                formData.append('category', document.getElementById('musicaCategory').value);
+                formData.append('audio_file', audioFile);
+                
+                App.loading.show('Salvando música e arquivo de áudio...');
+                
+                try {
+                    const response = await fetch('/add_musica', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    App.loading.hide();
+                    
+                    if (result.success) {
+                        App.toast.success('Música adicionada com sucesso!');
+                        App.modal.close('addMusicaModal');
+                        event.target.reset();
+                        loadRepertorio();
+                    } else {
+                        App.toast.error(result.message || 'Erro ao adicionar música.');
+                    }
+                } catch (error) {
+                    App.loading.hide();
+                    App.toast.error('Erro ao processar requisição.');
+                    console.error(error);
+                }
+            } else {
+                // Sem arquivo - enviar como JSON
+                const data = {
+                    title: document.getElementById('musicaTitle').value,
+                    artist: document.getElementById('musicaArtist').value,
+                    key_tone: document.getElementById('musicaKey').value,
+                    tempo: document.getElementById('musicaTempo').value,
+                    link_video: document.getElementById('musicaVideoLink').value,
+                    link_audio: document.getElementById('musicaAudioLink').value,
+                    lyrics: document.getElementById('musicaLyrics').value,
+                    notes: document.getElementById('musicaNotes').value,
+                    category: document.getElementById('musicaCategory').value
+                };
+                
+                App.loading.show('Salvando música...');
+                
+                const result = await App.api.post('/add_musica', data);
+                
+                App.loading.hide();
+                
+                if (result.success && result.data.success) {
+                    App.toast.success('Música adicionada com sucesso!');
+                    App.modal.close('addMusicaModal');
+                    event.target.reset();
+                    loadRepertorio();
+                } else {
+                    App.toast.error('Erro ao adicionar música.');
+                }
+            }
+        }
+
+        // Deletar música
+        async function deleteMusica(musicaId) {
+            GlobalModals.confirm(
+                'Deseja realmente remover esta música?',
+                async () => {
+                    App.loading.show('Removendo música...');
+                    
+                    const result = await App.api.delete(`/delete_musica/${musicaId}`);
+                    
+                    App.loading.hide();
+                    
+                    if (result.success && result.data.success) {
+                        GlobalModals.toast('Música removida com sucesso!', 'success');
+                        loadRepertorio();
+                    } else {
+                        GlobalModals.toast('Erro ao remover música.', 'error');
+                    }
+                },
+                'Confirmar Exclusão'
+            );
+        }
+
+        // Mostrar letra
+        function showLyrics(musicaId) {
+            const musica = musicasData.find(m => m.id === musicaId);
+            if (musica && musica.lyrics) {
+                GlobalModals.alert(musica.lyrics, 'info', `Letra: ${musica.title}`);
+            }
+        }
+
+        // Carregar ao iniciar
+        document.addEventListener('DOMContentLoaded', loadRepertorio);
+    </script>
+</body>
+</html>

@@ -1,0 +1,1721 @@
+{% extends "base.html" %}
+
+{% block title %}Escalas - Ministério de Louvor{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <i class="fas fa-clipboard-list"></i>
+            Escala de Serviço
+        </h1>
+        <p class="page-subtitle">Gerencie as escalas de cada culto</p>
+    </div>
+    {% if current_user.is_authenticated and current_user.is_admin %}
+    <div style="display: flex; gap: 1rem;">
+        <button class="btn btn-danger" onclick="App.modal.open('deleteAllEscalasModal')">
+            <i class="fas fa-trash-alt"></i>
+            Excluir Todas
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Escalas Criadas -->
+<div class="section" style="margin-bottom: 3rem;">
+    <div class="section-header">
+        <h2 class="section-title">
+            <i class="fas fa-check-circle"></i>
+            Escalas Criadas
+        </h2>
+    </div>
+    <div id="escalasContainer">
+        <div class="empty-state">
+            <i class="fas fa-spinner fa-spin"></i>
+            <h3>Carregando escalas...</h3>
+        </div>
+    </div>
+</div>
+
+<!-- Cultos Pendentes (Sem Escala Completa) -->
+{% if current_user.is_authenticated and current_user.is_admin %}
+<div class="section" id="cultosPendentesSection" style="margin-bottom: 3rem;">
+    <div class="section-header">
+        <div>
+            <h2 class="section-title">
+                <i class="fas fa-hourglass-half"></i>
+                Cultos Pendentes
+            </h2>
+            <p class="section-subtitle">Cultos que ainda precisam de escala completa</p>
+        </div>
+    </div>
+    <div id="cultosPendentesContainer">
+        <div class="empty-state">
+            <i class="fas fa-spinner fa-spin"></i>
+            <h3>Carregando cultos...</h3>
+        </div>
+    </div>
+</div>
+{% endif %}
+        <div class="empty-state">
+            <i class="fas fa-spinner fa-spin"></i>
+            <h3>Carregando escalas...</h3>
+        </div>
+    </div>
+</div>
+
+<!-- Add Escala Modal -->
+{% if current_user.is_authenticated and current_user.is_admin %}
+<div class="modal-overlay" id="addEscalaModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 class="modal-title">Criar Nova Escala</h2>
+            <button class="modal-close" onclick="App.modal.close('addEscalaModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="addEscalaForm" class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Culto</label>
+                <select name="culto_id" class="form-control" required id="selectCulto" onchange="filterMembersByInstrument()">
+                    <option value="">Carregando...</option>
+                </select>
+            </div>
+            <div class="alert alert-info" style="margin-top: 1rem;" id="indisponibilidadeInfo" hidden>
+                <i class="fas fa-info-circle"></i>
+                <span>Membros marcados com ⚠️ estão indisponíveis para este culto e não podem ser selecionados.</span>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Instrumento</label>
+                <select id="selectInstrument" class="form-control" required onchange="filterMembersByInstrument()">
+                    <option value="">Selecione o instrumento...</option>
+                    <option value="Guitarrista">Guitarrista</option>
+                    <option value="Violonista">Violonista</option>
+                    <option value="Baterista">Baterista</option>
+                    <option value="Tecladista">Tecladista</option>
+                    <option value="Baixista">Baixista</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Membro</label>
+                <select name="member_id" class="form-control" required id="selectMember">
+                    <option value="">Primeiro selecione o instrumento...</option>
+                </select>
+            </div>
+        </form>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="App.modal.close('addEscalaModal')">Cancelar</button>
+            <button class="btn btn-blue" onclick="saveEscala()">
+                <i class="fas fa-save"></i>
+                Salvar Escala
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Escala Modal -->
+<div class="modal-overlay" id="editEscalaModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 class="modal-title">Editar Escala</h2>
+            <button class="modal-close" onclick="App.modal.close('editEscalaModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="editEscalaForm" class="modal-body">
+            <input type="hidden" id="editEscalaId">
+            <div class="form-group">
+                <label class="form-label">Culto</label>
+                <input type="text" id="editCultoName" class="form-control" readonly style="background: var(--gray-50);">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Membro</label>
+                <select id="editMemberId" class="form-control" required>
+                    <option value="">Carregando...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Função</label>
+                <select id="editRole" class="form-control" required>
+                    <option value="">Selecione...</option>
+                    <option value="Guitarrista">Guitarrista</option>
+                    <option value="Violonista">Violonista</option>
+                    <option value="Baterista">Baterista</option>
+                    <option value="Tecladista">Tecladista</option>
+                    <option value="Baixista">Baixista</option>
+                </select>
+            </div>
+        </form>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="App.modal.close('editEscalaModal')">Cancelar</button>
+            <button class="btn btn-blue" onclick="updateEscala()">
+                <i class="fas fa-save"></i>
+                Atualizar Escala
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Single Member Modal -->
+<div class="modal-overlay" id="addSingleMemberModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 class="modal-title">Adicionar Membro à Escala</h2>
+            <button class="modal-close" onclick="App.modal.close('addSingleMemberModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="addSingleMemberForm" class="modal-body">
+            <input type="hidden" id="singleCultoId">
+            <div class="form-group">
+                <label class="form-label">Culto</label>
+                <input type="text" id="singleCultoName" class="form-control" readonly style="background: var(--gray-50);">
+            </div>
+            <div class="alert alert-info" style="margin-top: 1rem;" id="singleIndisponibilidadeInfo" hidden>
+                <i class="fas fa-info-circle"></i>
+                <span>Membros marcados com ⚠️ estão indisponíveis para este culto e não podem ser selecionados.</span>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Instrumento</label>
+                <select id="singleInstrument" class="form-control" required onchange="filterSingleMembersByInstrument()">
+                    <option value="">Selecione o instrumento...</option>
+                    <option value="Guitarrista">Guitarrista</option>
+                    <option value="Violonista">Violonista</option>
+                    <option value="Baterista">Baterista</option>
+                    <option value="Tecladista">Tecladista</option>
+                    <option value="Baixista">Baixista</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Membro</label>
+                <select id="singleMember" class="form-control" required>
+                    <option value="">Primeiro selecione o instrumento...</option>
+                </select>
+            </div>
+        </form>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="App.modal.close('addSingleMemberModal')">Cancelar</button>
+            <button class="btn btn-blue" onclick="saveSingleMember()">
+                <i class="fas fa-user-plus"></i>
+                Adicionar Membro
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Músicas do Culto Modal -->
+<div class="modal-overlay" id="musicasCultoModal">
+    <div class="modal" style="max-width: 800px;">
+        <div class="modal-header" style="background: linear-gradient(135deg, #10b981, #059669); color: white;">
+            <h2 class="modal-title" style="color: white;">
+                <i class="fas fa-music"></i>
+                Músicas do Culto
+            </h2>
+            <button class="modal-close" onclick="App.modal.close('musicasCultoModal')" style="color: white;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="musicasCultoId">
+            
+            <!-- Culto Info -->
+            <div style="background: var(--gray-50); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
+                <h3 id="musicasCultoName" style="font-size: 1.1rem; font-weight: 600; color: var(--gray-900); margin-bottom: 0.25rem;"></h3>
+                <p style="font-size: 0.9rem; color: var(--gray-600); margin: 0;">Gerencie o repertório deste culto</p>
+            </div>
+            
+            <!-- Adicionar Nova Música Rápida -->
+            <div style="margin-bottom: 1.5rem; padding: 1rem; background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.05)); border-radius: var(--radius-md); border: 1px dashed var(--primary-500);">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <i class="fas fa-plus-circle" style="font-size: 2rem; color: var(--primary-500);"></i>
+                    <div style="flex: 1;">
+                        <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem;">Música não está cadastrada?</h4>
+                        <p style="font-size: 0.875rem; color: var(--gray-600); margin: 0;">Clique no botão para cadastrar uma nova música no repertório</p>
+                    </div>
+                    <button onclick="openAddMusicaRapidaModal()" class="btn btn-blue">
+                        <i class="fas fa-plus"></i>
+                        Cadastrar Música
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Selecionar Músicas do Repertório -->
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-list"></i>
+                    Selecione músicas do repertório
+                </label>
+                
+                <!-- Campo de busca -->
+                <div style="position: relative; margin-bottom: 0.5rem;">
+                    <i class="fas fa-search" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+                    <input type="text" id="searchMusicaRepertorio" class="form-control" 
+                           placeholder="Buscar música por nome, artista ou tom..." 
+                           oninput="filterMusicasRepertorio()"
+                           style="padding-left: 2.5rem; font-size: 0.95rem;">
+                </div>
+                
+                <select id="selectMusicaRepertorio" class="form-control" 
+                        size="8" 
+                        style="margin-bottom: 0.75rem; font-size: 0.95rem; cursor: pointer;">
+                    <option value="">Carregando músicas...</option>
+                </select>
+                
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; padding: 0.5rem; background: rgba(59, 130, 246, 0.05); border-radius: 6px;">
+                    <i class="fas fa-info-circle" style="color: var(--primary-color);"></i>
+                    <span style="font-size: 0.875rem; color: var(--text-secondary);">
+                        <span id="musicasRepertorioCount">0</span> música(s) disponível(is) no repertório
+                    </span>
+                </div>
+                
+                <button class="btn btn-success" onclick="addMusicaToCulto()" style="width: 100%;">
+                    <i class="fas fa-plus"></i>
+                    Adicionar Música ao Culto
+                </button>
+            </div>
+            
+            <!-- Lista de Músicas Selecionadas -->
+            <div style="margin-top: 1.5rem;">
+                <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: var(--gray-900);">
+                    <i class="fas fa-list-ol"></i>
+                    Músicas Selecionadas <span id="musicasCount" style="background: var(--primary-500); color: white; padding: 0.125rem 0.5rem; border-radius: 1rem; font-size: 0.875rem; margin-left: 0.5rem;">0</span>
+                </h4>
+                <div id="musicasSelecionadasList" style="max-height: 400px; overflow-y: auto; padding-right: 0.5rem;">
+                    <div class="empty-state" style="padding: 2rem;">
+                        <i class="fas fa-music" style="font-size: 2.5rem; color: var(--gray-400); margin-bottom: 0.5rem;"></i>
+                        <p style="color: var(--gray-600);">Nenhuma música selecionada</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="App.modal.close('musicasCultoModal')">Fechar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Cadastro Rápido de Música -->
+<div class="modal-overlay" id="addMusicaRapidaModal">
+    <div class="modal" style="max-width: 600px;">
+        <div class="modal-header" style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: white;">
+            <h2 class="modal-title" style="color: white;">
+                <i class="fas fa-music"></i>
+                Cadastrar Nova Música
+            </h2>
+            <button class="modal-close" onclick="App.modal.close('addMusicaRapidaModal')" style="color: white;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="addMusicaRapidaForm" onsubmit="saveMusicaRapida(event)">
+                <!-- Título (obrigatório) -->
+                <div class="form-group">
+                    <label class="form-label" style="font-weight: 600;">
+                        <i class="fas fa-heading"></i>
+                        Título da Música <span style="color: var(--danger-color);">*</span>
+                    </label>
+                    <input type="text" id="rapidaMusicaTitle" class="form-control" required 
+                           placeholder="Ex: Cornerstone" 
+                           style="font-size: 1rem; padding: 0.75rem;">
+                </div>
+
+                <!-- Artista -->
+                <div class="form-group">
+                    <label class="form-label" style="font-weight: 600;">
+                        <i class="fas fa-microphone"></i>
+                        Artista/Banda
+                    </label>
+                    <input type="text" id="rapidaMusicaArtist" class="form-control" 
+                           placeholder="Ex: Hillsong Worship" 
+                           style="font-size: 1rem; padding: 0.75rem;">
+                </div>
+
+                <!-- Tom e Categoria em Grid -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label" style="font-weight: 600;">
+                            <i class="fas fa-music"></i>
+                            Tom
+                        </label>
+                        <select id="rapidaMusicaTom" class="form-control" style="font-size: 1rem; padding: 0.75rem;">
+                            <option value="">Selecione...</option>
+                            <option value="C">C (Dó)</option>
+                            <option value="C#">C# (Dó#)</option>
+                            <option value="D">D (Ré)</option>
+                            <option value="D#">D# (Ré#)</option>
+                            <option value="E">E (Mi)</option>
+                            <option value="F">F (Fá)</option>
+                            <option value="F#">F# (Fá#)</option>
+                            <option value="G">G (Sol)</option>
+                            <option value="G#">G# (Sol#)</option>
+                            <option value="A">A (Lá)</option>
+                            <option value="A#">A# (Lá#)</option>
+                            <option value="B">B (Si)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" style="font-weight: 600;">
+                            <i class="fas fa-tag"></i>
+                            Categoria
+                        </label>
+                        <select id="rapidaMusicaCategory" class="form-control" style="font-size: 1rem; padding: 0.75rem;">
+                            <option value="">Selecione...</option>
+                            <option value="Adoração">Adoração</option>
+                            <option value="Louvor">Louvor</option>
+                            <option value="Intimidade">Intimidade</option>
+                            <option value="Celebração">Celebração</option>
+                            <option value="Ministração">Ministração</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Link Vídeo -->
+                <div class="form-group">
+                    <label class="form-label" style="font-weight: 600;">
+                        <i class="fab fa-youtube"></i>
+                        Link do Vídeo (YouTube)
+                    </label>
+                    <input type="url" id="rapidaMusicaVideo" class="form-control" 
+                           placeholder="https://youtube.com/watch?v=..." 
+                           style="font-size: 1rem; padding: 0.75rem;">
+                </div>
+
+                <!-- Link Áudio -->
+                <div class="form-group">
+                    <label class="form-label" style="font-weight: 600;">
+                        <i class="fas fa-link"></i>
+                        Link de Áudio
+                    </label>
+                    <input type="url" id="rapidaMusicaAudio" class="form-control" 
+                           placeholder="Link para áudio externo" 
+                           style="font-size: 1rem; padding: 0.75rem;">
+                </div>
+
+                <!-- Observações -->
+                <div class="form-group">
+                    <label class="form-label" style="font-weight: 600;">
+                        <i class="fas fa-sticky-note"></i>
+                        Observações
+                    </label>
+                    <textarea id="rapidaMusicaNotes" class="form-control" rows="3" 
+                              placeholder="Anotações sobre a música..." 
+                              style="font-size: 1rem; padding: 0.75rem; resize: vertical;"></textarea>
+                </div>
+            </form>
+
+            <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border-left: 4px solid var(--primary-color);">
+                <p style="margin: 0; font-size: 0.875rem; color: var(--text-secondary);">
+                    <i class="fas fa-info-circle" style="color: var(--primary-color);"></i>
+                    <strong>Dica:</strong> Após cadastrar, a música estará disponível imediatamente no repertório.
+                </p>
+            </div>
+        </div>
+        <div class="modal-footer" style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+            <button type="button" class="btn btn-outline" onclick="App.modal.close('addMusicaRapidaModal')">
+                <i class="fas fa-times"></i>
+                Cancelar
+            </button>
+            <button type="submit" form="addMusicaRapidaForm" class="btn btn-success">
+                <i class="fas fa-save"></i>
+                Salvar Música
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" id="deleteConfirmModal">
+    <div class="modal" style="max-width: 500px;">
+        <div class="modal-header" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white;">
+            <h2 class="modal-title" style="color: white;">
+                <i class="fas fa-exclamation-triangle"></i>
+                Confirmar Exclusão
+            </h2>
+            <button class="modal-close" onclick="App.modal.close('deleteConfirmModal')" style="color: white;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div style="text-align: center; padding: 1.5rem 0;">
+                <i class="fas fa-exclamation-circle" style="font-size: 4rem; color: #ef4444; margin-bottom: 1rem;"></i>
+                <h3 id="deleteConfirmTitle" style="font-size: 1.3rem; margin-bottom: 0.5rem;"></h3>
+                <p id="deleteConfirmMessage" style="color: var(--text-secondary);"></p>
+            </div>
+        </div>
+        <div class="modal-footer" style="justify-content: center; gap: 1rem;">
+            <button class="btn btn-outline" onclick="App.modal.close('deleteConfirmModal')" style="min-width: 120px;">
+                <i class="fas fa-times"></i>
+                Cancelar
+            </button>
+            <button class="btn btn-danger" id="confirmDeleteBtn" style="min-width: 120px;">
+                <i class="fas fa-trash"></i>
+                Excluir
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete All Escalas Modal -->
+<div class="modal-overlay" id="deleteAllEscalasModal">
+    <div class="modal" style="max-width: 500px;">
+        <div class="modal-header" style="background: linear-gradient(135deg, #dc2626, #991b1b); color: white;">
+            <h2 class="modal-title" style="color: white;">
+                <i class="fas fa-exclamation-triangle"></i>
+                Excluir TODAS as Escalas
+            </h2>
+            <button class="modal-close" onclick="App.modal.close('deleteAllEscalasModal')" style="color: white;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div style="text-align: center; padding: 1.5rem 0;">
+                <i class="fas fa-bomb" style="font-size: 4rem; color: #dc2626; margin-bottom: 1rem;"></i>
+                <h3 style="font-size: 1.4rem; margin-bottom: 1rem; color: #dc2626;">⚠️ ATENÇÃO: Ação Irreversível!</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 1rem;">Você está prestes a excluir <strong>TODAS as escalas cadastradas</strong> no sistema.</p>
+                <p style="color: var(--text-secondary); font-weight: 600;">Esta ação não pode ser desfeita!</p>
+            </div>
+        </div>
+        <div class="modal-footer" style="justify-content: center; gap: 1rem;">
+            <button class="btn btn-outline" onclick="App.modal.close('deleteAllEscalasModal')" style="min-width: 150px;">
+                <i class="fas fa-times"></i>
+                Cancelar
+            </button>
+            <button class="btn btn-danger" onclick="deleteAllEscalas()" style="min-width: 150px;">
+                <i class="fas fa-trash-alt"></i>
+                Excluir Todas
+            </button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Carregar cultos que ainda precisam de escala
+async function loadCultosPendentes() {
+    {% if not current_user.is_authenticated or not current_user.is_admin %}
+    return; // Só admins veem essa seção
+    {% endif %}
+    
+    try {
+        const [cultosRes, escalasRes, membersRes] = await Promise.all([
+            fetch('/get_cultos'),
+            fetch('/get_escalas'),
+            fetch('/get_members')
+        ]);
+        
+        const cultosData = await cultosRes.json();
+        const escalasData = await escalasRes.json();
+        const membersData = await membersRes.json();
+        
+        const cultos = cultosData.cultos || [];
+        const escalas = escalasData.escalas || [];
+        const allMembers = membersData.members || [];
+        
+        // Apenas cultos futuros
+        const now = new Date();
+        const cultosFuturos = cultos.filter(c => new Date(c.date_time) >= now);
+        
+        // Contar escalas por culto
+        const escalasPorCulto = {};
+        escalas.forEach(e => {
+            if (!escalasPorCulto[e.culto_id]) {
+                escalasPorCulto[e.culto_id] = 0;
+            }
+            escalasPorCulto[e.culto_id]++;
+        });
+        
+        console.log('Escalas por culto:', escalasPorCulto);
+        
+        // Cultos pendentes (sem 5 membros)
+        const cultosPendentes = cultosFuturos.filter(c => {
+            const count = escalasPorCulto[c.id] || 0;
+            const isPendente = count < 5;
+            console.log(`Culto ${c.id} (${c.name}): ${count}/5 membros - Pendente: ${isPendente}`);
+            return isPendente;
+        });
+        
+        console.log('Total de cultos pendentes:', cultosPendentes.length);
+        
+        const container = document.getElementById('cultosPendentesContainer');
+        
+        if (cultosPendentes.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-check-circle" style="color: var(--accent-success);"></i>
+                    <h3>Todos os cultos têm escalas completas!</h3>
+                    <p>Não há cultos pendentes</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Para cada culto, buscar membros com flag de indisponibilidade
+        const cultosComIndisponibilidade = await Promise.all(
+            cultosPendentes.map(async (culto) => {
+                try {
+                    const response = await fetch(`/get_members?culto_id=${culto.id}`);
+                    const data = await response.json();
+                    return { ...culto, membrosAtualizado: data.members || allMembers };
+                } catch (error) {
+                    console.error('Erro ao buscar membros para culto', culto.id, error);
+                    return { ...culto, membrosAtualizado: allMembers };
+                }
+            })
+        );
+        
+        container.innerHTML = cultosComIndisponibilidade.map(culto => {
+            const count = escalasPorCulto[culto.id] || 0;
+            const faltam = 5 - count;
+            
+            // Texto do botão
+            const btnText = count === 0 
+                ? '<i class="fas fa-plus"></i> Criar Escala Completa'
+                : `<i class="fas fa-user-plus"></i> Adicionar Membros (${count}/5 - faltam ${faltam})`;
+            
+            return `
+                <div class="card mb-3 fade-in">
+                    <div class="card-header">
+                        <div>
+                            <h3 class="card-title">${culto.name}</h3>
+                            <p class="card-subtitle">${App.format.datetime(culto.date_time)}</p>
+                            ${count > 0 ? `<span class="badge" style="background: var(--accent-warning); color: white; margin-top: 0.5rem;"><i class="fas fa-exclamation-circle"></i> ${count}/5 membros - Faltam ${faltam}</span>` : ''}
+                        </div>
+                        <button class="btn btn-blue" onclick="toggleCreateEscalaForm(${culto.id})" id="toggleBtn${culto.id}">
+                            ${btnText}
+                        </button>
+                    </div>
+                    <div class="card-body" id="createEscalaForm${culto.id}" style="display: none; background: var(--gradient-soft); border-top: 1px solid var(--border-color);">
+                        <h4 style="margin-bottom: 1.5rem; color: var(--primary-color);">
+                            <i class="fas fa-users"></i>
+                            Selecione os 5 membros da escala
+                        </h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                            ${['Guitarrista', 'Violonista', 'Baterista', 'Tecladista', 'Baixista'].map(instrumento => {
+                                const membrosInstrumento = culto.membrosAtualizado.filter(m => m.instrument === instrumento && !m.suspended);
+                                return `
+                                    <div class="form-group" style="margin: 0;">
+                                        <label class="form-label">
+                                            <i class="fas fa-music"></i>
+                                            ${instrumento}
+                                        </label>
+                                        <select class="form-control escala-member-select" data-culto="${culto.id}" data-instrument="${instrumento}">
+                                            <option value="">Selecione...</option>
+                                            ${membrosInstrumento.map(m => {
+                                                if (m.indisponivel) {
+                                                    return `<option value="${m.id}" disabled style="color: #dc2626; background: #fee2e2;">${m.name} ⚠️ INDISPONÍVEL</option>`;
+                                                } else {
+                                                    return `<option value="${m.id}">${m.name}</option>`;
+                                                }
+                                            }).join('')}
+                                        </select>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                            <button class="btn btn-outline" onclick="toggleCreateEscalaForm(${culto.id})">
+                                <i class="fas fa-times"></i>
+                                Cancelar
+                            </button>
+                            <button class="btn btn-success" onclick="saveEscalaCompleta(${culto.id})">
+                                <i class="fas fa-save"></i>
+                                Salvar Escala Completa
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Erro ao carregar cultos pendentes:', error);
+    }
+}
+
+function toggleCreateEscalaForm(cultoId) {
+    const form = document.getElementById(`createEscalaForm${cultoId}`);
+    const btn = document.getElementById(`toggleBtn${cultoId}`);
+    
+    if (form.style.display === 'none') {
+        form.style.display = 'block';
+        btn.innerHTML = '<i class="fas fa-times"></i> Cancelar';
+        btn.classList.remove('btn-blue');
+        btn.classList.add('btn-outline');
+    } else {
+        form.style.display = 'none';
+        btn.innerHTML = '<i class="fas fa-plus"></i> Criar Escala';
+        btn.classList.remove('btn-outline');
+        btn.classList.add('btn-blue');
+    }
+}
+
+async function saveEscalaCompleta(cultoId) {
+    const selects = document.querySelectorAll(`.escala-member-select[data-culto="${cultoId}"]`);
+    const membrosEscolhidos = [];
+    const instrumentos = [];
+    
+    // Coletar membros selecionados
+    selects.forEach(select => {
+        const memberId = select.value;
+        const instrument = select.dataset.instrument;
+        
+        if (memberId) {
+            membrosEscolhidos.push({
+                member_id: parseInt(memberId),
+                instrument: instrument
+            });
+            instrumentos.push(instrument);
+        }
+    });
+    
+    // Validar se 5 membros foram selecionados
+    if (membrosEscolhidos.length < 5) {
+        App.toast.error('Selecione os 5 membros da escala!');
+        return;
+    }
+    
+    // Verificar duplicados
+    const memberIds = membrosEscolhidos.map(m => m.member_id);
+    const uniqueIds = new Set(memberIds);
+    if (uniqueIds.size !== memberIds.length) {
+        App.toast.error('Não é possível selecionar o mesmo membro para múltiplos instrumentos!');
+        return;
+    }
+    
+    try {
+        // Adicionar cada membro à escala
+        const promises = membrosEscolhidos.map(membro => 
+            fetch('/add_escala', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    culto_id: cultoId,
+                    member_id: membro.member_id,
+                    role: membro.instrument
+                })
+            })
+        );
+        
+        const results = await Promise.all(promises);
+        const allSuccess = results.every(r => r.ok);
+        
+        if (allSuccess) {
+            App.toast.success('Escala completa criada com sucesso!');
+            loadCultosPendentes(); // Recarregar cultos pendentes
+            loadEscalas(); // Atualizar escalas criadas
+        } else {
+            App.toast.error('Erro ao criar algumas escalas');
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        App.toast.error('Erro ao processar requisição');
+    }
+}
+
+async function loadEscalas() {
+    console.log('🔄 Iniciando loadEscalas...');
+    const container = document.getElementById('escalasContainer');
+    if (!container) {
+        console.error('❌ Container escalasContainer não encontrado!');
+        return;
+    }
+    console.log('✓ Container encontrado');
+    try {
+        console.log('📡 Buscando escalas e repertório...');
+        
+        // Adicionar timeout de 10 segundos
+        const fetchWithTimeout = (url, timeout = 10000) => {
+            return Promise.race([
+                fetch(url),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Timeout')), timeout)
+                )
+            ]);
+        };
+        
+        const [escalasResponse, repertorioResponse] = await Promise.all([
+            fetchWithTimeout('/get_escalas'),
+            fetchWithTimeout('/get_repertorio')
+        ]);
+        console.log('✓ Respostas recebidas');
+        
+        if (!escalasResponse.ok || !repertorioResponse.ok) {
+            throw new Error('Erro ao buscar dados do servidor');
+        }
+        
+        const data = await escalasResponse.json();
+        const repertorioData = await repertorioResponse.json();
+        const escalas = data.escalas || [];
+        console.log(`📊 Total de escalas: ${escalas.length}`);
+        
+        if (escalas.length === 0) {
+            console.log('ℹ️ Nenhuma escala encontrada');
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-clipboard-list"></i>
+                    <h3>Nenhuma escala cadastrada</h3>
+                    <p>Não há escalas criadas ainda</p>
+                </div>
+            `;
+            return;
+        }
+        console.log('✓ Processando escalas...');
+        
+        // Agrupar por data + equipe (mesmo dia com mesma equipe = um card só)
+        const byCulto = {};
+        escalas.forEach(escala => {
+            if (!byCulto[escala.culto_id]) {
+                byCulto[escala.culto_id] = {
+                    culto_id: escala.culto_id,
+                    name: escala.culto_name,
+                    date: escala.culto_date,
+                    dateOnly: escala.culto_date.split('T')[0],
+                    time: escala.culto_date.split('T')[1],
+                    escalas: []
+                };
+            }
+            byCulto[escala.culto_id].escalas.push(escala);
+        });
+        
+        // Agrupar por data
+        const byDate = {};
+        Object.values(byCulto).forEach(culto => {
+            if (!byDate[culto.dateOnly]) {
+                byDate[culto.dateOnly] = [];
+            }
+            byDate[culto.dateOnly].push(culto);
+        });
+        
+        // Agrupar cultos com mesma equipe no mesmo dia
+        const finalGroups = [];
+        Object.entries(byDate).forEach(([date, cultos]) => {
+            if (cultos.length === 1) {
+                // Apenas um culto nesse dia, adiciona direto
+                finalGroups.push({
+                    name: cultos[0].name,
+                    date: cultos[0].date,
+                    times: [cultos[0].time],
+                    culto_ids: [cultos[0].culto_id],
+                    escalas: cultos[0].escalas
+                });
+            } else {
+                // Múltiplos cultos no mesmo dia - verificar se têm mesma equipe
+                const processed = new Set();
+                cultos.forEach((culto, idx) => {
+                    if (processed.has(idx)) return;
+                    
+                    // Pegar IDs dos membros deste culto
+                    const memberIds = culto.escalas.map(e => e.member_id).sort().join(',');
+                    
+                    // Procurar outros cultos do mesmo dia com mesma equipe
+                    const sameTeam = [culto];
+                    const times = [culto.time];
+                    const culto_ids = [culto.culto_id];
+                    
+                    for (let i = idx + 1; i < cultos.length; i++) {
+                        if (processed.has(i)) continue;
+                        const otherMemberIds = cultos[i].escalas.map(e => e.member_id).sort().join(',');
+                        if (memberIds === otherMemberIds) {
+                            sameTeam.push(cultos[i]);
+                            times.push(cultos[i].time);
+                            culto_ids.push(cultos[i].culto_id);
+                            processed.add(i);
+                        }
+                    }
+                    
+                    processed.add(idx);
+                    
+                    // Adicionar grupo
+                    finalGroups.push({
+                        name: culto.name,
+                        date: culto.date,
+                        times: times,
+                        culto_ids: culto_ids,
+                        escalas: culto.escalas
+                    });
+                });
+            }
+        });
+        
+        // Buscar músicas para todos os cultos
+        const musicasPorCulto = {};
+        const cultoIds = [...new Set(escalas.map(e => e.culto_id))];
+        
+        console.log(`🎵 Buscando músicas para ${cultoIds.length} cultos...`);
+        await Promise.all(cultoIds.map(async (cultoId) => {
+            try {
+                const response = await fetchWithTimeout(`/get_culto_musicas/${cultoId}`, 10000);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const data = await response.json();
+                musicasPorCulto[cultoId] = data.musicas || [];
+                console.log(`  Culto ${cultoId}: ${data.musicas ? data.musicas.length : 0} músicas`);
+            } catch (error) {
+                console.error(`Erro ao buscar músicas do culto ${cultoId}:`, error);
+                musicasPorCulto[cultoId] = [];
+            }
+        }));
+        console.log('✓ Músicas carregadas');
+        
+        console.log(`🎨 Renderizando ${finalGroups.length} grupos de escalas...`);
+        container.innerHTML = finalGroups.map(group => {
+            const timeStr = group.times.length > 1 
+                ? `${App.format.date(group.date)}, ${group.times.join(' e ')}`
+                : App.format.datetime(group.date);
+            
+            // Passar todos os culto_ids para deletar (quando há agrupamento)
+            const cultoIdsStr = JSON.stringify(group.culto_ids);
+            
+            return `
+                <div class="card mb-3 fade-in">
+                    <div class="card-header">
+                        <div>
+                            <h3 class="card-title">${group.name}</h3>
+                            <p class="card-subtitle">${timeStr}</p>
+                        </div>
+                        {% if current_user.is_authenticated and current_user.is_admin %}
+                        <div style="display: flex; gap: 0.75rem;">
+                            <button class="btn btn-success" onclick='openMusicasModal(${group.culto_ids[0]}, "${group.name}")' title="Gerenciar músicas do culto">
+                                <i class="fas fa-music"></i>
+                                Músicas
+                            </button>
+                            <button class="btn btn-blue" onclick='openAddSingleMember(${group.culto_ids[0]}, "${group.name}")' title="Adicionar membro à escala">
+                                <i class="fas fa-user-plus"></i>
+                                Adicionar Membro
+                            </button>
+                            <button class="btn btn-danger" onclick='deleteEscalaCompletaConfirm(${cultoIdsStr}, "${group.name}")' title="Excluir escala completa">
+                                <i class="fas fa-trash"></i>
+                                Excluir Escala
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        <div class="grid grid-2">
+                            ${group.escalas.map(e => `
+                                <div style="padding: 1rem; background: var(--gray-50); border-radius: var(--radius-lg); position: relative;">
+                                    <div class="flex items-center gap-2">
+                                        <div style="width: 40px; height: 40px; border-radius: var(--radius-md); background: var(--gradient-primary); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700;">
+                                            ${e.member_name.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div style="flex: 1;">
+                                            <div style="font-weight: 600; color: var(--gray-900);">${e.member_name}</div>
+                                            <div style="font-size: 0.875rem; color: var(--gray-600);">
+                                                <i class="fas fa-music"></i>
+                                                ${e.role}
+                                            </div>
+                                        </div>
+                                        {% if current_user.is_authenticated and current_user.is_admin %}
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <button class="btn-icon" onclick="openEditEscala(${e.escala_id})" title="Editar membro da escala" style="color: var(--primary-500); background: rgba(59, 130, 246, 0.1);">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn-icon btn-danger" onclick="deleteEscalaConfirm(${e.escala_id})" title="Remover membro da escala">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <!-- Músicas do Culto -->
+                        ${(() => {
+                            const musicas = musicasPorCulto[group.culto_ids[0]] || [];
+                            
+                            if (musicas.length === 0) {
+                                return `
+                                    <div style="margin-top: 1.5rem; padding: 1.5rem; background: linear-gradient(135deg, rgba(239, 68, 68, 0.05), rgba(220, 38, 38, 0.02)); border-radius: var(--radius-lg); border: 1px dashed rgba(239, 68, 68, 0.3);">
+                                        <div style="text-align: center;">
+                                            <i class="fas fa-music" style="font-size: 2rem; color: var(--gray-400); margin-bottom: 0.5rem;"></i>
+                                            <p style="color: var(--gray-600); margin: 0; font-size: 0.95rem;">
+                                                Nenhuma música selecionada para este culto
+                                            </p>
+                                            {% if current_user.is_authenticated and current_user.is_admin %}
+                                            <button class="btn btn-sm btn-success" onclick='openMusicasModal(${group.culto_ids[0]}, "${group.name}")' style="margin-top: 0.75rem;">
+                                                <i class="fas fa-plus"></i>
+                                                Adicionar Músicas
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                            
+                            return `
+                                <div style="margin-top: 1.5rem;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                                        <h4 style="font-size: 1.1rem; font-weight: 600; color: var(--gray-900); margin: 0;">
+                                            <i class="fas fa-music" style="color: var(--accent-success);"></i>
+                                            Repertório do Culto
+                                            <span style="background: var(--accent-success); color: white; padding: 0.125rem 0.5rem; border-radius: 1rem; font-size: 0.875rem; margin-left: 0.5rem;">${musicas.length}</span>
+                                        </h4>
+                                        {% if current_user.is_authenticated and current_user.is_admin %}
+                                        <button class="btn-icon" onclick='openMusicasModal(${group.culto_ids[0]}, "${group.name}")' title="Editar músicas" style="color: var(--accent-success);">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                    <div style="display: grid; gap: 0.75rem;">
+                                        ${musicas.map((m, index) => `
+                                            <div style="padding: 1rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(5, 150, 105, 0.02)); border-radius: var(--radius-lg); border-left: 3px solid var(--accent-success);">
+                                                <div style="display: flex; align-items: flex-start; gap: 1rem;">
+                                                    <div style="width: 32px; height: 32px; background: var(--gradient-success); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0;">
+                                                        ${index + 1}
+                                                    </div>
+                                                    <div style="flex: 1;">
+                                                        <div style="font-weight: 600; color: var(--gray-900); font-size: 1rem; margin-bottom: 0.25rem;">
+                                                            ${m.title}
+                                                        </div>
+                                                        <div style="display: flex; flex-wrap: wrap; gap: 1rem; font-size: 0.875rem; color: var(--gray-600);">
+                                                            ${m.artist ? `<span><i class="fas fa-user"></i> ${m.artist}</span>` : ''}
+                                                            ${m.key_tone ? `<span><i class="fas fa-music"></i> Tom: <strong style="color: var(--accent-success);">${m.key_tone}</strong></span>` : ''}
+                                                            ${m.tempo ? `<span><i class="fas fa-drum"></i> ${m.tempo}</span>` : ''}
+                                                            ${m.category ? `<span style="background: var(--gray-100); padding: 0.125rem 0.5rem; border-radius: 0.25rem;"><i class="fas fa-tag"></i> ${m.category}</span>` : ''}
+                                                        </div>
+                                                        ${(m.link_video || m.link_audio || m.audio_file) ? `
+                                                            <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap;">
+                                                                ${m.link_video ? `
+                                                                    <a href="${m.link_video}" target="_blank" class="btn btn-sm" style="background: #ff0000; color: white; padding: 0.375rem 0.75rem; font-size: 0.875rem; text-decoration: none;">
+                                                                        <i class="fab fa-youtube"></i>
+                                                                        YouTube
+                                                                    </a>
+                                                                ` : ''}
+                                                                ${m.link_audio ? `
+                                                                    <a href="${m.link_audio}" target="_blank" class="btn btn-sm btn-outline" style="padding: 0.375rem 0.75rem; font-size: 0.875rem; text-decoration: none;">
+                                                                        <i class="fas fa-link"></i>
+                                                                        Áudio Online
+                                                                    </a>
+                                                                ` : ''}
+                                                                ${m.audio_file ? `
+                                                                    <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(16, 185, 129, 0.1); padding: 0.5rem; border-radius: 0.5rem;">
+                                                                        <i class="fas fa-headphones" style="color: var(--accent-success);"></i>
+                                                                        <span style="font-size: 0.875rem; font-weight: 500; color: var(--accent-success);">VS:</span>
+                                                                        <audio controls style="height: 32px; max-width: 250px;">
+                                                                            <source src="/uploads/${m.audio_file}" type="audio/mpeg">
+                                                                            Seu navegador não suporta o player de áudio.
+                                                                        </audio>
+                                                                    </div>
+                                                                ` : ''}
+                                                            </div>
+                                                        ` : ''}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `;
+                        })()}
+                    </div>
+                </div>
+            `;
+        }).join('');
+        console.log('✅ Escalas renderizadas com sucesso!');
+    } catch (error) {
+        console.error('❌ Erro ao carregar escalas:', error);
+        console.error('Stack:', error.stack);
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-exclamation-triangle" style="color: var(--danger-color);"></i>
+                <h3>Erro ao carregar escalas</h3>
+                <p>Ocorreu um erro ao buscar as escalas. Por favor, recarregue a página.</p>
+                <button class="btn btn-primary" onclick="loadEscalas()">
+                    <i class="fas fa-sync"></i>
+                    Tentar Novamente
+                </button>
+            </div>
+        `;
+        App.toast.error('Erro ao carregar escalas');
+    }
+}
+
+let allMembers = []; // Variável global para armazenar todos os membros
+
+async function loadModalData() {
+    try {
+        const [cultosRes, membersRes] = await Promise.all([
+            fetch('/get_cultos'),
+            fetch('/get_members')
+        ]);
+        
+        const cultosData = await cultosRes.json();
+        const membersData = await membersRes.json();
+        
+        console.log('Dados carregados do servidor:');
+        console.log('- Cultos:', cultosData.cultos.length);
+        console.log('- Membros recebidos:', membersData.members.length);
+        console.log('- Estrutura dos membros:', membersData.members);
+        
+        // Armazenar membros globalmente
+        allMembers = membersData.members;
+        
+        console.log('allMembers populado com', allMembers.length, 'membros');
+        
+        document.getElementById('selectCulto').innerHTML = 
+            cultosData.cultos.map(c => `<option value="${c.id}">${c.name} - ${App.format.date(c.date_time)}</option>`).join('');
+    } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+    }
+}
+
+async function filterMembersByInstrument() {
+    const instrument = document.getElementById('selectInstrument').value;
+    const cultoId = document.getElementById('selectCulto').value;
+    const memberSelect = document.getElementById('selectMember');
+    
+    console.log('Filtrando por instrumento:', instrument);
+    console.log('Total de membros:', allMembers.length);
+    
+    if (!instrument) {
+        memberSelect.innerHTML = '<option value="">Primeiro selecione o instrumento...</option>';
+        return;
+    }
+    
+    // Buscar membros atualizados com informação de indisponibilidade para este culto
+    let membersToUse = allMembers;
+    if (cultoId) {
+        try {
+            const response = await fetch(`/get_members?culto_id=${cultoId}`);
+            const data = await response.json();
+            membersToUse = data.members || allMembers;
+            console.log('Membros atualizados com indisponibilidade:', membersToUse);
+        } catch (error) {
+            console.error('Erro ao buscar membros:', error);
+        }
+    }
+    
+    const filteredMembers = membersToUse.filter(m => {
+        return m.instrument === instrument && !m.suspended;
+    });
+    
+    console.log('Membros filtrados:', filteredMembers);
+    
+    if (filteredMembers.length === 0) {
+        memberSelect.innerHTML = '<option value="">Nenhum membro disponível para este instrumento</option>';
+    } else {
+        const options = filteredMembers.map(m => {
+            if (m.indisponivel) {
+                // Membro indisponível - desabilitar a opção
+                return `<option value="${m.id}" disabled style="color: #dc2626; background: #fee2e2;">${m.name} ⚠️ INDISPONÍVEL</option>`;
+            } else {
+                return `<option value="${m.id}">${m.name}</option>`;
+            }
+        }).join('');
+        
+        memberSelect.innerHTML = '<option value="">Selecione o membro...</option>' + options;
+    }
+}
+
+async function saveEscala() {
+    const cultoId = document.getElementById('selectCulto').value;
+    const memberId = document.getElementById('selectMember').value;
+    const instrument = document.getElementById('selectInstrument').value;
+    
+    if (!cultoId || !memberId || !instrument) {
+        App.toast.error('Preencha todos os campos');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/add_escala', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                culto_id: cultoId,
+                member_id: memberId,
+                role: instrument
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            App.toast.success('Escala criada com sucesso!');
+            App.modal.close('addEscalaModal');
+            document.getElementById('addEscalaForm').reset();
+            document.getElementById('selectInstrument').value = '';
+            loadEscalas();
+        } else {
+            App.toast.error(result.message || 'Erro ao criar escala');
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        App.toast.error('Erro ao processar requisição');
+    }
+}
+
+async function openEditEscala(escalaId) {
+    try {
+        const [escalaRes, membersRes] = await Promise.all([
+            fetch(`/get_escala/${escalaId}`),
+            fetch('/get_members')
+        ]);
+        
+        const escala = await escalaRes.json();
+        const membersData = await membersRes.json();
+        
+        document.getElementById('editEscalaId').value = escala.id;
+        document.getElementById('editCultoName').value = escala.culto_name;
+        document.getElementById('editRole').value = escala.role;
+        
+        // Popular dropdown de membros
+        const memberSelect = document.getElementById('editMemberId');
+        memberSelect.innerHTML = membersData.members.map(m => 
+            `<option value="${m.id}" ${m.id === escala.member_id ? 'selected' : ''}>${m.name} (${m.instrument})</option>`
+        ).join('');
+        
+        App.modal.open('editEscalaModal');
+    } catch (error) {
+        console.error('Erro ao carregar escala:', error);
+        App.toast.error('Erro ao carregar dados da escala');
+    }
+}
+
+async function updateEscala() {
+    const escalaId = document.getElementById('editEscalaId').value;
+    const memberId = document.getElementById('editMemberId').value;
+    const role = document.getElementById('editRole').value;
+    
+    if (!memberId || !role) {
+        App.toast.error('Preencha todos os campos');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/edit_escala/${escalaId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ member_id: memberId, role: role })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            App.toast.success('Escala atualizada com sucesso!');
+            App.modal.close('editEscalaModal');
+            loadEscalas();
+        } else {
+            App.toast.error(result.message || 'Erro ao atualizar escala');
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        App.toast.error('Erro ao processar requisição');
+    }
+}
+
+async function deleteEscalaConfirm(escalaId) {
+    // Abrir modal moderno de confirmação
+    document.getElementById('deleteConfirmTitle').textContent = 'Remover membro da escala?';
+    document.getElementById('deleteConfirmMessage').textContent = 'Este membro será removido da escala. Você poderá adicioná-lo novamente depois.';
+    
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+    confirmBtn.onclick = async () => {
+        App.modal.close('deleteConfirmModal');
+        
+        try {
+            const response = await fetch(`/delete_escala/${escalaId}`, {
+                method: 'POST'
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                App.toast.success('Membro removido da escala com sucesso!');
+                loadEscalas();
+            } else {
+                App.toast.error(result.message || 'Erro ao remover membro');
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            App.toast.error('Erro ao processar requisição');
+        }
+    };
+    
+    App.modal.open('deleteConfirmModal');
+}
+
+async function deleteEscalaCompletaConfirm(cultoIds, cultoName) {
+    // cultoIds pode ser um array (quando há agrupamento) ou um único ID
+    const idsArray = Array.isArray(cultoIds) ? cultoIds : [cultoIds];
+    
+    // Abrir modal moderno de confirmação
+    document.getElementById('deleteConfirmTitle').textContent = `Excluir escala completa?`;
+    document.getElementById('deleteConfirmMessage').textContent = `Todos os membros da escala "${cultoName}" serão removidos. Esta ação pode ser desfeita criando uma nova escala.`;
+    
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+    confirmBtn.onclick = async () => {
+        App.modal.close('deleteConfirmModal');
+        
+        try {
+            // Deletar escalas de todos os cultos do grupo
+            const deletePromises = idsArray.map(id => 
+                fetch(`/delete_escalas_culto/${id}`, { method: 'POST' })
+            );
+            
+            const responses = await Promise.all(deletePromises);
+            const allSuccess = responses.every(r => r.ok);
+            
+            if (allSuccess) {
+                App.toast.success('Escala completa removida com sucesso!');
+                loadEscalas();
+                {% if current_user.is_authenticated and current_user.is_admin %}
+                loadCultosPendentes();
+                {% endif %}
+            } else {
+                App.toast.error('Erro ao remover algumas escalas');
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            App.toast.error('Erro ao processar requisição');
+        }
+    };
+    
+    App.modal.open('deleteConfirmModal');
+}
+
+// ========================================
+// ADICIONAR MEMBRO INDIVIDUAL
+// ========================================
+
+async function openAddSingleMember(cultoId, cultoName) {
+    try {
+        // Buscar membros com informação de indisponibilidade
+        const membersRes = await fetch(`/get_members?culto_id=${cultoId}`);
+        const membersData = await membersRes.json();
+        
+        // Armazenar membros globalmente para filtro
+        allMembers = membersData.members;
+        
+        // Preencher campos do modal
+        document.getElementById('singleCultoId').value = cultoId;
+        document.getElementById('singleCultoName').value = cultoName;
+        document.getElementById('singleInstrument').value = '';
+        document.getElementById('singleMember').innerHTML = '<option value="">Primeiro selecione o instrumento...</option>';
+        
+        // Verificar se há membros indisponíveis
+        const hasIndisponiveis = allMembers.some(m => m.indisponivel);
+        const infoAlert = document.getElementById('singleIndisponibilidadeInfo');
+        if (hasIndisponiveis) {
+            infoAlert.hidden = false;
+        } else {
+            infoAlert.hidden = true;
+        }
+        
+        App.modal.open('addSingleMemberModal');
+    } catch (error) {
+        console.error('Erro ao abrir modal:', error);
+        App.toast.error('Erro ao carregar dados');
+    }
+}
+
+async function filterSingleMembersByInstrument() {
+    const instrument = document.getElementById('singleInstrument').value;
+    const cultoId = document.getElementById('singleCultoId').value;
+    const memberSelect = document.getElementById('singleMember');
+    
+    if (!instrument) {
+        memberSelect.innerHTML = '<option value="">Primeiro selecione o instrumento...</option>';
+        return;
+    }
+    
+    try {
+        // Buscar escalas existentes para este culto
+        const escalasRes = await fetch('/get_escalas');
+        const escalasData = await escalasRes.json();
+        const escalasExistentes = escalasData.escalas.filter(e => e.culto_id == cultoId);
+        const membrosJaEscalados = escalasExistentes.map(e => e.member_id);
+        
+        // Filtrar por instrumento, excluindo membros já escalados e indisponíveis
+        const filteredMembers = allMembers.filter(m => {
+            const instrumentMatch = m.instrument === instrument;
+            const naoEscalado = !membrosJaEscalados.includes(m.id);
+            const naoIndisponivel = !m.indisponivel;
+            
+            return instrumentMatch && naoEscalado && naoIndisponivel;
+        });
+        
+        if (filteredMembers.length === 0) {
+            memberSelect.innerHTML = '<option value="">Nenhum membro disponível para este instrumento</option>';
+            return;
+        }
+        
+        memberSelect.innerHTML = filteredMembers.map(m => {
+            const label = m.indisponivel ? `⚠️ ${m.name} (INDISPONÍVEL)` : m.name;
+            const disabled = m.indisponivel ? 'disabled' : '';
+            return `<option value="${m.id}" ${disabled}>${label}</option>`;
+        }).join('');
+        
+    } catch (error) {
+        console.error('Erro ao filtrar membros:', error);
+        memberSelect.innerHTML = '<option value="">Erro ao carregar membros</option>';
+    }
+}
+
+async function saveSingleMember() {
+    const cultoId = document.getElementById('singleCultoId').value;
+    const memberId = document.getElementById('singleMember').value;
+    const role = document.getElementById('singleInstrument').value;
+    
+    if (!memberId || !role) {
+        App.toast.error('Preencha todos os campos');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/add_escala', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                culto_id: cultoId,
+                member_id: memberId,
+                role: role
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            App.toast.success('Membro adicionado à escala com sucesso!');
+            App.modal.close('addSingleMemberModal');
+            loadEscalas();
+            {% if current_user.is_authenticated and current_user.is_admin %}
+            loadCultosPendentes();
+            {% endif %}
+        } else {
+            App.toast.error(result.message || 'Erro ao adicionar membro');
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        App.toast.error('Erro ao processar requisição');
+    }
+}
+
+async function deleteAllEscalas() {
+    App.modal.close('deleteAllEscalasModal');
+    
+    try {
+        const response = await fetch('/delete_all_escalas', {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            App.toast.success(result.message || 'Todas as escalas foram removidas com sucesso!');
+            loadEscalas();
+            {% if current_user.is_authenticated and current_user.is_admin %}
+            loadCultosPendentes();
+            {% endif %}
+        } else {
+            App.toast.error(result.message || 'Erro ao remover escalas');
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        App.toast.error('Erro ao processar requisição');
+    }
+}
+
+// ========================================
+// GERENCIAR MÚSICAS DO CULTO
+// ========================================
+
+let currentCultoMusicas = null;
+
+async function openMusicasModal(cultoId, cultoName) {
+    currentCultoMusicas = cultoId;
+    
+    document.getElementById('musicasCultoId').value = cultoId;
+    document.getElementById('musicasCultoName').textContent = cultoName;
+    
+    // Carregar músicas do repertório disponíveis
+    await loadRepertorioDisponivel();
+    
+    // Carregar músicas já selecionadas para este culto
+    await loadMusicasCulto();
+    
+    App.modal.open('musicasCultoModal');
+}
+
+// Variável global para armazenar todas as músicas do repertório
+let todasMusicasRepertorio = [];
+
+async function loadRepertorioDisponivel() {
+    try {
+        const response = await fetch('/get_repertorio');
+        const data = await response.json();
+        
+        console.log('Repertório carregado:', data);
+        
+        const select = document.getElementById('selectMusicaRepertorio');
+        const countEl = document.getElementById('musicasRepertorioCount');
+        
+        if (!data.repertorio || data.repertorio.length === 0) {
+            select.innerHTML = '<option value="">Nenhuma música cadastrada no repertório</option>';
+            todasMusicasRepertorio = [];
+            if (countEl) countEl.textContent = '0';
+            console.log('Nenhuma música encontrada no repertório');
+            return;
+        }
+        
+        console.log(`${data.repertorio.length} música(s) encontrada(s)`);
+        
+        // Armazenar todas as músicas globalmente
+        todasMusicasRepertorio = data.repertorio;
+        
+        // Atualizar contador
+        if (countEl) countEl.textContent = data.repertorio.length;
+        
+        // Renderizar todas as músicas
+        renderMusicasRepertorio(todasMusicasRepertorio);
+        
+    } catch (error) {
+        console.error('Erro ao carregar repertório:', error);
+        App.toast.error('Erro ao carregar repertório: ' + error.message);
+    }
+}
+
+// Renderizar músicas no select
+function renderMusicasRepertorio(musicas) {
+    const select = document.getElementById('selectMusicaRepertorio');
+    
+    if (!musicas || musicas.length === 0) {
+        select.innerHTML = '<option value="">Nenhuma música encontrada</option>';
+        return;
+    }
+    
+    select.innerHTML = musicas.map(m => `
+        <option value="${m.id}" data-title="${m.title.toLowerCase()}" data-artist="${(m.artist || '').toLowerCase()}" data-tone="${(m.key_tone || '').toLowerCase()}">
+            ${m.title}${m.artist ? ' - ' + m.artist : ''}${m.key_tone ? ' (' + m.key_tone + ')' : ''}
+        </option>
+    `).join('');
+}
+
+// Filtrar músicas do repertório
+function filterMusicasRepertorio() {
+    const searchTerm = document.getElementById('searchMusicaRepertorio').value.toLowerCase().trim();
+    
+    if (!searchTerm) {
+        // Se não há busca, mostrar todas
+        renderMusicasRepertorio(todasMusicasRepertorio);
+        return;
+    }
+    
+    // Filtrar músicas que contenham o termo de busca no título, artista ou tom
+    const musicasFiltradas = todasMusicasRepertorio.filter(m => {
+        const title = (m.title || '').toLowerCase();
+        const artist = (m.artist || '').toLowerCase();
+        const tone = (m.key_tone || '').toLowerCase();
+        
+        return title.includes(searchTerm) || 
+               artist.includes(searchTerm) || 
+               tone.includes(searchTerm);
+    });
+    
+    renderMusicasRepertorio(musicasFiltradas);
+}
+
+async function loadMusicasCulto() {
+    const cultoId = document.getElementById('musicasCultoId').value;
+    
+    try {
+        const response = await fetch(`/get_culto_musicas/${cultoId}`);
+        const data = await response.json();
+        
+        const container = document.getElementById('musicasSelecionadasList');
+        const count = document.getElementById('musicasCount');
+        
+        if (!data.musicas || data.musicas.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state" style="padding: 2rem;">
+                    <i class="fas fa-music" style="font-size: 2.5rem; color: var(--gray-400); margin-bottom: 0.5rem;"></i>
+                    <p style="color: var(--gray-600);">Nenhuma música selecionada</p>
+                </div>
+            `;
+            count.textContent = '0';
+            return;
+        }
+        
+        count.textContent = data.musicas.length;
+        
+        container.innerHTML = data.musicas.map((m, index) => `
+            <div class="card" style="margin-bottom: 0.75rem; padding: 1rem;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div style="width: 32px; height: 32px; background: var(--gradient-success); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0;">
+                        ${index + 1}
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; color: var(--gray-900);">${m.title}</div>
+                        <div style="font-size: 0.875rem; color: var(--gray-600);">
+                            ${m.artist ? `<i class="fas fa-user"></i> ${m.artist} • ` : ''}
+                            ${m.key_tone ? `<i class="fas fa-music"></i> Tom: ${m.key_tone}` : ''}
+                            ${m.category ? ` • <span style="background: var(--gray-100); padding: 0.125rem 0.5rem; border-radius: 0.25rem;">${m.category}</span>` : ''}
+                        </div>
+                    </div>
+                    <button class="btn-icon btn-danger" onclick="removeMusicaDoCulto(${m.id})" title="Remover música">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Erro ao carregar músicas do culto:', error);
+        App.toast.error('Erro ao carregar músicas');
+    }
+}
+
+async function addMusicaToCulto() {
+    const cultoId = document.getElementById('musicasCultoId').value;
+    const musicaId = document.getElementById('selectMusicaRepertorio').value;
+    
+    if (!musicaId) {
+        App.toast.error('Selecione uma música');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/add_musica_culto', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                culto_id: cultoId,
+                repertorio_id: musicaId
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            App.toast.success('Música adicionada ao culto!');
+            document.getElementById('selectMusicaRepertorio').value = '';
+            await loadMusicasCulto();
+        } else {
+            App.toast.error(result.message || 'Erro ao adicionar música');
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        App.toast.error('Erro ao processar requisição');
+    }
+}
+
+async function removeMusicaDoCulto(musicaId) {
+    const cultoId = document.getElementById('musicasCultoId').value;
+    
+    try {
+        const response = await fetch('/remove_musica_culto', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                culto_id: cultoId,
+                repertorio_id: musicaId
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            App.toast.success('Música removida do culto!');
+            await loadMusicasCulto();
+        } else {
+            App.toast.error(result.message || 'Erro ao remover música');
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        App.toast.error('Erro ao processar requisição');
+    }
+}
+
+// Abrir modal de cadastro rápido de música
+function openAddMusicaRapidaModal() {
+    // Limpar formulário
+    document.getElementById('addMusicaRapidaForm').reset();
+    App.modal.open('addMusicaRapidaModal');
+}
+
+// Salvar música cadastrada rapidamente
+async function saveMusicaRapida(event) {
+    event.preventDefault();
+    
+    const title = document.getElementById('rapidaMusicaTitle').value.trim();
+    const artist = document.getElementById('rapidaMusicaArtist').value.trim();
+    const key_tone = document.getElementById('rapidaMusicaTom').value;
+    const category = document.getElementById('rapidaMusicaCategory').value;
+    const link_video = document.getElementById('rapidaMusicaVideo').value.trim();
+    const link_audio = document.getElementById('rapidaMusicaAudio').value.trim();
+    const notes = document.getElementById('rapidaMusicaNotes').value.trim();
+    
+    if (!title) {
+        App.toast.error('O título da música é obrigatório!');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/add_musica', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                title: title,
+                artist: artist || '',
+                key_tone: key_tone || '',
+                category: category || '',
+                link_video: link_video || '',
+                link_audio: link_audio || '',
+                notes: notes || ''
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+            App.toast.success('Música cadastrada com sucesso!');
+            
+            // Fechar modal
+            App.modal.close('addMusicaRapidaModal');
+            
+            // Limpar formulário
+            document.getElementById('addMusicaRapidaForm').reset();
+            
+            // Recarregar repertório disponível
+            await loadRepertorioDisponivel();
+            
+            App.toast.show('Música já está disponível no repertório!', 'success');
+        } else {
+            App.toast.error(result.message || 'Erro ao cadastrar música');
+        }
+    } catch (error) {
+        console.error('Erro ao salvar música:', error);
+        App.toast.error('Erro ao processar requisição: ' + error.message);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('🚀 Página carregada, iniciando...');
+    loadEscalas().catch(error => {
+        console.error('❌ Erro crítico ao carregar escalas:', error);
+        const container = document.getElementById('escalasContainer');
+        if (container) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-exclamation-triangle" style="color: var(--danger-color);"></i>
+                    <h3>Erro ao carregar escalas</h3>
+                    <p>Por favor, recarregue a página. Se o erro persistir, contate o administrador.</p>
+                    <button class="btn btn-primary" onclick="location.reload()">
+                        <i class="fas fa-sync"></i>
+                        Recarregar Página
+                    </button>
+                </div>
+            `;
+        }
+    });
+    {% if current_user.is_authenticated and current_user.is_admin %}
+    loadCultosPendentes();
+    loadModalData();
+    {% endif %}
+});
+</script>
+{% endblock %}
