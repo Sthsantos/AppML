@@ -520,9 +520,10 @@ def perfil():
 def get_perfil():
     """Retorna os dados do perfil do usuário logado."""
     try:
-        user = db.session.get(User, session['user_id']) or db.session.get(Member, session['user_id'])
+        # Usar current_user do Flask-Login (já carregado corretamente pelo load_user)
+        user = current_user
         
-        if not user:
+        if not user or not user.is_authenticated:
             return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 404
         
         # Se for User (admin), buscar Member associado pelo email
@@ -530,19 +531,26 @@ def get_perfil():
         if isinstance(user, User):
             member = Member.query.filter_by(email=user.email).first()
         
+        # Obter role e is_admin
+        user_role = getattr(user, 'role', ROLE_MEMBRO)
+        is_admin = getattr(user, 'is_admin', False)
+        
         perfil_data = {
             'id': user.id,
-            'name': member.name if member else user.email.split('@')[0],
+            'name': member.name if member else (user.name if isinstance(user, Member) else user.email.split('@')[0]),
             'email': user.email,
             'phone': member.phone if member else getattr(user, 'phone', ''),
             'instrument': member.instrument if member else getattr(user, 'instrument', ''),
             'avatar': getattr(user, 'avatar', 'default-avatar.png') or 'default-avatar.png',
-            'is_admin': getattr(user, 'is_admin', False)
+            'is_admin': is_admin,
+            'role': user_role  # Adicionar role ao retorno
         }
         
         return jsonify({'success': True, 'perfil': perfil_data})
     except Exception as e:
         print(f"Erro ao carregar perfil: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/update_perfil', methods=['POST'])
@@ -551,9 +559,10 @@ def update_perfil():
     """Atualiza os dados do perfil do usuário logado."""
     try:
         data = request.get_json()
-        user = db.session.get(User, session['user_id']) or db.session.get(Member, session['user_id'])
+        # Usar current_user do Flask-Login
+        user = current_user
         
-        if not user:
+        if not user or not user.is_authenticated:
             return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 404
         
         # Se for Member, atualizar diretamente

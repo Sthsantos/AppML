@@ -209,8 +209,29 @@ async function loadPerfil() {
             // Atualizar elementos
             document.getElementById('profileName').textContent = perfil.name;
             document.getElementById('profileEmail').textContent = perfil.email;
-            document.getElementById('profileBadge').textContent = perfil.is_admin ? 'Administrador' : 'Membro';
-            document.getElementById('profileBadge').style.background = perfil.is_admin ? 'var(--success-500)' : 'var(--primary-500)';
+            
+            // Exibir role com labels corretos
+            const roleLabels = {
+                'admin': 'Administrador',
+                'pastor': 'Pastor',
+                'lider_banda': 'Líder de Banda',
+                'lider_ministerio': 'Líder de Ministério',
+                'ministro': 'Ministro de Louvor',
+                'membro': 'Membro'
+            };
+            
+            const roleColors = {
+                'admin': 'var(--danger-500)',
+                'pastor': 'var(--warning-500)',
+                'lider_banda': 'var(--info-500)',
+                'lider_ministerio': 'var(--purple-500)',
+                'ministro': 'var(--success-500)',
+                'membro': 'var(--primary-500)'
+            };
+            
+            const userRole = perfil.role || 'membro';
+            document.getElementById('profileBadge').textContent = roleLabels[userRole] || 'Membro';
+            document.getElementById('profileBadge').style.background = roleColors[userRole] || 'var(--primary-500)';
             
             // Avatar
             const avatarPath = perfil.avatar && perfil.avatar !== 'default-avatar.png' 
