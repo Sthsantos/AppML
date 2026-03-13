@@ -16,10 +16,10 @@
     
     <!-- iOS Meta Tags - PNG obrigatório (iOS não suporta SVG) -->
     <meta name="apple-itunes-app" content="app-id=none">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon-192x192.png') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='icon-180x180.png') }}">
-    <link rel="apple-touch-icon" sizes="192x192" href="{{ url_for('static', filename='icon-192x192.png') }}">
-    <link rel="apple-touch-icon" sizes="512x512" href="{{ url_for('static', filename='icon-512x512.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon-192x192.png') }}?v=2.0">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='icon-180x180.png') }}?v=2.0">
+    <link rel="apple-touch-icon" sizes="192x192" href="{{ url_for('static', filename='icon-192x192.png') }}?v=2.0">
+    <link rel="apple-touch-icon" sizes="512x512" href="{{ url_for('static', filename='icon-512x512.png') }}?v=2.0">
     
     <!-- Android Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
@@ -27,16 +27,16 @@
     
     <!-- Microsoft Meta Tags -->
     <meta name="msapplication-TileColor" content="#667eea">
-    <meta name="msapplication-TileImage" content="{{ url_for('static', filename='icon-512x512.png') }}">
+    <meta name="msapplication-TileImage" content="{{ url_for('static', filename='icon-512x512.png') }}?v=2.0">
     <meta name="msapplication-tap-highlight" content="no">
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
     
     <!-- Favicons -->
-    <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='icon-192x192.png') }}">
-    <link rel="icon" type="image/png" sizes="512x512" href="{{ url_for('static', filename='icon-512x512.png') }}">
-    <link rel="shortcut icon" href="{{ url_for('static', filename='icon.png') }}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='icon-192x192.png') }}?v=2.0">
+    <link rel="icon" type="image/png" sizes="512x512" href="{{ url_for('static', filename='icon-512x512.png') }}?v=2.0">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='icon.png') }}?v=2.0">
     
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
