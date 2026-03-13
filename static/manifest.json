@@ -14,22 +14,22 @@
     "prefer_related_applications": false,
     "icons": [
         {
-            "src": "/static/icon.svg",
-            "sizes": "any",
-            "type": "image/svg+xml",
-            "purpose": "any"
-        },
-        {
-            "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='192' height='192' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23000000'/%3E%3Cstop offset='50%25' style='stop-color:%231a1a1a'/%3E%3Cstop offset='100%25' style='stop-color:%23000000'/%3E%3C/linearGradient%3E%3ClinearGradient id='gold' x1='0%25' y1='0%25' x2='0%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23ffd700'/%3E%3Cstop offset='50%25' style='stop-color:%23ffed4e'/%3E%3Cstop offset='100%25' style='stop-color:%23d4af37'/%3E%3C/linearGradient%3E%3Cfilter id='glow'%3E%3CfeGaussianBlur stdDeviation='4'/%3E%3C/filter%3E%3Cfilter id='textGlow'%3E%3CfeGaussianBlur in='SourceAlpha' stdDeviation='5'/%3E%3CfeOffset dx='0' dy='0'/%3E%3CfeFlood flood-color='%23ffd700' flood-opacity='1'/%3E%3CfeComposite in2='offsetblur' operator='in'/%3E%3CfeMerge%3E%3CfeMergeNode/%3E%3CfeMergeNode/%3E%3CfeMergeNode in='SourceGraphic'/%3E%3C/feMerge%3E%3C/filter%3E%3C/defs%3E%3Crect width='512' height='512' fill='url(%23bg)' rx='100'/%3E%3Cg transform='translate(256,230) scale(1.3)' filter='url(%23glow)'%3E%3Cpath d='M 20,-140 C 60,-140 80,-100 80,-60 C 80,-20 60,0 40,20 C 20,40 0,60 0,100 C 0,130 15,145 35,145 C 55,145 70,130 70,110 C 70,95 60,85 50,85 C 40,85 35,90 35,98 C 35,103 38,106 42,106 C 45,106 47,104 47,101 L 47,101 C 44,101 42,99 42,96 C 42,92 45,88 50,88 C 58,88 65,95 65,108 C 65,125 52,140 35,140 C 12,140 -5,123 -5,100 C -5,55 18,35 38,15 C 58,-5 75,-25 75,-60 C 75,-95 58,-135 20,-135 C -10,-135 -30,-110 -30,-80 C -30,-60 -20,-45 -5,-45 C 8,-45 18,-55 18,-68 C 18,-78 12,-85 3,-85 C -2,-85 -6,-82 -8,-78 L -8,-78 C -6,-82 -2,-88 3,-90 C 15,-90 23,-80 23,-68 C 23,-52 10,-40 -5,-40 C -22,-40 -35,-55 -35,-80 C -35,-115 -12,-140 20,-140 Z' fill='url(%23gold)' stroke='%23b8860b' stroke-width='2'/%3E%3Cpath d='M 18,-135 L 18,60' stroke='url(%23gold)' stroke-width='14' stroke-linecap='round'/%3E%3Ccircle cx='18' cy='-140' r='12' fill='url(%23gold)'/%3E%3C/g%3E%3Cg filter='url(%23textGlow)'%3E%3Ctext x='256' y='485' text-anchor='middle' fill='none' stroke='url(%23gold)' stroke-width='3' font-size='48' font-weight='bold'%3EL%3C/text%3E%3Ctext x='256' y='485' text-anchor='middle' fill='url(%23gold)' font-size='48' font-weight='bold'%3EL%3C/text%3E%3C/g%3E%3C/svg%3E",
+            "src": "/static/icon-192x192.png",
             "sizes": "192x192",
-            "type": "image/svg+xml",
+            "type": "image/png",
             "purpose": "any maskable"
         },
         {
-            "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='bg2' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23000000'/%3E%3Cstop offset='50%25' style='stop-color:%231a1a1a'/%3E%3Cstop offset='100%25' style='stop-color:%23000000'/%3E%3C/linearGradient%3E%3ClinearGradient id='gold2' x1='0%25' y1='0%25' x2='0%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23ffd700'/%3E%3Cstop offset='50%25' style='stop-color:%23ffed4e'/%3E%3Cstop offset='100%25' style='stop-color:%23d4af37'/%3E%3C/linearGradient%3E%3Cfilter id='glow2'%3E%3CfeGaussianBlur stdDeviation='4'/%3E%3C/filter%3E%3Cfilter id='textGlow2'%3E%3CfeGaussianBlur in='SourceAlpha' stdDeviation='5'/%3E%3CfeOffset dx='0' dy='0'/%3E%3CfeFlood flood-color='%23ffd700' flood-opacity='1'/%3E%3CfeComposite in2='offsetblur' operator='in'/%3E%3CfeMerge%3E%3CfeMergeNode/%3E%3CfeMergeNode/%3E%3CfeMergeNode in='SourceGraphic'/%3E%3C/feMerge%3E%3C/filter%3E%3C/defs%3E%3Crect width='512' height='512' fill='url(%23bg2)' rx='100'/%3E%3Cg transform='translate(256,230) scale(1.3)' filter='url(%23glow2)'%3E%3Cpath d='M 20,-140 C 60,-140 80,-100 80,-60 C 80,-20 60,0 40,20 C 20,40 0,60 0,100 C 0,130 15,145 35,145 C 55,145 70,130 70,110 C 70,95 60,85 50,85 C 40,85 35,90 35,98 C 35,103 38,106 42,106 C 45,106 47,104 47,101 L 47,101 C 44,101 42,99 42,96 C 42,92 45,88 50,88 C 58,88 65,95 65,108 C 65,125 52,140 35,140 C 12,140 -5,123 -5,100 C -5,55 18,35 38,15 C 58,-5 75,-25 75,-60 C 75,-95 58,-135 20,-135 C -10,-135 -30,-110 -30,-80 C -30,-60 -20,-45 -5,-45 C 8,-45 18,-55 18,-68 C 18,-78 12,-85 3,-85 C -2,-85 -6,-82 -8,-78 L -8,-78 C -6,-82 -2,-88 3,-90 C 15,-90 23,-80 23,-68 C 23,-52 10,-40 -5,-40 C -22,-40 -35,-55 -35,-80 C -35,-115 -12,-140 20,-140 Z' fill='url(%23gold2)' stroke='%23b8860b' stroke-width='2'/%3E%3Cpath d='M 18,-135 L 18,60' stroke='url(%23gold2)' stroke-width='14' stroke-linecap='round'/%3E%3Ccircle cx='18' cy='-140' r='12' fill='url(%23gold2)'/%3E%3C/g%3E%3Cg filter='url(%23textGlow2)'%3E%3Ctext x='256' y='485' text-anchor='middle' fill='none' stroke='url(%23gold2)' stroke-width='3' font-size='48' font-weight='bold'%3EL%3C/text%3E%3Ctext x='256' y='485' text-anchor='middle' fill='url(%23gold2)' font-size='48' font-weight='bold'%3EL%3C/text%3E%3C/g%3E%3C/svg%3E",
+            "src": "/static/icon-512x512.png",
             "sizes": "512x512",
-            "type": "image/svg+xml",
+            "type": "image/png",
             "purpose": "any maskable"
+        },
+        {
+            "src": "/static/icon-180x180.png",
+            "sizes": "180x180",
+            "type": "image/png",
+            "purpose": "any"
         }
     ],
     "screenshots": [
