@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ministry-v1.4.0';
+const CACHE_NAME = 'ministry-v1.5.0';
 const CACHE_ASSETS = [
     '/',
     '/static/styles.css',
@@ -10,7 +10,7 @@ const CACHE_ASSETS = [
 
 // Install Service Worker
 self.addEventListener('install', event => {
-    console.log('[SW] Instalando Service Worker v1.3.0...');
+    console.log('[SW] Instalando Service Worker v1.5.0...');
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
@@ -29,7 +29,7 @@ self.addEventListener('install', event => {
 
 // Activate Service Worker
 self.addEventListener('activate', event => {
-    console.log('[SW] Ativando Service Worker v1.3.0...');
+    console.log('[SW] Ativando Service Worker v1.5.0...');
     event.waitUntil(
         caches.keys().then(cacheNames => {
             return Promise.all(
@@ -41,7 +41,7 @@ self.addEventListener('activate', event => {
                 })
             );
         }).then(() => {
-            console.log('[SW] Service Worker ativado!');
+            console.log('[SW] Service Worker ativado e assumindo controle!');
             return self.clients.claim();
         })
     );
@@ -78,15 +78,19 @@ self.addEventListener('fetch', event => {
         return;
     }
     
-    // Network First para HTML e API
+    // Network First para HTML e API (não cachear cookies de sessão)
     event.respondWith(
-        fetch(event.request)
+        fetch(event.request, {
+            credentials: 'same-origin'  // Garante envio de cookies
+        })
             .then(response => {
                 // Clone da resposta
                 const responseClone = response.clone();
                 
-                // Cachear resposta HTML
-                if (response.headers.get('content-type')?.includes('text/html')) {
+                // Cachear resposta HTML apenas se não for login/logout
+                if (response.headers.get('content-type')?.includes('text/html') && 
+                    !url.pathname.includes('/login') && 
+                    !url.pathname.includes('/logout')) {
                     caches.open(CACHE_NAME).then(cache => {
                         cache.put(event.request, responseClone);
                     });
@@ -109,29 +113,6 @@ self.addEventListener('fetch', event => {
             })
     );
 });
-                caches.open(CACHE_NAME)
-                    .then(cache => {
-                        cache.put(event.request, responseClone);
-                    });
-                
-                return response;
-            })
-            .catch(() => {
-                // Network failed, try cache
-                return caches.match(event.request)
-                    .then(response => {
-                        if (response) {
-                            return response;
-                        }
-                        
-                        // If no cache, return offline page
-                        if (event.request.mode === 'navigate') {
-                            return caches.match('/');
-                        }
-                    });
-            })
-    );
-});
 
 // Background Sync
 self.addEventListener('sync', event => {
@@ -143,8 +124,8 @@ self.addEventListener('push', event => {
     console.log('[SW] Push notification recebida');
     const options = {
         body: event.data ? event.data.text() : 'Nova notificação',
-        icon: '/static/manifest.json',
-        badge: '/static/manifest.json',
+        icon: '/static/icon.svg',
+        badge: '/static/icon.svg',
         vibrate: [200, 100, 200]
     };
     

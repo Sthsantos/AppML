@@ -45,8 +45,10 @@ app.secret_key = secret_key
 app.config['SESSION_COOKIE_SECURE'] = flask_env == 'production'  # HTTPS em produção
 app.config['SESSION_COOKIE_HTTPONLY'] = True  # Protege contra XSS
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Proteção CSRF básica
+app.config['SESSION_REFRESH_EACH_REQUEST'] = False  # Não renovar cookie a cada request
 app.config['PERMANENT_SESSION_LIFETIME'] = 2592000  # 30 dias em segundos
 app.config['SESSION_COOKIE_NAME'] = 'ministry_session'  # Nome customizado
+app.config['REMEMBER_COOKIE_NAME'] = 'ministry_remember'  # Cookie "lembrar-me"
 app.config['REMEMBER_COOKIE_DURATION'] = 2592000  # 30 dias para "lembrar-me"
 app.config['REMEMBER_COOKIE_SECURE'] = flask_env == 'production'
 app.config['REMEMBER_COOKIE_HTTPONLY'] = True
@@ -128,6 +130,10 @@ class User(db.Model, UserMixin):
     def is_ministro(self):
         """Verifica se o usuário é ministro de louvor."""
         return self.role == ROLE_MINISTRO
+    
+    def get_id(self):
+        """Retorna o ID do usuário com prefixo para distinguir de membros."""
+        return f"user_{self.id}"
 
 class Member(db.Model, UserMixin):
     """Modelo para membros comuns do ministério."""
@@ -157,6 +163,10 @@ class Member(db.Model, UserMixin):
     def is_ministro(self):
         """Verifica se o membro é ministro de louvor."""
         return self.role == ROLE_MINISTRO
+    
+    def get_id(self):
+        """Retorna o ID do membro com prefixo para distinguir de usuários."""
+        return f"member_{self.id}"
 
 # Tabela de associação para relacionamento many-to-many entre Culto e Repertorio
 culto_repertorio = db.Table('culto_repertorio',
@@ -254,6 +264,19 @@ class Configuracao(db.Model):
 def load_user(user_id):
     """Carrega um usuário ou membro pelo ID para autenticação."""
     with db.session.no_autoflush:  # Evita flush automático durante a sessão
+        # Verifica o prefixo para determinar qual tabela consultar
+        if isinstance(user_id, str):
+            if user_id.startswith('user_'):
+                # Remove o prefixo e busca na tabela User
+                numeric_id = int(user_id.replace('user_', ''))
+                return db.session.get(User, numeric_id)
+            elif user_id.startswith('member_'):
+                # Remove o prefixo e busca na tabela Member
+                numeric_id = int(user_id.replace('member_', ''))
+                return db.session.get(Member, numeric_id)
+        
+        # Compatibilidade com sessões antigas (sem prefixo)
+        # Tenta User primeiro, depois Member
         user = db.session.get(User, int(user_id))
         if not user:
             return db.session.get(Member, int(user_id))
@@ -289,6 +312,26 @@ def inject_user_permissions():
         'HAS_ADMIN_ACCESS': False,
         'HAS_MINISTRO_ACCESS': False
     }
+
+# Configurar headers de cache para PWA e arquivos estáticos
+@app.after_request
+def add_cache_headers(response):
+    """Adiciona headers de cache para arquivos estáticos e ícones PWA."""
+    if request.path.startswith('/static/'):
+        # Cache de 1 ano para ícones e assets estáticos
+        if any(request.path.endswith(ext) for ext in ['.svg', '.png', '.jpg', '.jpeg', '.gif', '.ico', '.woff', '.woff2', '.ttf', '.eot']):
+            response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+        # Cache de 1 dia para CSS e JS
+        elif any(request.path.endswith(ext) for ext in ['.css', '.js']):
+            response.headers['Cache-Control'] = 'public, max-age=86400'
+    
+    # Garantir que manifest e service worker sejam sempre atualizados
+    if request.path in ['/static/manifest.json', '/static/sw.js']:
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    
+    return response
 
 # Decorador para verificar se o usuário é admin
 def admin_required(f):
