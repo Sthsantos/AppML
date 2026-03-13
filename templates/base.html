@@ -14,12 +14,12 @@
     <meta name="apple-mobile-web-app-title" content="Min. Louvor">
     <meta name="mobile-web-app-capable" content="yes">
     
-    <!-- iOS Meta Tags -->
+    <!-- iOS Meta Tags - PNG obrigatório (iOS não suporta SVG) -->
     <meta name="apple-itunes-app" content="app-id=none">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon.svg') }}">
-    <link rel="apple-touch-icon" sizes="152x152" href="{{ url_for('static', filename='icon.svg') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='icon.svg') }}">
-    <link rel="apple-touch-icon" sizes="167x167" href="{{ url_for('static', filename='icon.svg') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon-192x192.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='icon-180x180.png') }}">
+    <link rel="apple-touch-icon" sizes="192x192" href="{{ url_for('static', filename='icon-192x192.png') }}">
+    <link rel="apple-touch-icon" sizes="512x512" href="{{ url_for('static', filename='icon-512x512.png') }}">
     
     <!-- Android Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">

@@ -1,10 +1,13 @@
-const CACHE_NAME = 'ministry-v1.6.0';
+const CACHE_NAME = 'ministry-v1.7.0';
 const CACHE_ASSETS = [
     '/',
     '/static/styles.css',
     '/static/manifest.json',
     '/static/js/script.js',
     '/static/icon.svg',
+    '/static/icon-180x180.png',
+    '/static/icon-192x192.png',
+    '/static/icon-512x512.png',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css'
 ];
 
