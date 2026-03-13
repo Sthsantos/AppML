@@ -171,20 +171,22 @@
                 <input type="text" id="editCultoName" class="form-control" readonly style="background: var(--gray-50);">
             </div>
             <div class="form-group">
-                <label class="form-label">Membro</label>
-                <select id="editMemberId" class="form-control" required>
-                    <option value="">Carregando...</option>
+                <label class="form-label">Instrumento</label>
+                <select id="editInstrument" class="form-control" onchange="filterEditMembersByInstrument()" required>
+                    <option value="">Selecione o instrumento...</option>
+                    <option value="Ministro">Ministro</option>
+                    <option value="Back Vocal">Back Vocal</option>
+                    <option value="Guitarrista">Guitarrista</option>
+                    <option value="Baixista">Baixista</option>
+                    <option value="Baterista">Baterista</option>
+                    <option value="Tecladista">Tecladista</option>
+                    <option value="Violonista">Violonista</option>
                 </select>
             </div>
             <div class="form-group">
-                <label class="form-label">Função</label>
-                <select id="editRole" class="form-control" required>
-                    <option value="">Selecione...</option>
-                    <option value="Guitarrista">Guitarrista</option>
-                    <option value="Violonista">Violonista</option>
-                    <option value="Baterista">Baterista</option>
-                    <option value="Tecladista">Tecladista</option>
-                    <option value="Baixista">Baixista</option>
+                <label class="form-label">Membro</label>
+                <select id="editMemberId" class="form-control" required>
+                    <option value="">Primeiro selecione o instrumento...</option>
                 </select>
             </div>
         </form>
@@ -546,8 +548,11 @@
 
 {% block extra_js %}
 <script>
-// Variável global para verificar permissões de administrador
-const IS_ADMIN = {% if current_user.is_authenticated and current_user.is_admin %}true{% else %}false{% endif %};
+// Variável global para verificar permissões
+const IS_ADMIN = {% if HAS_ADMIN_ACCESS %}true{% else %}false{% endif %};
+const IS_MINISTRO = {% if IS_MINISTRO %}true{% else %}false{% endif %};
+const HAS_MINISTRO_ACCESS = {% if HAS_MINISTRO_ACCESS %}true{% else %}false{% endif %};
+const USER_ROLE = '{{ USER_ROLE or "membro" }}';
 
 // Funções de formatação locais (não dependem de App)
 function formatDate(dateString) {
@@ -572,6 +577,8 @@ function formatTime(timeString) {
 
 // Funções de modal locais (não dependem de App)
 function openModal(modalId) {
+    // Scroll suave para o topo antes de abrir o modal
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     if (typeof App !== 'undefined' && App.modal) {
         App.modal.open(modalId);
     } else {
@@ -1097,7 +1104,8 @@ async function loadEscalas() {
                             ${group.escalas.map(e => {
                                 // Mapear instrumento para ícone
                                 const instrumentIcons = {
-                                    'Vocalista': 'fa-microphone',
+                                    'Ministro': 'fa-microphone',
+                                    'Back Vocal': 'fa-microphone-alt',
                                     'Guitarrista': 'fa-guitar',
                                     'Violonista': 'fa-guitar',
                                     'Baterista': 'fa-drum',
@@ -1106,7 +1114,8 @@ async function loadEscalas() {
                                 };
                                 
                                 const instrumentColors = {
-                                    'Vocalista': 'linear-gradient(135deg, #ec4899, #db2777)',
+                                    'Ministro': 'linear-gradient(135deg, #ec4899, #db2777)',
+                                    'Back Vocal': 'linear-gradient(135deg, #a855f7, #9333ea)',
                                     'Guitarrista': 'linear-gradient(135deg, #f59e0b, #d97706)',
                                     'Violonista': 'linear-gradient(135deg, #84cc16, #65a30d)',
                                     'Baterista': 'linear-gradient(135deg, #ef4444, #dc2626)',
@@ -1385,15 +1394,21 @@ async function openEditEscala(escalaId) {
         const escala = await escalaRes.json();
         const membersData = await membersRes.json();
         
+        // Guardar todos os membros globalmente para o filtro
+        window.editAllMembers = membersData.members;
+        
         document.getElementById('editEscalaId').value = escala.id;
         document.getElementById('editCultoName').value = escala.culto_name;
-        document.getElementById('editRole').value = escala.role;
         
-        // Popular dropdown de membros
-        const memberSelect = document.getElementById('editMemberId');
-        memberSelect.innerHTML = membersData.members.map(m => 
-            `<option value="${m.id}" ${m.id === escala.member_id ? 'selected' : ''}>${m.name} (${m.instrument})</option>`
-        ).join('');
+        // Pre-selecionar o instrumento baseado na role atual
+        const instrument = escala.role; // A role já contém o instrumento
+        document.getElementById('editInstrument').value = instrument;
+        
+        // Filtrar membros pelo instrumento selecionado
+        await filterEditMembersByInstrument();
+        
+        // Selecionar o membro atual
+        document.getElementById('editMemberId').value = escala.member_id;
         
         openModal('editEscalaModal');
     } catch (error) {
@@ -1402,10 +1417,41 @@ async function openEditEscala(escalaId) {
     }
 }
 
+async function filterEditMembersByInstrument() {
+    const instrument = document.getElementById('editInstrument').value;
+    const memberSelect = document.getElementById('editMemberId');
+    
+    if (!instrument) {
+        memberSelect.innerHTML = '<option value="">Primeiro selecione o instrumento...</option>';
+        return;
+    }
+    
+    // Filtrar membros pelo instrumento
+    const filteredMembers = window.editAllMembers.filter(m => {
+        return m.instrument === instrument && !m.suspended;
+    });
+    
+    if (filteredMembers.length === 0) {
+        memberSelect.innerHTML = '<option value="">Nenhum membro disponível para este instrumento</option>';
+    } else {
+        const currentMemberId = memberSelect.value; // Guardar seleção atual
+        const options = filteredMembers.map(m => {
+            return `<option value="${m.id}">${m.name}</option>`;
+        }).join('');
+        
+        memberSelect.innerHTML = '<option value="">Selecione o membro...</option>' + options;
+        
+        // Restaurar seleção se o membro ainda estiver na lista
+        if (currentMemberId && filteredMembers.find(m => m.id == currentMemberId)) {
+            memberSelect.value = currentMemberId;
+        }
+    }
+}
+
 async function updateEscala() {
     const escalaId = document.getElementById('editEscalaId').value;
     const memberId = document.getElementById('editMemberId').value;
-    const role = document.getElementById('editRole').value;
+    const role = document.getElementById('editInstrument').value;
     
     if (!memberId || !role) {
         showToast('Preencha todos os campos', 'error');
@@ -1664,6 +1710,8 @@ async function openMusicasModal(cultoId, cultoName) {
     // Carregar músicas já selecionadas para este culto
     await loadMusicasCulto();
     
+    // Scroll suave para o topo antes de abrir o modal
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     openModal('musicasCultoModal');
 }
 
@@ -1819,6 +1867,8 @@ async function addMusicaToCulto() {
             showToast('Música adicionada ao culto!', 'success');
             document.getElementById('selectMusicaRepertorio').value = '';
             await loadMusicasCulto();
+            // Atualizar a lista principal de escalas para refletir as mudanças
+            await loadEscalas();
         } else {
             showToast(result.message || 'Erro ao adicionar música', 'error');
         }
@@ -1846,6 +1896,8 @@ async function removeMusicaDoCulto(musicaId) {
         if (response.ok) {
             showToast('Música removida do culto!', 'success');
             await loadMusicasCulto();
+            // Atualizar a lista principal de escalas para refletir as mudanças
+            await loadEscalas();
         } else {
             showToast(result.message || 'Erro ao remover música', 'error');
         }
@@ -1859,6 +1911,8 @@ async function removeMusicaDoCulto(musicaId) {
 function openAddMusicaRapidaModal() {
     // Limpar formulário
     document.getElementById('addMusicaRapidaForm').reset();
+    // Scroll suave para o topo antes de abrir o modal
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     openModal('addMusicaRapidaModal');
 }
 

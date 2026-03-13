@@ -26,7 +26,8 @@
         <label for="filterFuncao">Função:</label>
         <select id="filterFuncao" class="form-control" onchange="filterMembers()">
             <option value="">Todas</option>
-            <option value="Vocalista">Vocalista</option>
+            <option value="Ministro">Ministro</option>
+            <option value="Back Vocal">Back Vocal</option>
             <option value="Guitarrista">Guitarrista</option>
             <option value="Baixista">Baixista</option>
             <option value="Baterista">Baterista</option>
@@ -76,13 +77,33 @@
                 <label class="form-label">Função Principal</label>
                 <select name="instrument" class="form-control" required>
                     <option value="">Selecione...</option>
-                    <option value="Vocalista">Vocalista</option>
+                    <option value="Ministro">Ministro</option>
+                    <option value="Back Vocal">Back Vocal</option>
                     <option value="Guitarrista">Guitarrista</option>
                     <option value="Baixista">Baixista</option>
                     <option value="Baterista">Baterista</option>
                     <option value="Tecladista">Tecladista</option>
                     <option value="Violonista">Violonista</option>
                 </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Nível de Permissão</label>
+                <select name="role" class="form-control" required>
+                    <option value="membro">Membro</option>
+                    <option value="ministro">Ministro de Louvor</option>
+                    <option value="lider_banda">Líder de Banda</option>
+                    <option value="lider_ministerio">Líder de Ministério</option>
+                    <option value="pastor">Pastor</option>
+                    <option value="admin">Administrador</option>
+                </select>
+                <small style="color: var(--gray-600); font-size: 0.875rem; margin-top: 0.25rem; display: block;">
+                    <strong>Membro:</strong> Acesso limitado | 
+                    <strong>Ministro:</strong> Gerencia músicas das próprias escalas | 
+                    <strong>Líder de Banda:</strong> Acesso pleno (escalas de instrumentos) | 
+                    <strong>Líder de Ministério:</strong> Acesso pleno (escalas de ministros/back vocal) | 
+                    <strong>Pastor:</strong> Acesso pleno | 
+                    <strong>Admin:</strong> Acesso total
+                </small>
             </div>
         </form>
         <div class="modal-footer">
@@ -122,13 +143,33 @@
                 <label class="form-label">Função Principal</label>
                 <select id="editMemberInstrument" name="instrument" class="form-control" required>
                     <option value="">Selecione...</option>
-                    <option value="Vocalista">Vocalista</option>
+                    <option value="Ministro">Ministro</option>
+                    <option value="Back Vocal">Back Vocal</option>
                     <option value="Guitarrista">Guitarrista</option>
                     <option value="Baixista">Baixista</option>
                     <option value="Baterista">Baterista</option>
                     <option value="Tecladista">Tecladista</option>
                     <option value="Violonista">Violonista</option>
                 </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Nível de Permissão</label>
+                <select id="editMemberRole" name="role" class="form-control" required>
+                    <option value="membro">Membro</option>
+                    <option value="ministro">Ministro de Louvor</option>
+                    <option value="lider_banda">Líder de Banda</option>
+                    <option value="lider_ministerio">Líder de Ministério</option>
+                    <option value="pastor">Pastor</option>
+                    <option value="admin">Administrador</option>
+                </select>
+                <small style="color: var(--gray-600); font-size: 0.875rem; margin-top: 0.25rem; display: block;">
+                    <strong>Membro:</strong> Acesso limitado | 
+                    <strong>Ministro:</strong> Gerencia músicas das próprias escalas | 
+                    <strong>Líder de Banda:</strong> Acesso pleno (escalas de instrumentos) | 
+                    <strong>Líder de Ministério:</strong> Acesso pleno (ministros/back vocal) | 
+                    <strong>Pastor:</strong> Acesso pleno | 
+                    <strong>Admin:</strong> Acesso total
+                </small>
             </div>
         </form>
         <div class="modal-footer">
@@ -209,6 +250,8 @@ let pendingDeleteAction = null;
 
 // Modal Management
 function openAddModal() {
+    // Scroll suave para o topo antes de abrir o modal
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     document.getElementById('addMemberModal').classList.add('active');
     document.body.style.overflow = 'hidden';
 }
@@ -228,7 +271,10 @@ function openEditModal(memberId) {
     document.getElementById('editMemberEmail').value = member.email;
     document.getElementById('editMemberPhone').value = member.phone || '';
     document.getElementById('editMemberInstrument').value = member.instrument || '';
+    document.getElementById('editMemberRole').value = member.role || 'membro';
     
+    // Scroll suave para o topo antes de abrir o modal
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     document.getElementById('editMemberModal').classList.add('active');
     document.body.style.overflow = 'hidden';
 }
@@ -296,7 +342,8 @@ function renderMembers(members) {
     
     // Mapear instrumento para ícone
     const instrumentIcons = {
-        'Vocalista': 'fa-microphone',
+        'Ministro': 'fa-microphone',
+        'Back Vocal': 'fa-microphone-alt',
         'Guitarrista': 'fa-guitar',
         'Violonista': 'fa-guitar',
         'Baterista': 'fa-drum',
@@ -306,7 +353,8 @@ function renderMembers(members) {
     
     // Cores por instrumento
     const instrumentColors = {
-        'Vocalista': 'linear-gradient(135deg, #ec4899, #db2777)',
+        'Ministro': 'linear-gradient(135deg, #ec4899, #db2777)',
+        'Back Vocal': 'linear-gradient(135deg, #a855f7, #9333ea)',
         'Guitarrista': 'linear-gradient(135deg, #f59e0b, #d97706)',
         'Violonista': 'linear-gradient(135deg, #84cc16, #65a30d)',
         'Baterista': 'linear-gradient(135deg, #ef4444, #dc2626)',
@@ -318,6 +366,18 @@ function renderMembers(members) {
         const statusBadge = member.suspended 
             ? '<span class="badge" style="background: var(--accent-danger); color: white;">Suspenso</span>'
             : '<span class="badge" style="background: var(--accent-success); color: white;">Ativo</span>';
+        
+        // Badge de permissão
+        const roleLabels = {
+            'admin': { label: 'Admin', color: '#dc2626' },
+            'pastor': { label: 'Pastor', color: '#8b5cf6' },
+            'lider_banda': { label: 'Líder de Banda', color: '#3b82f6' },
+            'lider_ministerio': { label: 'Líder de Ministério', color: '#06b6d4' },
+            'ministro': { label: 'Ministro', color: '#f59e0b' },
+            'membro': { label: 'Membro', color: '#6b7280' }
+        };
+        const roleInfo = roleLabels[member.role] || roleLabels['membro'];
+        const roleBadge = `<span class="badge" style="background: ${roleInfo.color}; color: white;">${roleInfo.label}</span>`;
         
         const icon = instrumentIcons[member.instrument] || 'fa-user';
         const gradient = instrumentColors[member.instrument] || 'linear-gradient(135deg, #6366f1, #8b5cf6)';
@@ -352,6 +412,7 @@ function renderMembers(members) {
                             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                                 <span class="badge badge-primary">${member.instrument || 'Sem função'}</span>
                                 ${statusBadge}
+                                ${roleBadge}
                             </div>
                         </div>
                     </div>
@@ -411,7 +472,8 @@ async function saveMember() {
         name: formData.get('name'),
         email: formData.get('email'),
         phone: formData.get('phone'),
-        instrument: formData.get('instrument')
+        instrument: formData.get('instrument'),
+        role: formData.get('role') || 'membro'
     };
     
     try {
@@ -452,7 +514,8 @@ async function updateMember() {
         name: document.getElementById('editMemberName').value,
         email: document.getElementById('editMemberEmail').value,
         phone: document.getElementById('editMemberPhone').value,
-        instrument: document.getElementById('editMemberInstrument').value
+        instrument: document.getElementById('editMemberInstrument').value,
+        role: document.getElementById('editMemberRole').value || 'membro'
     };
     
     try {

@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+
+{% block title %}Meu Perfil - Ministério de Louvor{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <i class="fas fa-user-circle"></i>
+            Meu Perfil
+        </h1>
+        <p class="page-subtitle">Gerencie suas informações pessoais</p>
+    </div>
+</div>
+
+<div class="grid" style="grid-template-columns: 350px 1fr; gap: 1.5rem;">
+    <!-- Card do Avatar -->
+    <div class="card" style="text-align: center;">
+        <div class="card-body">
+            <div style="position: relative; display: inline-block; margin-bottom: 1.5rem;">
+                <img id="avatarPreview" src="/static/uploads/avatars/default-avatar.png" 
+                     alt="Avatar" 
+                     style="width: 200px; height: 200px; border-radius: 50%; object-fit: cover; border: 4px solid var(--primary-500); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);">
+                <label for="avatarInput" style="position: absolute; bottom: 10px; right: 10px; background: var(--primary-500); color: white; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); transition: all 0.3s;">
+                    <i class="fas fa-camera" style="font-size: 1.2rem;"></i>
+                </label>
+                <input type="file" id="avatarInput" accept="image/*" style="display: none;">
+            </div>
+            
+            <h3 id="profileName" style="margin: 1rem 0 0.5rem; color: var(--text-color); font-weight: 600;">Carregando...</h3>
+            <p id="profileEmail" style="color: var(--text-secondary); margin: 0 0 1rem;">email@exemplo.com</p>
+            <span id="profileBadge" class="badge" style="background: var(--primary-500); color: white; padding: 0.35rem 0.75rem;">Membro</span>
+        </div>
+    </div>
+
+    <!-- Card de Informações -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="fas fa-edit"></i>
+                Informações Pessoais
+            </h2>
+        </div>
+        <div class="card-body">
+            <form id="profileForm">
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-user"></i>
+                        Nome Completo
+                    </label>
+                    <input type="text" id="inputName" class="form-control" placeholder="Seu nome completo" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-envelope"></i>
+                        E-mail
+                    </label>
+                    <input type="email" id="inputEmail" class="form-control" readonly style="background: var(--bg-secondary); cursor: not-allowed;" title="O e-mail não pode ser alterado">
+                    <small style="color: var(--text-secondary); display: block; margin-top: 0.25rem;">
+                        <i class="fas fa-info-circle"></i> O e-mail não pode ser alterado
+                    </small>
+                </div>
+
+                <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-phone"></i>
+                            Telefone
+                        </label>
+                        <input type="tel" id="inputPhone" class="form-control" placeholder="(00) 00000-0000">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-guitar"></i>
+                            Instrumento/Função
+                        </label>
+                        <select id="inputInstrument" class="form-control">
+                            <option value="">Selecione...</option>
+                            <option value="Vocal">Vocal</option>
+                            <option value="Violão">Violão</option>
+                            <option value="Guitarra">Guitarra</option>
+                            <option value="Baixo">Baixo</option>
+                            <option value="Bateria">Bateria</option>
+                            <option value="Teclado">Teclado</option>
+                            <option value="Cajón">Cajón</option>
+                            <option value="Violino">Violino</option>
+                            <option value="Saxofone">Saxofone</option>
+                            <option value="Flauta">Flauta</option>
+                            <option value="Trompete">Trompete</option>
+                            <option value="Back Vocal">Back Vocal</option>
+                            <option value="Ministração">Ministração</option>
+                            <option value="Produção">Produção</option>
+                            <option value="Som">Som</option>
+                            <option value="Outro">Outro</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="card" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.05)); border: 1px solid var(--primary-200); margin: 1.5rem 0;">
+                    <div class="card-body">
+                        <h3 style="color: var(--primary-600); font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">
+                            <i class="fas fa-lock"></i>
+                            Alterar Senha
+                        </h3>
+                        
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">
+                                <i class="fas fa-key"></i>
+                                Nova Senha
+                            </label>
+                            <input type="password" id="inputPassword" class="form-control" placeholder="Deixe em branco para não alterar">
+                            <small style="color: var(--text-secondary); display: block; margin-top: 0.25rem;">
+                                <i class="fas fa-info-circle"></i> Deixe em branco se não quiser alterar a senha
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem;">
+                    <button type="button" onclick="window.location.reload()" class="btn btn-outline">
+                        <i class="fas fa-undo"></i>
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i>
+                        Salvar Alterações
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showToast(message, type = 'info', duration = 4000) {
+    if (['success', 'error', 'warning', 'info'].includes(message)) {
+        [type, message] = [message, type];
+    }
+
+    if (typeof App !== 'undefined' && App.toast) {
+        App.toast.show(message, type, duration);
+    } else {
+        let container = document.querySelector('.toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        
+        const icons = {
+            success: 'fa-check-circle',
+            error: 'fa-exclamation-circle',
+            warning: 'fa-exclamation-triangle',
+            info: 'fa-info-circle'
+        };
+
+        const titles = {
+            success: 'Sucesso!',
+            error: 'Erro!',
+            warning: 'Atenção!',
+            info: 'Informação'
+        };
+        
+        toast.innerHTML = `
+            <div class="toast-icon-wrapper">
+                <i class="fas ${icons[type]}"></i>
+            </div>
+            <div class="toast-content">
+                <div class="toast-title">${titles[type]}</div>
+                <div class="toast-message">${message}</div>
+            </div>
+            <button class="toast-close" aria-label="Fechar">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="toast-progress" style="animation-duration: ${duration}ms;"></div>
+        `;
+
+        const closeBtn = toast.querySelector('.toast-close');
+        closeBtn.addEventListener('click', () => {
+            toast.classList.add('removing');
+            setTimeout(() => toast.remove(), 300);
+        });
+        
+        container.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.classList.add('removing');
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
+    }
+}
+
+// Carregar dados do perfil
+async function loadPerfil() {
+    try {
+        const response = await fetch('/get_perfil');
+        const data = await response.json();
+        
+        if (data.success) {
+            const perfil = data.perfil;
+            
+            // Atualizar elementos
+            document.getElementById('profileName').textContent = perfil.name;
+            document.getElementById('profileEmail').textContent = perfil.email;
+            document.getElementById('profileBadge').textContent = perfil.is_admin ? 'Administrador' : 'Membro';
+            document.getElementById('profileBadge').style.background = perfil.is_admin ? 'var(--success-500)' : 'var(--primary-500)';
+            
+            // Avatar
+            const avatarPath = perfil.avatar && perfil.avatar !== 'default-avatar.png' 
+                ? `/static/uploads/avatars/${perfil.avatar}` 
+                : '/static/uploads/avatars/default-avatar.png';
+            document.getElementById('avatarPreview').src = avatarPath;
+            
+            // Formulário
+            document.getElementById('inputName').value = perfil.name || '';
+            document.getElementById('inputEmail').value = perfil.email || '';
+            document.getElementById('inputPhone').value = perfil.phone || '';
+            document.getElementById('inputInstrument').value = perfil.instrument || '';
+        } else {
+            showToast('error', 'Erro ao carregar dados do perfil');
+        }
+    } catch (error) {
+        console.error('Erro ao carregar perfil:', error);
+        showToast('error', 'Erro ao carregar dados do perfil');
+    }
+}
+
+// Upload de avatar
+document.getElementById('avatarInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Validar tamanho (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        showToast('error', 'A imagem deve ter no máximo 5MB');
+        return;
+    }
+    
+    // Preview local
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        document.getElementById('avatarPreview').src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+    
+    // Upload
+    const formData = new FormData();
+    formData.append('avatar', file);
+    
+    try {
+        const response = await fetch('/upload_avatar', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast('success', 'Foto atualizada com sucesso!');
+        } else {
+            showToast('error', result.message || 'Erro ao atualizar foto');
+            loadPerfil(); // Recarregar para restaurar avatar anterior
+        }
+    } catch (error) {
+        console.error('Erro ao fazer upload:', error);
+        showToast('error', 'Erro ao atualizar foto');
+        loadPerfil();
+    }
+});
+
+// Salvar perfil
+document.getElementById('profileForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const data = {
+        name: document.getElementById('inputName').value,
+        phone: document.getElementById('inputPhone').value,
+        instrument: document.getElementById('inputInstrument').value
+    };
+    
+    const password = document.getElementById('inputPassword').value;
+    if (password) {
+        if (password.length < 6) {
+            showToast('error', 'A senha deve ter pelo menos 6 caracteres');
+            return;
+        }
+        data.password = password;
+    }
+    
+    try {
+        const response = await fetch('/update_perfil', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast('success', 'Perfil atualizado com sucesso!');
+            document.getElementById('inputPassword').value = '';
+            setTimeout(() => {
+                loadPerfil();
+            }, 500);
+        } else {
+            showToast('error', result.message || 'Erro ao atualizar perfil');
+        }
+    } catch (error) {
+        console.error('Erro ao atualizar perfil:', error);
+        showToast('error', 'Erro ao atualizar perfil');
+    }
+});
+
+// Carregar ao iniciar
+document.addEventListener('DOMContentLoaded', loadPerfil);
+</script>
+{% endblock %}

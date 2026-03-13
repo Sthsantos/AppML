@@ -2,35 +2,123 @@
 <svg width="512" height="512" viewBox="0 0 512 512" version="1.1" xmlns="http://www.w3.org/2000/svg">
     <defs>
         <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#000000;stop-opacity:1" />
+            <stop offset="50%" style="stop-color:#1a1a1a;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#000000;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="goldGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:#ffd700;stop-opacity:1" />
+            <stop offset="50%" style="stop-color:#ffed4e;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#d4af37;stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="mGradient" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
             <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
         </linearGradient>
-        <linearGradient id="iconGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
-            <stop offset="100%" style="stop-color:#f0f0f0;stop-opacity:1" />
-        </linearGradient>
+        <filter id="glow">
+            <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+            <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+        </filter>
         <filter id="shadow">
-            <feDropShadow dx="0" dy="4" stdDeviation="8" flood-opacity="0.3"/>
+            <feDropShadow dx="0" dy="6" stdDeviation="10" flood-opacity="0.4"/>
+        </filter>
+        <filter id="goldGlow">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+            <feOffset dx="0" dy="0" result="offsetblur"/>
+            <feFlood flood-color="#ffd700" flood-opacity="0.8"/>
+            <feComposite in2="offsetblur" operator="in"/>
+            <feMerge>
+                <feMergeNode/>
+                <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+        </filter>
+        <filter id="textGlow">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="5"/>
+            <feOffset dx="0" dy="0" result="offsetblur"/>
+            <feFlood flood-color="#ffd700" flood-opacity="1"/>
+            <feComposite in2="offsetblur" operator="in"/>
+            <feMerge>
+                <feMergeNode/>
+                <feMergeNode/>
+                <feMergeNode in="SourceGraphic"/>
+            </feMerge>
         </filter>
     </defs>
     
     <!-- Background -->
     <rect width="512" height="512" fill="url(#bgGradient)" rx="100"/>
     
-    <!-- Music Note Icon -->
-    <g transform="translate(256, 256)" filter="url(#shadow)">
-        <!-- Main stem -->
-        <rect x="-20" y="-140" width="40" height="220" fill="url(#iconGradient)" rx="20"/>
+    <!-- Decorative circles -->
+    <circle cx="100" cy="100" r="60" fill="#667eea" opacity="0.1"/>
+    <circle cx="412" cy="412" r="80" fill="#764ba2" opacity="0.1"/>
+    
+    <!-- Main Group -->
+    <g transform="translate(256, 256)">
+        <!-- Letter M (background) -->
+        <g filter="url(#shadow)">
+            <path d="M -120,-100 L -120,120 L -80,120 L -80,0 L -20,80 L 40,0 L 40,120 L 80,120 L 80,-100 L 20,-20 L -40,-100 Z" 
+                  fill="url(#mGradient)" opacity="0.3"/>
+        </g>
         
-        <!-- Musical notes -->
-        <ellipse cx="0" cy="100" rx="60" ry="40" fill="url(#iconGradient)"/>
-        <ellipse cx="0" cy="90" rx="55" ry="35" fill="url(#bgGradient)"/>
+        <!-- Treble Clef (Clave de Sol) -->
+        <g filter="url(#glow)">
+            <!-- Main spiral body -->
+            <path d="M 20,-140 
+                     C 60,-140 80,-100 80,-60
+                     C 80,-20 60,0 40,20
+                     C 20,40 0,60 0,100
+                     C 0,130 15,145 35,145
+                     C 55,145 70,130 70,110
+                     C 70,95 60,85 50,85
+                     C 40,85 35,90 35,98
+                     C 35,103 38,106 42,106
+                     C 45,106 47,104 47,101
+                     L 47,101
+                     C 44,101 42,99 42,96
+                     C 42,92 45,88 50,88
+                     C 58,88 65,95 65,108
+                     C 65,125 52,140 35,140
+                     C 12,140 -5,123 -5,100
+                     C -5,55 18,35 38,15
+                     C 58,-5 75,-25 75,-60
+                     C 75,-95 58,-135 20,-135
+                     C -10,-135 -30,-110 -30,-80
+                     C -30,-60 -20,-45 -5,-45
+                     C 8,-45 18,-55 18,-68
+                     C 18,-78 12,-85 3,-85
+                     C -2,-85 -6,-82 -8,-78
+                     L -8,-78
+                     C -6,-82 -2,-88 3,-90
+                     C 15,-90 23,-80 23,-68
+                     C 23,-52 10,-40 -5,-40
+                     C -22,-40 -35,-55 -35,-80
+                     C -35,-115 -12,-140 20,-140 Z"
+                  fill="url(#goldGradient)" 
+                  stroke="#b8860b" 
+                  stroke-width="2"/>
+            
+            <!-- Vertical line of clef -->
+            <path d="M 18,-135 L 18,60" 
+                  stroke="url(#goldGradient)" 
+                  stroke-width="14" 
+                  stroke-linecap="round"/>
+            
+            <!-- Top curl -->
+            <circle cx="18" cy="-140" r="12" fill="url(#goldGradient)"/>
+        </g>
         
-        <!-- Top circle -->
-        <circle cx="0" cy="-140" r="45" fill="url(#iconGradient)"/>
-        
-        <!-- Accent lines -->
-        <path d="M -15,-80 Q 40,-60 40,-20" stroke="url(#iconGradient)" stroke-width="12" fill="none" stroke-linecap="round" opacity="0.6"/>
-        <path d="M 15,-100 Q 70,-80 70,-40" stroke="url(#iconGradient)" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.4"/>
+        <!-- Accent shine on clef -->
+        <ellipse cx="-10" cy="-80" rx="15" ry="25" fill="#ffffff" opacity="0.3" transform="rotate(-20 -10 -80)"/>
+    </g>
+    
+    <!-- Bottom text with golden glow -->
+    <g filter="url(#textGlow)">
+        <!-- Text outline (stroke) -->
+        <text x="256" y="478" text-anchor="middle" fill="none" stroke="url(#goldGradient)" stroke-width="2" font-size="36" font-weight="bold" font-family="Arial, sans-serif">ML</text>
+        <!-- Text fill -->
+        <text x="256" y="478" text-anchor="middle" fill="url(#goldGradient)" font-size="36" font-weight="bold" font-family="Arial, sans-serif">ML</text>
     </g>
 </svg>

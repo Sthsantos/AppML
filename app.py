@@ -12,6 +12,19 @@ from dotenv import load_dotenv
 # Carrega variáveis de ambiente do arquivo .env
 load_dotenv()
 
+# ========================================
+# CONSTANTES DE NÍVEIS DE PERMISSÃO
+# ========================================
+ROLE_ADMIN = 'admin'  # Desenvolvedor - Acesso total ao sistema
+ROLE_PASTOR = 'pastor'  # Pastor - Acesso pleno
+ROLE_LIDER_BANDA = 'lider_banda'  # Líder de Banda - Acesso pleno (escalas de instrumentos)
+ROLE_LIDER_MINISTERIO = 'lider_ministerio'  # Líder de Ministério - Acesso pleno (escalas de ministros/back vocal)
+ROLE_MINISTRO = 'ministro'  # Ministro de Louvor - Gerencia músicas das próprias escalas
+ROLE_MEMBRO = 'membro'  # Membro comum - Acesso limitado
+
+# Roles com acesso administrativo pleno
+ADMIN_ROLES = [ROLE_ADMIN, ROLE_PASTOR, ROLE_LIDER_BANDA, ROLE_LIDER_MINISTERIO]
+
 # Configuração do Flask
 app = Flask(__name__)
 
@@ -48,10 +61,12 @@ if database_url and database_url.startswith('postgres://'):
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Desativa notificações de modificação para performance
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')  # Pasta para uploads de áudio
+app.config['AVATAR_FOLDER'] = os.path.join('static', 'uploads', 'avatars')  # Pasta para fotos de perfil
 app.config['MAX_CONTENT_LENGTH'] = int(os.environ.get('MAX_CONTENT_LENGTH', 50 * 1024 * 1024))  # 50 MB max file size
 
 # Extensões de arquivo permitidas
 ALLOWED_AUDIO_EXTENSIONS = {'mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'}
+ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}  # Extensões permitidas para avatares
 
 # Configuração para CSRF (opcional, caso queira usar Flask-WTF)
 # Desativando temporariamente para testes, caso o Flask-WTF não esteja instalado
@@ -94,7 +109,9 @@ class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)  # Armazena o hash da senha
-    is_admin = db.Column(db.Boolean, default=False)
+    is_admin = db.Column(db.Boolean, default=False)  # Mantido para compatibilidade
+    role = db.Column(db.String(20), default=ROLE_MEMBRO)  # Nível de permissão
+    avatar = db.Column(db.String(255), nullable=True, default='default-avatar.png')  # Foto de perfil
 
     def set_password(self, password):
         """Define a senha como hash para o usuário."""
@@ -103,6 +120,14 @@ class User(db.Model, UserMixin):
     def check_password(self, password):
         """Verifica se a senha fornecida corresponde ao hash armazenado."""
         return check_password_hash(self.password, password)
+    
+    def has_admin_access(self):
+        """Verifica se o usuário tem acesso administrativo pleno."""
+        return self.role in ADMIN_ROLES
+    
+    def is_ministro(self):
+        """Verifica se o usuário é ministro de louvor."""
+        return self.role == ROLE_MINISTRO
 
 class Member(db.Model, UserMixin):
     """Modelo para membros comuns do ministério."""
@@ -113,7 +138,9 @@ class Member(db.Model, UserMixin):
     phone = db.Column(db.String(20), nullable=True)
     password = db.Column(db.String(120), nullable=False)  # Armazena o hash da senha para membros
     suspended = db.Column(db.Boolean, default=False)  # Campo para indicar suspensão
-    is_admin = db.Column(db.Boolean, default=False)  # Membros nunca são admin (sempre False)
+    is_admin = db.Column(db.Boolean, default=False)  # Mantido para compatibilidade
+    role = db.Column(db.String(20), default=ROLE_MEMBRO)  # Nível de permissão
+    avatar = db.Column(db.String(255), nullable=True, default='default-avatar.png')  # Foto de perfil
 
     def set_password(self, password):
         """Define a senha como hash para o membro."""
@@ -122,6 +149,14 @@ class Member(db.Model, UserMixin):
     def check_password(self, password):
         """Verifica se a senha fornecida corresponde ao hash armazenado."""
         return check_password_hash(self.password, password)
+    
+    def has_admin_access(self):
+        """Verifica se o membro tem acesso administrativo pleno."""
+        return self.role in ADMIN_ROLES
+    
+    def is_ministro(self):
+        """Verifica se o membro é ministro de louvor."""
+        return self.role == ROLE_MINISTRO
 
 # Tabela de associação para relacionamento many-to-many entre Culto e Repertorio
 culto_repertorio = db.Table('culto_repertorio',
@@ -224,15 +259,98 @@ def load_user(user_id):
             return db.session.get(Member, int(user_id))
         return user
 
+# Context processor para disponibilizar informações de permissão nos templates
+@app.context_processor
+def inject_user_permissions():
+    """Injeta variáveis de permissão em todos os templates."""
+    if current_user.is_authenticated:
+        user_role = getattr(current_user, 'role', ROLE_MEMBRO)
+        is_old_admin = getattr(current_user, 'is_admin', False)
+        
+        return {
+            'IS_ADMIN': user_role in ADMIN_ROLES or is_old_admin,
+            'IS_PASTOR': user_role == ROLE_PASTOR,
+            'IS_LIDER_BANDA': user_role == ROLE_LIDER_BANDA,
+            'IS_LIDER_MINISTERIO': user_role == ROLE_LIDER_MINISTERIO,
+            'IS_LIDER': user_role in [ROLE_LIDER_BANDA, ROLE_LIDER_MINISTERIO],  # Compatibilidade
+            'IS_MINISTRO': user_role == ROLE_MINISTRO,
+            'USER_ROLE': user_role,
+            'HAS_ADMIN_ACCESS': user_role in ADMIN_ROLES or is_old_admin,
+            'HAS_MINISTRO_ACCESS': user_role in ADMIN_ROLES or user_role == ROLE_MINISTRO or is_old_admin
+        }
+    return {
+        'IS_ADMIN': False,
+        'IS_PASTOR': False,
+        'IS_LIDER_BANDA': False,
+        'IS_LIDER_MINISTERIO': False,
+        'IS_LIDER': False,
+        'IS_MINISTRO': False,
+        'USER_ROLE': None,
+        'HAS_ADMIN_ACCESS': False,
+        'HAS_MINISTRO_ACCESS': False
+    }
+
 # Decorador para verificar se o usuário é admin
 def admin_required(f):
+    """Requer acesso administrativo pleno (Admin, Pastor ou Líder)."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not current_user.is_admin:
+        # Verifica se o usuário tem role de admin ou usa o is_admin antigo
+        user_role = getattr(current_user, 'role', None)
+        is_old_admin = getattr(current_user, 'is_admin', False)
+        
+        if not (user_role in ADMIN_ROLES or is_old_admin):
             flash('Acesso negado. Somente administradores podem acessar esta página.', 'error')
             return redirect(url_for('index'))
         return f(*args, **kwargs)
     return decorated_function
+
+# Decorador para verificar se é ministro ou admin
+def ministro_or_admin_required(f):
+    """Requer acesso de ministro de louvor ou superior."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        user_role = getattr(current_user, 'role', ROLE_MEMBRO)
+        is_old_admin = getattr(current_user, 'is_admin', False)
+        
+        allowed_roles = ADMIN_ROLES + [ROLE_MINISTRO]
+        if not (user_role in allowed_roles or is_old_admin):
+            flash('Acesso negado. Somente ministros ou administradores podem acessar esta funcionalidade.', 'error')
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Função auxiliar para verificar se usuário pode gerenciar músicas de uma escala
+def can_manage_escala_musicas(culto_id, user):
+    """
+    Verifica se o usuário pode gerenciar músicas de um culto/escala específico.
+    - Admin/Pastor/Líder: pode gerenciar qualquer escala
+    - Ministro: pode gerenciar apenas escalas onde está escalado
+    - Membro comum: não pode gerenciar
+    """
+    user_role = getattr(user, 'role', ROLE_MEMBRO)
+    is_old_admin = getattr(user, 'is_admin', False)
+    
+    # Admin, Pastor e Líder podem tudo
+    if user_role in ADMIN_ROLES or is_old_admin:
+        return True
+    
+    # Ministro pode gerenciar apenas suas escalas
+    if user_role == ROLE_MINISTRO:
+        # Verificar se o ministro está escalado neste culto
+        # Para Member, precisamos buscar por email; para User, por id
+        if isinstance(user, Member):
+            escala_do_ministro = Escala.query.join(Member).filter(
+                Escala.culto_id == culto_id,
+                Member.email == user.email
+            ).first()
+        else:
+            # Para User, não há escalas vinculadas diretamente
+            return False
+        
+        return escala_do_ministro is not None
+    
+    return False
 
 # Criar um administrador padrão
 def create_admin():
@@ -242,13 +360,20 @@ def create_admin():
     try:
         existing_admin = User.query.filter_by(email=email).first()
         if not existing_admin:
-            new_admin = User(email=email, is_admin=True)
+            new_admin = User(email=email, is_admin=True, role=ROLE_ADMIN)
             new_admin.set_password(password)
             db.session.add(new_admin)
             db.session.commit()
             print(f"✅ Administrador criado: {email} / {password}")
         else:
-            print(f"ℹ️ Administrador já existe: {email}")
+            # Atualizar role se já existe mas não tem role definido
+            if not existing_admin.role or existing_admin.role == ROLE_MEMBRO:
+                existing_admin.role = ROLE_ADMIN
+                existing_admin.is_admin = True
+                db.session.commit()
+                print(f"✅ Role do administrador atualizado: {email}")
+            else:
+                print(f"ℹ️ Administrador já existe: {email}")
     except Exception as e:
         db.session.rollback()
         print(f"⚠️ Erro ao criar admin: {e}")
@@ -341,6 +466,140 @@ def logout():
     session.pop('is_admin', None)
     return redirect(url_for('login'))
 
+@app.route('/perfil')
+@login_required
+def perfil():
+    """Rota para a página de perfil do usuário."""
+    return render_template('perfil.html')
+
+@app.route('/get_perfil', methods=['GET'])
+@login_required
+def get_perfil():
+    """Retorna os dados do perfil do usuário logado."""
+    try:
+        user = db.session.get(User, session['user_id']) or db.session.get(Member, session['user_id'])
+        
+        if not user:
+            return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 404
+        
+        # Se for User (admin), buscar Member associado pelo email
+        member = None
+        if isinstance(user, User):
+            member = Member.query.filter_by(email=user.email).first()
+        
+        perfil_data = {
+            'id': user.id,
+            'name': member.name if member else user.email.split('@')[0],
+            'email': user.email,
+            'phone': member.phone if member else getattr(user, 'phone', ''),
+            'instrument': member.instrument if member else getattr(user, 'instrument', ''),
+            'avatar': getattr(user, 'avatar', 'default-avatar.png') or 'default-avatar.png',
+            'is_admin': getattr(user, 'is_admin', False)
+        }
+        
+        return jsonify({'success': True, 'perfil': perfil_data})
+    except Exception as e:
+        print(f"Erro ao carregar perfil: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/update_perfil', methods=['POST'])
+@login_required
+def update_perfil():
+    """Atualiza os dados do perfil do usuário logado."""
+    try:
+        data = request.get_json()
+        user = db.session.get(User, session['user_id']) or db.session.get(Member, session['user_id'])
+        
+        if not user:
+            return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 404
+        
+        # Se for Member, atualizar diretamente
+        if isinstance(user, Member):
+            if 'name' in data:
+                user.name = data['name']
+            if 'phone' in data:
+                user.phone = data['phone']
+            if 'instrument' in data:
+                user.instrument = data['instrument']
+            if 'password' in data and data['password']:
+                user.set_password(data['password'])
+        else:  # User (admin)
+            # Atualizar Member associado se existir
+            member = Member.query.filter_by(email=user.email).first()
+            if member:
+                if 'name' in data:
+                    member.name = data['name']
+                if 'phone' in data:
+                    member.phone = data['phone']
+                if 'instrument' in data:
+                    member.instrument = data['instrument']
+            
+            # Atualizar senha do User
+            if 'password' in data and data['password']:
+                user.set_password(data['password'])
+        
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Perfil atualizado com sucesso!'})
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro ao atualizar perfil: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/upload_avatar', methods=['POST'])
+@login_required
+def upload_avatar():
+    """Faz upload da foto de perfil do usuário."""
+    try:
+        if 'avatar' not in request.files:
+            return jsonify({'success': False, 'message': 'Nenhuma imagem enviada'}), 400
+        
+        file = request.files['avatar']
+        
+        if file.filename == '':
+            return jsonify({'success': False, 'message': 'Nenhum arquivo selecionado'}), 400
+        
+        # Verificar extensão do arquivo
+        if '.' not in file.filename:
+            return jsonify({'success': False, 'message': 'Arquivo inválido'}), 400
+        
+        ext = file.filename.rsplit('.', 1)[1].lower()
+        if ext not in ALLOWED_IMAGE_EXTENSIONS:
+            return jsonify({'success': False, 'message': f'Apenas arquivos {", ".join(ALLOWED_IMAGE_EXTENSIONS)} são permitidos'}), 400
+        
+        # Gerar nome único para o arquivo
+        filename = secure_filename(f"avatar_{session['user_id']}_{datetime.now().strftime('%Y%m%d%H%M%S')}.{ext}")
+        
+        # Criar pasta de avatares se não existir
+        os.makedirs(app.config['AVATAR_FOLDER'], exist_ok=True)
+        
+        # Salvar arquivo
+        filepath = os.path.join(app.config['AVATAR_FOLDER'], filename)
+        file.save(filepath)
+        
+        # Atualizar banco de dados
+        user = db.session.get(User, session['user_id']) or db.session.get(Member, session['user_id'])
+        
+        if not user:
+            return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 404
+        
+        # Remover avatar antigo se não for o padrão
+        if hasattr(user, 'avatar') and user.avatar and user.avatar != 'default-avatar.png':
+            old_path = os.path.join(app.config['AVATAR_FOLDER'], user.avatar)
+            if os.path.exists(old_path):
+                try:
+                    os.remove(old_path)
+                except:
+                    pass
+        
+        user.avatar = filename
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Foto atualizada com sucesso!', 'avatar': filename})
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro ao fazer upload de avatar: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @app.route('/membros')
 @login_required
 def membros():
@@ -377,6 +636,7 @@ def get_members():
                 'email': member.email,
                 'phone': member.phone,
                 'suspended': member.suspended,
+                'role': getattr(member, 'role', ROLE_MEMBRO),  # Nível de permissão
                 'indisponivel': member.id in indisponiveis_ids  # Flag para indicar se está indisponível
             }
             members_list.append(member_data)
@@ -448,30 +708,53 @@ def get_escalas():
 @app.route('/get_minhas_escalas', methods=['GET'])
 @login_required
 def get_minhas_escalas():
-    """Retorna apenas as escalas onde o usuário logado está escalado."""
+    """Retorna as escalas onde o usuário logado está escalado + outros membros da mesma equipe."""
     try:
+        print(f"\nDEBUG: get_minhas_escalas chamado")
+        print(f"Session user_id: {session.get('user_id')}")
+        
         # Identificar o usuário logado
         user = db.session.get(User, session['user_id']) or db.session.get(Member, session['user_id'])
+        print(f"User encontrado: {user}")
         
         # Buscar o membro correspondente
         if isinstance(user, User):
             member = Member.query.filter_by(email=user.email).first()
+            print(f"Membro encontrado via email: {member}")
         else:
             member = user
+            print(f"Usuario ja e membro: {member}")
         
         if not member:
+            print("ERRO: Nenhum membro encontrado!")
             return jsonify({'escalas': []}), 200
         
-        # Buscar escalas apenas deste membro
+        print(f"OK - Membro: {member.name} (ID: {member.id})")
+        
+        # 1. Buscar cultos onde o usuário está escalado
+        meus_cultos = db.session.query(Escala.culto_id).filter(
+            Escala.member_id == member.id
+        ).distinct().all()
+        
+        culto_ids = [c[0] for c in meus_cultos]
+        print(f"Cultos onde esta escalado: {culto_ids}")
+        
+        if not culto_ids:
+            print("INFO: Usuario nao esta escalado em nenhum culto")
+            return jsonify({'escalas': []}), 200
+        
+        # 2. Buscar TODAS as escalas desses cultos (para mostrar a equipe completa)
         escalas = db.session.query(Escala, Culto, Member).join(
             Culto, Escala.culto_id == Culto.id
         ).join(
             Member, Escala.member_id == Member.id
         ).filter(
-            Escala.member_id == member.id
-        ).order_by(Culto.date, Culto.time).all()
+            Escala.culto_id.in_(culto_ids)
+        ).order_by(Culto.date, Culto.time, Escala.id).all()
         
-        # Retornar lista plana de escalas
+        print(f"Total de escalas (incluindo equipe): {len(escalas)}")
+        
+        # 3. Montar lista com marcação do usuário atual
         escalas_list = []
         for escala, culto, membro in escalas:
             date_time_str = f"{culto.date.strftime('%Y-%m-%d')}T{culto.time.strftime('%H:%M')}"
@@ -484,12 +767,16 @@ def get_minhas_escalas():
                 'member_id': membro.id,
                 'member_name': membro.name,
                 'role': escala.role,
-                'instrument': membro.instrument
+                'instrument': membro.instrument,
+                'is_me': membro.id == member.id  # Marca se é o usuário logado
             })
         
+        print(f"OK - Retornando {len(escalas_list)} escalas")
         return jsonify({'escalas': escalas_list}), 200
     except Exception as e:
-        print(f"Erro ao buscar minhas escalas: {str(e)}")
+        print(f"ERRO ao buscar minhas escalas: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'escalas': []}), 500
 
 # Rotas para gerenciar cultos (apenas para admins)
@@ -652,7 +939,14 @@ def add_member():
             existing_member = Member.query.filter_by(email=email).first()
             if existing_member:
                 return jsonify({'success': False, 'message': 'Este email já está cadastrado.'}), 400
-        novo_membro = Member(name=name, instrument=instrument, email=email, phone=phone, suspended=False)
+        
+        # Definir role padrão como membro
+        role = data.get('role', ROLE_MEMBRO)
+        if role not in [ROLE_ADMIN, ROLE_PASTOR, ROLE_LIDER_BANDA, ROLE_LIDER_MINISTERIO, ROLE_MINISTRO, ROLE_MEMBRO]:
+            role = ROLE_MEMBRO
+        
+        novo_membro = Member(name=name, instrument=instrument, email=email, phone=phone, suspended=False, role=role)
+        novo_membro.is_admin = role in ADMIN_ROLES  # Sincronizar is_admin
         novo_membro.set_password(password)  # Define a senha hashada
         db.session.add(novo_membro)
         db.session.commit()
@@ -679,7 +973,8 @@ def get_member(member_id):
         'instrument': member.instrument,
         'email': member.email,
         'phone': member.phone,
-        'suspended': member.suspended
+        'suspended': member.suspended,
+        'role': getattr(member, 'role', ROLE_MEMBRO)
     })
 
 @app.route('/update_member', methods=['POST'])
@@ -696,12 +991,24 @@ def update_member():
             member = db.session.get(Member, data['id'])
             if not member:
                 return jsonify({'success': False, 'message': 'Membro não encontrado'}), 404
+        
         member.name = data.get('name', member.name)
         member.instrument = data.get('instrument', member.instrument)
         member.email = data.get('email', member.email)
         member.phone = data.get('phone', member.phone)
+        
+        # Atualizar role (nível de permissão)
+        if 'role' in data:
+            new_role = data['role']
+            if new_role in [ROLE_ADMIN, ROLE_PASTOR, ROLE_LIDER_BANDA, ROLE_LIDER_MINISTERIO, ROLE_MINISTRO, ROLE_MEMBRO]:
+                member.role = new_role
+                # Sincronizar is_admin com o role
+                member.is_admin = new_role in ADMIN_ROLES
+                print(f"Role atualizado para: {new_role}")
+        
         if 'password' in data and data['password']:
             member.set_password(data['password'])
+        
         db.session.commit()
         return jsonify({'success': True, 'message': 'Membro atualizado com sucesso!'})
     except Exception as e:
@@ -978,15 +1285,18 @@ def get_culto_musicas(culto_id):
 
 @app.route('/add_musica_culto', methods=['POST'])
 @login_required
-@admin_required
 def add_musica_culto():
-    """Adiciona uma música ao culto."""
+    """Adiciona uma música ao culto. Permitido para Admin/Pastor/Líder e Ministros escalados."""
     data = request.json
     culto_id = data.get('culto_id')
     repertorio_id = data.get('repertorio_id')
     
     if not culto_id or not repertorio_id:
         return jsonify({'success': False, 'message': 'Dados inválidos'}), 400
+    
+    # Verificar permissão
+    if not can_manage_escala_musicas(culto_id, current_user):
+        return jsonify({'success': False, 'message': 'Você não tem permissão para gerenciar músicas desta escala'}), 403
     
     try:
         culto = db.session.get(Culto, culto_id)
@@ -1026,15 +1336,18 @@ def add_musica_culto():
 
 @app.route('/remove_musica_culto', methods=['POST'])
 @login_required
-@admin_required
 def remove_musica_culto():
-    """Remove uma música do culto."""
+    """Remove uma música do culto. Permitido para Admin/Pastor/Líder e Ministros escalados."""
     data = request.json
     culto_id = data.get('culto_id')
     repertorio_id = data.get('repertorio_id')
     
     if not culto_id or not repertorio_id:
         return jsonify({'success': False, 'message': 'Dados inválidos'}), 400
+    
+    # Verificar permissão
+    if not can_manage_escala_musicas(culto_id, current_user):
+        return jsonify({'success': False, 'message': 'Você não tem permissão para gerenciar músicas desta escala'}), 403
     
     try:
         stmt = culto_repertorio.delete().where(
@@ -1418,6 +1731,43 @@ def update_feedback_status(feedback_id):
         print(f"❌ Erro ao atualizar status: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
+@app.route('/edit_feedback/<int:feedback_id>', methods=['POST'])
+@login_required
+def edit_feedback(feedback_id):
+    """Edita a resposta de um feedback (apenas para admin)."""
+    with db.session.no_autoflush:
+        user = db.session.get(User, session['user_id']) or db.session.get(Member, session['user_id'])
+    
+    if not user.is_admin:
+        return jsonify({'error': 'Acesso negado'}), 403
+    
+    data = request.json
+    new_response = data.get('response')
+    new_status = data.get('status')
+    
+    if not new_response:
+        return jsonify({'success': False, 'message': 'Resposta é obrigatória'}), 400
+    
+    try:
+        feedback = db.session.get(Feedback, feedback_id)
+        if not feedback:
+            return jsonify({'success': False, 'message': 'Feedback não encontrado'}), 404
+        
+        feedback.response = new_response
+        if new_status:
+            feedback.status = new_status
+        feedback.responded_at = datetime.utcnow()
+        feedback.responded_by = user.id
+        
+        db.session.commit()
+        
+        print(f"✏️ Feedback {feedback_id} editado por admin {user.email}")
+        return jsonify({'success': True, 'message': 'Feedback editado com sucesso!'}), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Erro ao editar feedback: {str(e)}")
+        return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
+
 @app.route('/delete_feedback/<int:feedback_id>', methods=['DELETE', 'POST'])
 @login_required
 def delete_feedback(feedback_id):
@@ -1494,6 +1844,33 @@ def add_aviso():
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': f'Erro ao criar aviso: {str(e)}'}), 500
+
+@app.route('/edit_aviso/<int:aviso_id>', methods=['PUT'])
+@login_required
+@admin_required
+def edit_aviso(aviso_id):
+    """Edita um aviso existente (apenas admins)."""
+    data = request.json
+    title = data.get('title')
+    message = data.get('message')
+    priority = data.get('priority')
+    
+    if not all([title, message, priority]):
+        return jsonify({'success': False, 'message': 'Título, mensagem e prioridade são obrigatórios.'}), 400
+    
+    try:
+        aviso = db.session.get(Aviso, aviso_id)
+        if not aviso:
+            return jsonify({'success': False, 'message': 'Aviso não encontrado'}), 404
+        
+        aviso.title = title
+        aviso.message = message
+        aviso.priority = priority
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Aviso atualizado com sucesso!'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Erro ao atualizar aviso: {str(e)}'}), 500
 
 @app.route('/delete_aviso/<int:aviso_id>', methods=['DELETE'])
 @login_required
@@ -1605,27 +1982,58 @@ def add_musica():
                 os.remove(filepath)
         return jsonify({'success': False, 'message': f'Erro ao adicionar música: {str(e)}'}), 500
 
-@app.route('/update_musica/<int:musica_id>', methods=['PUT'])
+@app.route('/update_musica/<int:musica_id>', methods=['POST', 'PUT'])
 @login_required
 @admin_required
 def update_musica(musica_id):
     """Atualiza uma música do repertório (apenas admins)."""
-    data = request.json
+    # Aceitar tanto JSON quanto FormData
+    if request.is_json:
+        data = request.json
+    else:
+        data = request.form
     
     try:
         musica = db.session.get(Repertorio, musica_id)
         if not musica:
             return jsonify({'success': False, 'message': 'Música não encontrada'}), 404
         
-        musica.title = data.get('title', musica.title)
-        musica.artist = data.get('artist', musica.artist)
-        musica.key_tone = data.get('key_tone', musica.key_tone)
-        musica.tempo = data.get('tempo', musica.tempo)
-        musica.link_video = data.get('link_video', musica.link_video)
-        musica.link_audio = data.get('link_audio', musica.link_audio)
-        musica.lyrics = data.get('lyrics', musica.lyrics)
-        musica.notes = data.get('notes', musica.notes)
-        musica.category = data.get('category', musica.category)
+        # Atualizar campos
+        if 'title' in data:
+            musica.title = data.get('title')
+        if 'artist' in data:
+            musica.artist = data.get('artist')
+        if 'key_tone' in data:
+            musica.key_tone = data.get('key_tone')
+        if 'tempo' in data:
+            musica.tempo = data.get('tempo')
+        if 'link_video' in data:
+            musica.link_video = data.get('link_video')
+        if 'link_audio' in data:
+            musica.link_audio = data.get('link_audio')
+        if 'lyrics' in data:
+            musica.lyrics = data.get('lyrics')
+        if 'notes' in data:
+            musica.notes = data.get('notes')
+        if 'category' in data:
+            musica.category = data.get('category')
+        
+        # Processar arquivo de áudio se houver
+        if 'audio_file' in request.files:
+            file = request.files['audio_file']
+            if file and file.filename and allowed_audio_file(file.filename):
+                # Remover arquivo antigo se existir
+                if musica.audio_file:
+                    old_filepath = os.path.join(app.config['UPLOAD_FOLDER'], musica.audio_file)
+                    if os.path.exists(old_filepath):
+                        os.remove(old_filepath)
+                
+                # Salvar novo arquivo
+                original_ext = file.filename.rsplit('.', 1)[1].lower()
+                audio_filename = f"{secrets.token_hex(8)}_{secure_filename(file.filename)}"
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], audio_filename)
+                file.save(filepath)
+                musica.audio_file = audio_filename
         
         db.session.commit()
         return jsonify({'success': True, 'message': 'Música atualizada com sucesso!'}), 200

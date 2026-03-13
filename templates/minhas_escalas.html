@@ -122,24 +122,36 @@ const fetchWithTimeout = (url, timeout = 10000) => {
     ]);
 };
 
+// Funcao de formatacao de data/hora
+const formatDatetime = (dateTimeString) => {
+    const date = new Date(dateTimeString);
+    return date.toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+};
+
 async function loadMinhasEscalas() {
-    console.log('🔄 Carregando minhas escalas...');
+    console.log('[1] Carregando minhas escalas...');
     const container = document.getElementById('escalasContainer');
     
     if (!container) {
-        console.error('❌ Container não encontrado!');
+        console.error('[ERRO] Container nao encontrado!');
         return;
     }
     
     try {
-        console.log('📡 Buscando escalas e repertório...');
+        console.log('[2] Buscando escalas e repertorio...');
         
         const [escalasResponse, repertorioResponse] = await Promise.all([
             fetchWithTimeout('/get_minhas_escalas'),
             fetchWithTimeout('/get_repertorio')
         ]);
         
-        console.log('✓ Respostas recebidas');
+        console.log('[3] Respostas recebidas. Status:', escalasResponse.status, repertorioResponse.status);
         
         if (!escalasResponse.ok || !repertorioResponse.ok) {
             throw new Error('Erro ao buscar dados do servidor');
@@ -149,10 +161,11 @@ async function loadMinhasEscalas() {
         const repertorioData = await repertorioResponse.json();
         const escalas = data.escalas || [];
         
-        console.log(`📊 Total de minhas escalas: ${escalas.length}`);
+        console.log('[4] Total de minhas escalas:', escalas.length);
+        console.log('[5] Dados escalas:', escalas);
         
         if (escalas.length === 0) {
-            console.log('ℹ️ Nenhuma escala encontrada');
+            console.log('[INFO] Nenhuma escala encontrada');
             container.innerHTML = `
                 <div class="empty-state">
                     <i class="fas fa-calendar-times"></i>
@@ -163,7 +176,7 @@ async function loadMinhasEscalas() {
             return;
         }
         
-        console.log('✓ Processando escalas...');
+        console.log('[6] Processando escalas...');
         
         // Agrupar por culto
         const byCulto = {};
@@ -175,11 +188,19 @@ async function loadMinhasEscalas() {
                     date: escala.culto_date,
                     dateOnly: escala.culto_date.split('T')[0],
                     time: escala.culto_date.split('T')[1],
-                    escalas: []
+                    escalas: [],
+                    minhaEscala: null
                 };
             }
-            byCulto[escala.culto_id].escalas.push(escala);
+            // Separar minha escala das outras
+            if (escala.is_me) {
+                byCulto[escala.culto_id].minhaEscala = escala;
+            } else {
+                byCulto[escala.culto_id].escalas.push(escala);
+            }
         });
+        
+        console.log('[7] Agrupamento por culto:', byCulto);
         
         // Agrupar por data
         const byDate = {};
@@ -190,11 +211,13 @@ async function loadMinhasEscalas() {
             byDate[culto.dateOnly].push(culto);
         });
         
+        console.log('[8] Agrupamento por data:', byDate);
+        
         // Buscar músicas para cada culto
         const musicasPorCulto = {};
         const cultoIds = [...new Set(escalas.map(e => e.culto_id))];
         
-        console.log(`🎵 Buscando músicas para ${cultoIds.length} cultos...`);
+        console.log('[9] Buscando musicas para cultos:', cultoIds);
         await Promise.all(cultoIds.map(async (cultoId) => {
             try {
                 const response = await fetchWithTimeout(`/get_culto_musicas/${cultoId}`, 10000);
@@ -209,17 +232,55 @@ async function loadMinhasEscalas() {
             }
         }));
         
-        console.log('✓ Músicas carregadas');
+        console.log('[10] Musicas carregadas:', musicasPorCulto);
         
         // Renderizar escalas
         const finalGroups = Object.values(byCulto);
         
-        container.innerHTML = finalGroups.map(group => {
-            const timeStr = App.format.datetime(group.date);
+        console.log('[11] Grupos finais para renderizar:', finalGroups.length);
+        
+        // Mapeamento de ícones por instrumento
+        const instrumentIcons = {
+            'Ministro': 'fa-microphone',
+            'Back Vocal': 'fa-microphone-alt',
+            'Guitarrista': 'fa-guitar',
+            'Violonista': 'fa-guitar',
+            'Baterista': 'fa-drum',
+            'Tecladista': 'fa-keyboard',
+            'Baixista': 'fa-guitar'
+        };
+        
+        const instrumentColors = {
+            'Ministro': 'linear-gradient(135deg, #ec4899, #db2777)',
+            'Back Vocal': 'linear-gradient(135deg, #a855f7, #9333ea)',
+            'Guitarrista': 'linear-gradient(135deg, #f59e0b, #d97706)',
+            'Violonista': 'linear-gradient(135deg, #84cc16, #65a30d)',
+            'Baterista': 'linear-gradient(135deg, #ef4444, #dc2626)',
+            'Tecladista': 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+            'Baixista': 'linear-gradient(135deg, #06b6d4, #0891b2)'
+        };
+        
+        console.log('[12] Iniciando renderizacao HTML...');
+        
+        container.innerHTML = finalGroups.map((group, groupIndex) => {
+            console.log(`[12.${groupIndex + 1}] Renderizando grupo:`, group.name);
+            
+            const timeStr = formatDatetime(group.date);
             const musicas = musicasPorCulto[group.culto_id] || [];
             
-            // Encontrar a escala do usuário atual
-            const minhaEscala = group.escalas[0]; // Como só retorna escalas do usuário, pegamos a primeira
+            // Pegar a escala do usuário atual
+            const minhaEscala = group.minhaEscala;
+            
+            if (!minhaEscala) {
+                console.warn(`[AVISO] Grupo ${group.name} nao tem minhaEscala!`);
+                return ''; // Não deveria acontecer, mas por segurança
+            }
+            
+            console.log(`[12.${groupIndex + 1}] minhaEscala:`, minhaEscala.role);
+            
+            // Ícone e cor do instrumento do usuário
+            const meuIcon = instrumentIcons[minhaEscala.role] || 'fa-user';
+            const meuGradient = instrumentColors[minhaEscala.role] || 'var(--gradient-success)';
             
             return `
                 <div class="card mb-3 fade-in">
@@ -233,8 +294,8 @@ async function loadMinhasEscalas() {
                         <!-- Sua Função -->
                         <div style="margin-bottom: 1.5rem; padding: 1.5rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.05)); border-radius: var(--radius-lg); border: 2px solid var(--accent-success);">
                             <div style="display: flex; align-items: center; gap: 1rem;">
-                                <div style="width: 50px; height: 50px; border-radius: 50%; background: var(--gradient-success); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.5rem;">
-                                    ${minhaEscala.member_name.charAt(0).toUpperCase()}
+                                <div style="width: 56px; height: 56px; border-radius: 50%; background: ${meuGradient}; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                                    <i class="fas ${meuIcon}"></i>
                                 </div>
                                 <div style="flex: 1;">
                                     <div style="font-weight: 700; color: var(--gray-900); font-size: 1.1rem; margin-bottom: 0.25rem;">
@@ -251,18 +312,21 @@ async function loadMinhasEscalas() {
                         </div>
                         
                         <!-- Outras Escalas do Culto -->
-                        ${group.escalas.length > 1 ? `
+                        ${group.escalas.length > 0 ? `
                             <div style="margin-bottom: 1.5rem;">
                                 <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: var(--gray-900);">
                                     <i class="fas fa-users"></i>
-                                    Outros Membros da Equipe
+                                    Outros Membros da Equipe (${group.escalas.length})
                                 </h4>
                                 <div class="grid grid-2">
-                                    ${group.escalas.slice(1).map(e => `
+                                    ${group.escalas.map(e => {
+                                        const icon = instrumentIcons[e.role] || 'fa-user';
+                                        const gradient = instrumentColors[e.role] || 'var(--gradient-primary)';
+                                        return `
                                         <div style="padding: 1rem; background: var(--gray-50); border-radius: var(--radius-lg);">
                                             <div class="flex items-center gap-2">
-                                                <div style="width: 40px; height: 40px; border-radius: var(--radius-md); background: var(--gradient-primary); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700;">
-                                                    ${e.member_name.charAt(0).toUpperCase()}
+                                                <div style="width: 40px; height: 40px; border-radius: var(--radius-md); background: ${gradient}; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.1rem; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
+                                                    <i class="fas ${icon}"></i>
                                                 </div>
                                                 <div style="flex: 1;">
                                                     <div style="font-weight: 600; color: var(--gray-900);">${e.member_name}</div>
@@ -273,7 +337,7 @@ async function loadMinhasEscalas() {
                                                 </div>
                                             </div>
                                         </div>
-                                    `).join('')}
+                                    `}).join('')}
                                 </div>
                             </div>
                         ` : ''}
@@ -348,10 +412,11 @@ async function loadMinhasEscalas() {
             `;
         }).join('');
         
-        console.log('✅ Minhas escalas renderizadas com sucesso!');
+        console.log('[13] Minhas escalas renderizadas com sucesso!');
         
     } catch (error) {
-        console.error('❌ Erro ao carregar minhas escalas:', error);
+        console.error('[ERRO] Erro ao carregar minhas escalas:', error);
+        console.error('[ERRO] Stack trace:', error.stack);
         container.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-exclamation-triangle" style="color: var(--danger-color);"></i>
@@ -363,14 +428,17 @@ async function loadMinhasEscalas() {
                 </button>
             </div>
         `;
-        App.toast.error('Erro ao carregar escalas');
+        if (typeof App !== 'undefined' && App.toast) {
+            App.toast.error('Erro ao carregar escalas');
+        }
     }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 Página carregada, iniciando...');
+    console.log('[INICIO] Pagina carregada, iniciando...');
     loadMinhasEscalas().catch(error => {
-        console.error('❌ Erro crítico ao carregar minhas escalas:', error);
+        console.error('[ERRO CRITICO] Erro ao carregar minhas escalas:', error);
+        console.error('[ERRO CRITICO] Stack:', error.stack);
         const container = document.getElementById('escalasContainer');
         if (container) {
             container.innerHTML = `
