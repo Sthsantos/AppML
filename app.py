@@ -1529,25 +1529,31 @@ def reorder_musicas_culto():
 @login_required
 def get_user_data():
     """Carrega dados do usuário logado (User ou Member), priorizando o nome do membro."""
-    with db.session.no_autoflush:
-        user = db.session.get(User, session['user_id'])
-        if not user:
-            user = db.session.get(Member, session['user_id'])
-        if isinstance(user, User):
-            # Para um User (admin), tenta encontrar o Member associado pelo email
-            member = Member.query.filter_by(email=user.email).first()
-            name = member.name if member else user.email.split('@')[0]  # Usa o nome do member ou o username antes do '@'
-        else:  # Membro comum
-            name = user.name  # Usa o nome diretamente do Member
+    # Usa current_user do Flask-Login, que já interpreta os prefixos corretamente
+    user = current_user
     
-    print(f"User data: {name}, is_admin: {getattr(user, 'is_admin', False)}")  # Depuração
+    if not user or not user.is_authenticated:
+        return jsonify({'logged_in': False})
+    
+    # Determina o nome e role
+    if isinstance(user, User):
+        # Para um User (admin), tenta encontrar o Member associado pelo email
+        member = Member.query.filter_by(email=user.email).first()
+        name = member.name if member else user.email.split('@')[0]
+        role = ROLE_ADMIN
+    else:  # Member
+        name = user.name
+        role = user.role if hasattr(user, 'role') else ROLE_MEMBRO
+    
+    print(f"User data: {name}, role: {role}, is_admin: {isinstance(user, User)}")  # Depuração
     return jsonify({
         'logged_in': True,
         'name': name,
         'email': user.email,
+        'role': role,
         'instrument': user.instrument if hasattr(user, 'instrument') and user.instrument else 'N/A',
         'phone': user.phone if hasattr(user, 'phone') and user.phone else 'N/A',
-        'is_admin': getattr(user, 'is_admin', False)
+        'is_admin': isinstance(user, User)
     })
 
 @app.route('/get_announcements', methods=['GET'])
