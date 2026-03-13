@@ -52,18 +52,12 @@
     <rect width="512" height="512" fill="url(#bgGradient)" rx="100"/>
     
     <!-- Decorative circles -->
-    <circle cx="100" cy="100" r="60" fill="#667eea" opacity="0.1"/>
-    <circle cx="412" cy="412" r="80" fill="#764ba2" opacity="0.1"/>
+    <circle cx="100" cy="100" r="60" fill="#667eea" opacity="0.08"/>
+    <circle cx="412" cy="412" r="80" fill="#764ba2" opacity="0.08"/>
     
-    <!-- Main Group -->
-    <g transform="translate(256, 256)">
-        <!-- Letter M (background) -->
-        <g filter="url(#shadow)">
-            <path d="M -120,-100 L -120,120 L -80,120 L -80,0 L -20,80 L 40,0 L 40,120 L 80,120 L 80,-100 L 20,-20 L -40,-100 Z" 
-                  fill="url(#mGradient)" opacity="0.3"/>
-        </g>
-        
-        <!-- Treble Clef (Clave de Sol) -->
+    <!-- Main Group - Clave de Sol centralizada e ampliada -->
+    <g transform="translate(256, 230) scale(1.3)">
+        <!-- Treble Clef (Clave de Sol) with enhanced glow -->
         <g filter="url(#glow)">
             <!-- Main spiral body -->
             <path d="M 20,-140 
@@ -114,11 +108,11 @@
         <ellipse cx="-10" cy="-80" rx="15" ry="25" fill="#ffffff" opacity="0.3" transform="rotate(-20 -10 -80)"/>
     </g>
     
-    <!-- Bottom text with golden glow -->
+    <!-- Bottom text with golden glow - apenas "L" de Louvor -->
     <g filter="url(#textGlow)">
         <!-- Text outline (stroke) -->
-        <text x="256" y="478" text-anchor="middle" fill="none" stroke="url(#goldGradient)" stroke-width="2" font-size="36" font-weight="bold" font-family="Arial, sans-serif">ML</text>
+        <text x="256" y="485" text-anchor="middle" fill="none" stroke="url(#goldGradient)" stroke-width="3" font-size="48" font-weight="bold" font-family="Arial, sans-serif">L</text>
         <!-- Text fill -->
-        <text x="256" y="478" text-anchor="middle" fill="url(#goldGradient)" font-size="36" font-weight="bold" font-family="Arial, sans-serif">ML</text>
+        <text x="256" y="485" text-anchor="middle" fill="url(#goldGradient)" font-size="48" font-weight="bold" font-family="Arial, sans-serif">L</text>
     </g>
 </svg>

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ministry-v1.5.0';
+const CACHE_NAME = 'ministry-v1.6.0';
 const CACHE_ASSETS = [
     '/',
     '/static/styles.css',
@@ -10,7 +10,7 @@ const CACHE_ASSETS = [
 
 // Install Service Worker
 self.addEventListener('install', event => {
-    console.log('[SW] Instalando Service Worker v1.5.0...');
+    console.log('[SW] Instalando Service Worker v1.6.0...');
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
@@ -29,7 +29,7 @@ self.addEventListener('install', event => {
 
 // Activate Service Worker
 self.addEventListener('activate', event => {
-    console.log('[SW] Ativando Service Worker v1.5.0...');
+    console.log('[SW] Ativando Service Worker v1.6.0...');
     event.waitUntil(
         caches.keys().then(cacheNames => {
             return Promise.all(
