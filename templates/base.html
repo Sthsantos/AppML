@@ -96,18 +96,19 @@
             
             <div class="navbar-actions">
                 <!-- Theme Toggle -->
-                <button class="theme-toggle" onclick="App.theme.toggle()" title="Alternar tema">
+                <button class="theme-toggle" onclick="toggleTheme()" title="Alternar tema">
                     <i class="fas fa-moon"></i>
                 </button>
                 
                 {% if current_user.is_authenticated %}
-                    <span style="color: var(--text-color); font-weight: 500; display: flex; align-items: center; gap: 0.5rem;">
-                        <i class="fas fa-user-circle"></i> 
-                        <span class="user-name-desktop">{{ current_user.name }}</span>
-                    </span>
+                    <a href="{{ url_for('perfil') }}" class="user-profile-link" style="color: var(--text-color); text-decoration: none; display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 1rem; border-radius: var(--radius-md); transition: all 0.3s;" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='transparent'" title="Meu Perfil">
+                        <div style="width: 35px; height: 35px; border-radius: 50%; background: var(--primary-500); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.9rem;">
+                            <span id="userInitials"><i class="fas fa-user"></i></span>
+                        </div>
+                        <span class="user-name-desktop" id="userName" style="font-weight: 500;">Carregando...</span>
+                    </a>
                     <a href="{{ url_for('logout') }}" class="btn-logout" title="Sair">
                         <i class="fas fa-sign-out-alt"></i>
-                        <span class="logout-text">Sair</span>
                     </a>
                 {% else %}
                     <a href="{{ url_for('login') }}" class="btn-login">
@@ -165,6 +166,10 @@
             <a href="{{ url_for('feedback') }}" class="sidebar-link {% if request.endpoint == 'feedback' %}active{% endif %}">
                 <i class="fas fa-comment-dots"></i>
                 <span>Feedback</span>
+            </a>
+            <a href="{{ url_for('perfil') }}" class="sidebar-link {% if request.endpoint == 'perfil' %}active{% endif %}">
+                <i class="fas fa-user-circle"></i>
+                <span>Meu Perfil</span>
             </a>
             {% if current_user.is_authenticated and current_user.is_admin %}
             <a href="{{ url_for('dashboard') }}" class="sidebar-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
@@ -494,7 +499,7 @@
         // window.confirm = (message) => { /* não pode ser substituído diretamente devido ao retorno síncrono */ };
     </script>
 
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}?v=1.5.0"></script>
     
     <!-- PWA Install Prompt -->
     <div id="pwaInstallPrompt" style="display: none; position: fixed; bottom: calc(var(--bottom-nav-height, 0px) + 1rem); left: 1rem; right: 1rem; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%); color: white; padding: 1.5rem; border-radius: 1rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); z-index: 9999; animation: slideInUp 0.4s ease-out; border: 1px solid rgba(255, 255, 255, 0.1);">
@@ -715,6 +720,121 @@
         window.addEventListener('load', showIOSInstallInstructions);
     </script>
     
+    <!-- Script para carregar nome do usuário -->
+    <script>
+    {% if current_user.is_authenticated %}
+    async function loadUserName() {
+        try {
+            const response = await fetch('/get_user_data');
+            const data = await response.json();
+            
+            if (data.logged_in && data.name) {
+                const userName = document.getElementById('userName');
+                const userInitials = document.getElementById('userInitials');
+                
+                if (userName) {
+                    userName.textContent = data.name;
+                }
+                
+                if (userInitials && data.name) {
+                    // Pegar iniciais do nome
+                    const nameParts = data.name.trim().split(' ');
+                    const initials = nameParts.length > 1 
+                        ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
+                        : (nameParts[0][0] + (nameParts[0][1] || '')).toUpperCase();
+                    userInitials.textContent = initials;
+                }
+            }
+        } catch (error) {
+            console.error('Erro ao carregar nome do usuário:', error);
+        }
+    }
+    
+    // Carregar nome ao iniciar
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadUserName);
+    } else {
+        loadUserName();
+    }
+    {% endif %}
+    </script>
+    
     {% block extra_js %}{% endblock %}
+    
+    <!-- ============================================ -->
+    <!-- SISTEMA DE TEMA - IMPLEMENTAÇÃO NOVA (2026) -->
+    <!-- ============================================ -->
+    <script>
+        // Função NOVA de alternância de tema - Implementação independente
+        (function() {
+            'use strict';
+            
+            console.log('🎨 [TEMA NOVO] Carregando sistema de tema...');
+            
+            // Função principal de alternância
+            window.toggleTheme = function() {
+                console.log('🔄 [TEMA NOVO] toggleTheme() executado!');
+                
+                try {
+                    // Pegar elemento HTML
+                    const html = document.documentElement;
+                    const currentTheme = html.getAttribute('data-theme') || 'light';
+                    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+                    
+                    console.log('📝 [TEMA NOVO] Mudando de', currentTheme, 'para', newTheme);
+                    
+                    // Aplicar novo tema
+                    html.setAttribute('data-theme', newTheme);
+                    
+                    // Atualizar TODOS os ícones de tema
+                    const icons = document.querySelectorAll('.theme-toggle i, .theme-toggle-login i');
+                    console.log('🎭 [TEMA NOVO] Atualizando', icons.length, 'ícones');
+                    
+                    icons.forEach(function(icon) {
+                        // Remover classes antigas
+                        icon.className = '';
+                        // Adicionar nova classe
+                        if (newTheme === 'dark') {
+                            icon.className = 'fas fa-sun';
+                        } else {
+                            icon.className = 'fas fa-moon';
+                        }
+                    });
+                    
+                    // Salvar preferência
+                    try {
+                        localStorage.setItem('theme', newTheme);
+                        console.log('💾 [TEMA NOVO] Preferência salva:', newTheme);
+                    } catch(e) {
+                        console.warn('⚠️ [TEMA NOVO] Não pode salvar no localStorage:', e.message);
+                    }
+                    
+                    // Atualizar meta theme-color
+                    const metaColor = document.querySelector('meta[name="theme-color"]');
+                    if (metaColor) {
+                        metaColor.setAttribute('content', newTheme === 'dark' ? '#1a1a2e' : '#667eea');
+                    }
+                    
+                    console.log('✅ [TEMA NOVO] Tema alterado com sucesso!');
+                    
+                    // Mostrar notificação visual (se disponível)
+                    if (window.App && window.App.toast && window.App.toast.success) {
+                        const msg = newTheme === 'dark' ? '🌙 Tema escuro ativado' : '☀️ Tema claro ativado';
+                        window.App.toast.success(msg);
+                    }
+                    
+                } catch(error) {
+                    console.error('❌ [TEMA NOVO] Erro ao alternar tema:', error);
+                }
+            };
+            
+            console.log('✅ [TEMA NOVO] Sistema de tema carregado e pronto!');
+            console.log('🔘 [TEMA NOVO] Clique no botão lua/sol para testar');
+            
+        })();
+    </script>
+    <!-- ============================================ -->
+    <!-- FIM DO SISTEMA DE TEMA NOVO                -->
+    <!-- ============================================ -->
 </body>
 </html>

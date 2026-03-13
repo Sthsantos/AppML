@@ -22,6 +22,44 @@
     
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <!-- Inicialização Antecipada do Tema (previne flash) -->
+    <script>
+        (function() {
+            try {
+                // Suporte para iOS/Safari - verifica se localStorage está disponível
+                const storageAvailable = (function() {
+                    try {
+                        const test = '__storage_test__';
+                        localStorage.setItem(test, test);
+                        localStorage.removeItem(test);
+                        return true;
+                    } catch(e) {
+                        return false;
+                    }
+                })();
+                
+                let theme = 'light';
+                
+                if (storageAvailable) {
+                    const savedTheme = localStorage.getItem('theme');
+                    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    theme = savedTheme || (prefersDark ? 'dark' : 'light');
+                } else {
+                    // Fallback para iOS em modo privado
+                    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    theme = prefersDark ? 'dark' : 'light';
+                }
+                
+                document.documentElement.setAttribute('data-theme', theme);
+                console.log('⚡ Tema aplicado no login (iOS-safe):', theme);
+            } catch (e) {
+                console.error('❌ Erro ao aplicar tema:', e);
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        })();
+    </script>
+    
     <style>
         body {
             background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
@@ -330,7 +368,7 @@
             font-size: 1.25rem;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
             backdrop-filter: blur(10px);
-            transition: var(--transition-base);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 100;
         }
         
@@ -338,6 +376,14 @@
             transform: scale(1.1) rotate(20deg);
             background: rgba(255, 255, 255, 1);
             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .theme-toggle-login:active {
+            transform: scale(0.95);
+        }
+        
+        .theme-toggle-login i {
+            transition: opacity 0.15s ease;
         }
         
         [data-theme="dark"] .theme-toggle-login {
@@ -371,11 +417,20 @@
             border-color: var(--border-color);
             color: var(--text-color);
         }
+        
+        [data-theme="dark"] .form-control:focus {
+            background: var(--bg-secondary);
+            border-color: var(--primary-500);
+        }
+        
+        [data-theme="dark"] body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+        }
     </style>
 </head>
 <body>
     <!-- Botão de Tema -->
-    <button class="theme-toggle-login" onclick="App.theme.toggle()" title="Alternar tema">
+    <button class="theme-toggle-login" onclick="toggleTheme()" title="Alternar tema">
         <i class="fas fa-moon"></i>
     </button>
     
@@ -635,6 +690,76 @@
     </script>
     
     <!-- Script.js para funcionalidade do tema -->
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}?v=1.5.0"></script>
+    
+    <!-- ============================================ -->
+    <!-- SISTEMA DE TEMA - IMPLEMENTAÇÃO NOVA (2026) -->
+    <!-- ============================================ -->
+    <script>
+        // Função NOVA de alternância de tema - Implementação independente
+        (function() {
+            'use strict';
+            
+            console.log('🎨 [TEMA NOVO LOGIN] Carregando sistema de tema...');
+            
+            // Função principal de alternância
+            window.toggleTheme = function() {
+                console.log('🔄 [TEMA NOVO LOGIN] toggleTheme() executado!');
+                
+                try {
+                    // Pegar elemento HTML
+                    const html = document.documentElement;
+                    const currentTheme = html.getAttribute('data-theme') || 'light';
+                    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+                    
+                    console.log('📝 [TEMA NOVO LOGIN] Mudando de', currentTheme, 'para', newTheme);
+                    
+                    // Aplicar novo tema
+                    html.setAttribute('data-theme', newTheme);
+                    
+                    // Atualizar TODOS os ícones de tema
+                    const icons = document.querySelectorAll('.theme-toggle i, .theme-toggle-login i');
+                    console.log('🎭 [TEMA NOVO LOGIN] Atualizando', icons.length, 'ícones');
+                    
+                    icons.forEach(function(icon) {
+                        // Remover classes antigas
+                        icon.className = '';
+                        // Adicionar nova classe
+                        if (newTheme === 'dark') {
+                            icon.className = 'fas fa-sun';
+                        } else {
+                            icon.className = 'fas fa-moon';
+                        }
+                    });
+                    
+                    // Salvar preferência
+                    try {
+                        localStorage.setItem('theme', newTheme);
+                        console.log('💾 [TEMA NOVO LOGIN] Preferência salva:', newTheme);
+                    } catch(e) {
+                        console.warn('⚠️ [TEMA NOVO LOGIN] Não pode salvar no localStorage:', e.message);
+                    }
+                    
+                    // Atualizar meta theme-color
+                    const metaColor = document.querySelector('meta[name="theme-color"]');
+                    if (metaColor) {
+                        metaColor.setAttribute('content', newTheme === 'dark' ? '#1a1a2e' : '#667eea');
+                    }
+                    
+                    console.log('✅ [TEMA NOVO LOGIN] Tema alterado com sucesso!');
+                    
+                } catch(error) {
+                    console.error('❌ [TEMA NOVO LOGIN] Erro ao alternar tema:', error);
+                }
+            };
+            
+            console.log('✅ [TEMA NOVO LOGIN] Sistema de tema carregado e pronto!');
+            console.log('🔘 [TEMA NOVO LOGIN] Clique no botão lua/sol para testar');
+            
+        })();
+    </script>
+    <!-- ============================================ -->
+    <!-- FIM DO SISTEMA DE TEMA NOVO                -->
+    <!-- ============================================ -->
 </body>
 </html>

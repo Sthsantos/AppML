@@ -14,12 +14,16 @@
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal[style*="display: flex"] {
+    display: flex !important;
     align-items: center;
     justify-content: center;
 }
 
 .modal-content {
-    background-color: white;
+    background-color: var(--card-bg, white);
     border-radius: var(--radius-xl);
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     width: 90%;
@@ -296,12 +300,112 @@
         </div>
     </div>
 </div>
+
+<!-- Modal de Confirmação de Exclusão -->
+<div id="deleteModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3 style="color: #ef4444;">
+                <i class="fas fa-exclamation-triangle"></i>
+                Confirmar Exclusão
+            </h3>
+            <button onclick="closeDeleteModal()" class="btn-close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size: 1rem; color: var(--gray-700); margin-bottom: 1rem;">
+                Tem certeza que deseja deletar este feedback?
+            </p>
+            <div style="padding: 1rem; background: #fee2e2; border-left: 4px solid #ef4444; border-radius: var(--radius-md);">
+                <p style="margin: 0; font-size: 0.875rem; color: #b91c1c; font-weight: 600;">
+                    <i class="fas fa-info-circle"></i>
+                    Esta ação não pode ser desfeita.
+                </p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button onclick="closeDeleteModal()" class="btn btn-outline">
+                <i class="fas fa-times"></i>
+                Cancelar
+            </button>
+            <button onclick="confirmDelete()" class="btn btn-sm" style="background: #ef4444; color: white; font-weight: 600;">
+                <i class="fas fa-trash"></i>
+                Deletar Feedback
+            </button>
+        </div>
+    </div>
+</div>
 {% endif %}
 
 {% endblock %}
 
 {% block extra_js %}
 <script>
+function showToast(message, type = 'info', duration = 4000) {
+    // Se o tipo foi passado primeiro (compatibilidade reversa)
+    if (['success', 'error', 'warning', 'info'].includes(message)) {
+        [type, message] = [message, type];
+    }
+
+    if (typeof App !== 'undefined' && App.toast) {
+        App.toast.show(message, type, duration);
+    } else {
+        // Fallback moderno - criar toast standalone
+        let container = document.querySelector('.toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        
+        const icons = {
+            success: 'fa-check-circle',
+            error: 'fa-exclamation-circle',
+            warning: 'fa-exclamation-triangle',
+            info: 'fa-info-circle'
+        };
+
+        const titles = {
+            success: 'Sucesso!',
+            error: 'Erro!',
+            warning: 'Atenção!',
+            info: 'Informação'
+        };
+        
+        toast.innerHTML = `
+            <div class="toast-icon-wrapper">
+                <i class="fas ${icons[type]}"></i>
+            </div>
+            <div class="toast-content">
+                <div class="toast-title">${titles[type]}</div>
+                <div class="toast-message">${message}</div>
+            </div>
+            <button class="toast-close" aria-label="Fechar">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="toast-progress" style="animation-duration: ${duration}ms;"></div>
+        `;
+
+        const closeBtn = toast.querySelector('.toast-close');
+        closeBtn.addEventListener('click', () => {
+            toast.classList.add('removing');
+            setTimeout(() => toast.remove(), 300);
+        });
+        
+        container.appendChild(toast);
+        
+        // Auto remoção
+        setTimeout(() => {
+            toast.classList.add('removing');
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
+    }
+}
+
 // Enviar Feedback
 document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -324,22 +428,26 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
         const result = await response.json();
         
         if (response.ok && result.success) {
-            App.toast.success('Feedback enviado com sucesso! Obrigado pela contribuição.');
+            showToast('success', 'Feedback enviado com sucesso! Obrigado pela contribuição.');
             e.target.reset();
             
             // Recarregar lista de feedbacks do usuário
-            loadMyFeedbacks();
+            setTimeout(() => {
+                loadMyFeedbacks();
+            }, 500);
             
             // Se for admin, recarregar lista de feedbacks
             if (typeof loadFeedbacks === 'function') {
-                loadFeedbacks();
+                setTimeout(() => {
+                    loadFeedbacks();
+                }, 500);
             }
         } else {
-            App.toast.error(result.message || 'Erro ao enviar feedback. Tente novamente.');
+            showToast('error', result.message || 'Erro ao enviar feedback. Tente novamente.');
         }
     } catch (error) {
-        console.error('Erro:', error);
-        App.toast.error('Erro ao processar requisição.');
+        console.error('Erro ao enviar feedback:', error);
+        showToast('error', 'Erro ao processar requisição.');
     }
 });
 
@@ -678,6 +786,13 @@ function renderFeedbacks(feedbacks) {
         'resolved': 'Resolvido'
     };
     
+    // Debug: verificar dados
+    console.log('📊 Total de feedbacks a renderizar:', feedbacks.length);
+    if (feedbacks.length > 0) {
+        console.log('🔍 Exemplo de feedback:', feedbacks[0]);
+        console.log('🔍 Tem response?', feedbacks[0].response);
+    }
+    
     container.innerHTML = feedbacks.map(fb => `
         <div class="card mb-2" style="border-left: 4px solid ${statusColors[fb.status] || 'var(--primary-500)'};">
             <div class="card-body" style="padding: 1rem;">
@@ -736,8 +851,8 @@ function renderFeedbacks(feedbacks) {
                         <i class="fas fa-check"></i>
                         Resolvido
                     </button>
-                    ${fb.status === 'resolved' ? `
-                        <button onclick="deleteFeedback(${fb.id})" class="btn btn-sm" style="background: var(--danger-color); color: white;">
+                    ${fb.response ? `
+                        <button onclick="deleteFeedback(${fb.id})" class="btn btn-sm" style="background: #ef4444; color: white; font-weight: 600; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);">
                             <i class="fas fa-trash"></i>
                             Deletar
                         </button>
@@ -763,6 +878,9 @@ function openResponseModal(feedbackId, email, message) {
     
     document.getElementById('responseText').value = '';
     document.getElementById('responseStatus').value = 'reviewed';
+    
+    // Scroll suave para o topo antes de abrir o modal
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     document.getElementById('responseModal').style.display = 'flex';
 }
 
@@ -776,12 +894,12 @@ async function submitResponse() {
     const status = document.getElementById('responseStatus').value;
     
     if (!responseText) {
-        App.toast.error('Por favor, digite uma resposta');
+        showToast('error', 'Por favor, digite uma resposta');
         return;
     }
     
     if (!currentFeedbackId) {
-        App.toast.error('ID do feedback não encontrado');
+        showToast('error', 'ID do feedback não encontrado');
         return;
     }
     
@@ -800,15 +918,17 @@ async function submitResponse() {
         const result = await response.json();
         
         if (response.ok && result.success) {
-            App.toast.success('Resposta enviada com sucesso!');
+            showToast('success', 'Resposta enviada com sucesso!');
             closeResponseModal();
-            loadFeedbacks(); // Recarregar lista
+            setTimeout(() => {
+                loadFeedbacks();
+            }, 500);
         } else {
-            App.toast.error(result.message || 'Erro ao enviar resposta');
+            showToast('error', result.message || 'Erro ao enviar resposta');
         }
     } catch (error) {
-        console.error('Erro:', error);
-        App.toast.error('Erro ao processar requisição');
+        console.error('Erro ao responder feedback:', error);
+        showToast('error', 'Erro ao processar requisição');
     }
 }
 
@@ -827,22 +947,45 @@ async function changeStatus(feedbackId, newStatus) {
         const result = await response.json();
         
         if (response.ok && result.success) {
-            App.toast.success('Status atualizado!');
-            loadFeedbacks(); // Recarregar lista
+            showToast('success', 'Status atualizado com sucesso!');
+            setTimeout(() => {
+                loadFeedbacks();
+            }, 500);
         } else {
-            App.toast.error(result.message || 'Erro ao atualizar status');
+            showToast('error', result.message || 'Erro ao atualizar status');
         }
     } catch (error) {
-        console.error('Erro:', error);
-        App.toast.error('Erro ao processar requisição');
+        console.error('Erro ao atualizar status:', error);
+        showToast('error', 'Erro ao processar requisição');
     }
 }
 
-async function deleteFeedback(feedbackId) {
-    // Confirmar antes de deletar
-    if (!confirm('Tem certeza que deseja deletar este feedback? Esta ação não pode ser desfeita.')) {
+// Variável para armazenar o ID do feedback a ser deletado
+let deleteFeedbackId = null;
+
+function openDeleteModal(feedbackId) {
+    deleteFeedbackId = feedbackId;
+    // Scroll suave para o topo antes de abrir o modal
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const modal = document.getElementById('deleteModal');
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeDeleteModal() {
+    deleteFeedbackId = null;
+    const modal = document.getElementById('deleteModal');
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+async function confirmDelete() {
+    if (!deleteFeedbackId) {
         return;
     }
+    
+    const feedbackId = deleteFeedbackId;
+    closeDeleteModal();
     
     try {
         const response = await fetch(`/delete_feedback/${feedbackId}`, {
@@ -855,22 +998,33 @@ async function deleteFeedback(feedbackId) {
         const result = await response.json();
         
         if (response.ok && result.success) {
-            App.toast.success('Feedback deletado com sucesso!');
-            loadFeedbacks(); // Recarregar lista
+            showToast('success', 'Feedback deletado com sucesso!');
+            setTimeout(() => {
+                loadFeedbacks();
+            }, 500);
         } else {
-            App.toast.error(result.message || 'Erro ao deletar feedback');
+            showToast('error', result.message || 'Erro ao deletar feedback');
         }
     } catch (error) {
-        console.error('Erro:', error);
-        App.toast.error('Erro ao processar requisição');
+        console.error('Erro ao deletar feedback:', error);
+        showToast('error', 'Erro ao processar requisição');
     }
+}
+
+function deleteFeedback(feedbackId) {
+    openDeleteModal(feedbackId);
 }
 
 // Fechar modal ao clicar fora
 document.addEventListener('click', (e) => {
-    const modal = document.getElementById('responseModal');
-    if (e.target === modal) {
+    const responseModal = document.getElementById('responseModal');
+    if (e.target === responseModal) {
         closeResponseModal();
+    }
+    
+    const deleteModal = document.getElementById('deleteModal');
+    if (e.target === deleteModal) {
+        closeDeleteModal();
     }
 });
 

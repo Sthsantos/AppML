@@ -11,7 +11,7 @@
         </h1>
         <p class="page-subtitle">Informe quando não poderá participar dos cultos</p>
     </div>
-    <button class="btn btn-blue" onclick="App.modal.open('addIndisponibilidadeModal')" id="btnNovaIndisponibilidade">
+    <button class="btn btn-blue" onclick="openModalIndisponibilidade()" id="btnNovaIndisponibilidade">
         <i class="fas fa-plus"></i>
         Nova Indisponibilidade
     </button>
@@ -35,7 +35,7 @@
     <div class="modal">
         <div class="modal-header">
             <h2 class="modal-title">Registrar Indisponibilidade</h2>
-            <button class="modal-close" onclick="App.modal.close('addIndisponibilidadeModal')">
+            <button class="modal-close" onclick="closeModalIndisponibilidade()">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -69,7 +69,7 @@
             </div>
         </form>
         <div class="modal-footer">
-            <button class="btn btn-outline" onclick="App.modal.close('addIndisponibilidadeModal')">Cancelar</button>
+            <button class="btn btn-outline" onclick="closeModalIndisponibilidade()">Cancelar</button>
             <button class="btn btn-blue" onclick="saveIndisponibilidade()">
                 <i class="fas fa-save"></i>
                 Registrar
@@ -78,12 +78,15 @@
     </div>
 </div>
 
+
+
 {% endblock %}
 
 {% block extra_js %}
 <script>
 // Variável global para armazenar status do período
 let periodoAberto = false;
+const isAdmin = {{ 'true' if current_user.is_admin else 'false' }};
 
 // Carregar status do período
 async function loadPeriodoStatus() {
@@ -119,8 +122,15 @@ async function loadPeriodoStatus() {
                     </div>
                 </div>
             `;
-            btnNova.disabled = true;
-            btnNova.style.opacity = '0.5';
+            
+            // Admin pode criar mesmo com período fechado
+            if (isAdmin) {
+                btnNova.disabled = false;
+                btnNova.style.opacity = '1';
+            } else {
+                btnNova.disabled = true;
+                btnNova.style.opacity = '0.5';
+            }
         }
     } catch (error) {
         console.error('Erro ao carregar status do período:', error);
@@ -132,6 +142,98 @@ async function loadPeriodoStatus() {
         `;
     }
 }
+
+// Mostrar notificação de sucesso moderna
+function showSuccessNotification(message) {
+    // Remover notificação existente
+    const existing = document.querySelector('.toast-notification');
+    if (existing) {
+        existing.remove();
+    }
+
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <i class="fas fa-check-circle" style="font-size: 1.25rem;"></i>
+            <span style="flex: 1; font-weight: 500;">${message}</span>
+            <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: white; cursor: pointer; opacity: 0.8; font-size: 1.25rem; padding: 0;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #10b981;
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 0.75rem;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        z-index: 9999;
+        min-width: 300px;
+        max-width: 500px;
+        animation: slideInRight 0.3s ease-out;
+    `;
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.animation = 'slideOutRight 0.3s ease-in';
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+}
+
+// Abrir modal de nova indisponibilidade
+function openModalIndisponibilidade() {
+    console.log('openModalIndisponibilidade chamada', { periodoAberto, isAdmin });
+    
+    // Verificar se pode criar (período aberto OU é admin)
+    if (!periodoAberto && !isAdmin) {
+        console.log('Período fechado e não é admin');
+        if (typeof App !== 'undefined' && App.toast) {
+            App.toast.warning('Período de registro está fechado no momento.');
+        } else {
+            alert('Período de registro está fechado no momento.');
+        }
+        return;
+    }
+    
+    // Abrir modal
+    console.log('Abrindo modal...');
+    const modal = document.getElementById('addIndisponibilidadeModal');
+    if (modal) {
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        console.log('Modal aberto');
+    } else {
+        console.error('Modal não encontrado!');
+    }
+    
+    // Carregar cultos disponíveis
+    console.log('Carregando cultos...');
+    loadCultosDisponiveis();
+}
+
+// Fechar modal de indisponibilidade
+function closeModalIndisponibilidade() {
+    const modal = document.getElementById('addIndisponibilidadeModal');
+    if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+        // Limpar formulário
+        document.getElementById('addIndisponibilidadeForm').reset();
+    }
+}
+
+// Fechar modal ao clicar no overlay
+document.addEventListener('click', function(e) {
+    const modalIndisp = document.getElementById('addIndisponibilidadeModal');
+    if (modalIndisp && e.target === modalIndisp) {
+        closeModalIndisponibilidade();
+    }
+});
 
 // Carregar cultos disponíveis
 async function loadCultosDisponiveis() {
@@ -232,7 +334,7 @@ async function loadIndisponibilidades() {
                                     ${item.culto_description || 'Indisponibilidade'}
                                 </div>
                                 <div style="font-size: 0.875rem; color: var(--gray-600);">
-                                    ${item.culto_date || App.format.date(item.data_inicio)} às ${item.culto_time || ''}
+                                    ${item.culto_date || new Date(item.data_inicio).toLocaleDateString('pt-BR')} ${item.culto_time ? 'às ' + item.culto_time : ''}
                                 </div>
                             </div>
                         </div>
@@ -280,12 +382,20 @@ async function saveIndisponibilidade() {
     const motivo = document.getElementById('motivoIndisponibilidade').value.trim();
     
     if (checkboxes.length === 0) {
-        App.toast.error('Selecione pelo menos um culto');
+        if (typeof App !== 'undefined' && App.toast) {
+            App.toast.error('Selecione pelo menos um culto');
+        } else {
+            alert('Selecione pelo menos um culto');
+        }
         return;
     }
     
     if (!motivo) {
-        App.toast.error('Informe o motivo da indisponibilidade');
+        if (typeof App !== 'undefined' && App.toast) {
+            App.toast.error('Informe o motivo da indisponibilidade');
+        } else {
+            alert('Informe o motivo da indisponibilidade');
+        }
         return;
     }
     
@@ -306,70 +416,70 @@ async function saveIndisponibilidade() {
         const data = await response.json();
         
         if (response.ok && data.success) {
-            App.toast.success(data.message);
-            App.modal.close('addIndisponibilidadeModal');
-            document.getElementById('addIndisponibilidadeForm').reset();
+            if (typeof App !== 'undefined' && App.toast) {
+                App.toast.success(data.message);
+            } else {
+                alert(data.message);
+            }
+            closeModalIndisponibilidade();
             loadIndisponibilidades();
         } else {
-            App.toast.error(data.message || 'Erro ao registrar indisponibilidade');
+            if (typeof App !== 'undefined' && App.toast) {
+                App.toast.error(data.message || 'Erro ao registrar indisponibilidade');
+            } else {
+                alert(data.message || 'Erro ao registrar indisponibilidade');
+            }
         }
     } catch (error) {
         console.error('Erro ao salvar indisponibilidade:', error);
-        App.toast.error('Erro ao processar requisição');
+        if (typeof App !== 'undefined' && App.toast) {
+            App.toast.error('Erro ao processar requisição');
+        } else {
+            alert('Erro ao processar requisição');
+        }
     }
 }
 
 // Deletar indisponibilidade
 async function deleteIndisponibilidade(id) {
-    GlobalModals.confirm(
-        'Tem certeza que deseja remover esta indisponibilidade?',
-        async () => {
-            try {
-                const response = await fetch(`/delete_indisponibilidade/${id}`, {
-                    method: 'DELETE'
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok && data.success) {
-                    GlobalModals.toast('Indisponibilidade removida com sucesso!', 'success');
-                    loadIndisponibilidades();
-                } else {
-                    GlobalModals.toast(data.message || 'Erro ao remover indisponibilidade', 'error');
-                }
-            } catch (error) {
-                GlobalModals.toast('Erro ao remover indisponibilidade', 'error');
-            }
-        },
-        'Confirmar Exclusão'
-    );
-}
-
-// Inicializar quando modal abre
-document.getElementById('addIndisponibilidadeModal').addEventListener('click', function(e) {
-    if (e.target.id === 'addIndisponibilidadeModal' || e.target.closest('.modal-close')) {
+    if (!confirm('Tem certeza que deseja remover esta indisponibilidade?')) {
         return;
     }
     
-    // Carregar cultos quando modal é aberto
-    const cultosContainer = document.getElementById('cultosCheckboxList');
-    if (cultosContainer && cultosContainer.children.length === 1 && cultosContainer.textContent.includes('Carregando')) {
-        loadCultosDisponiveis();
-    }
-});
-
-// Event listener para abrir modal
-const btnNova = document.getElementById('btnNovaIndisponibilidade');
-if (btnNova) {
-    btnNova.addEventListener('click', function() {
-        if (periodoAberto) {
-            loadCultosDisponiveis();
+    try {
+        const response = await fetch(`/delete_indisponibilidade/${id}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            if (typeof App !== 'undefined' && App.toast) {
+                App.toast.success('Indisponibilidade removida com sucesso!');
+            } else {
+                alert('Indisponibilidade removida com sucesso!');
+            }
+            loadIndisponibilidades();
+        } else {
+            if (typeof App !== 'undefined' && App.toast) {
+                App.toast.error(data.message || 'Erro ao remover indisponibilidade');
+            } else {
+                alert(data.message || 'Erro ao remover indisponibilidade');
+            }
         }
-    });
+    } catch (error) {
+        console.error('Erro ao remover indisponibilidade:', error);
+        if (typeof App !== 'undefined' && App.toast) {
+            App.toast.error('Erro ao remover indisponibilidade');
+        } else {
+            alert('Erro ao remover indisponibilidade');
+        }
+    }
 }
 
 // Carregar ao abrir página
 document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar status e indisponibilidades
     loadPeriodoStatus();
     loadIndisponibilidades();
 });

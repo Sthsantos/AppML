@@ -76,12 +76,13 @@
 <div class="modal-overlay" id="addSongModal">
     <div class="modal">
         <div class="modal-header">
-            <h2 class="modal-title">Adicionar Nova Música</h2>
+            <h2 class="modal-title" id="songModalTitle">Adicionar Nova Música</h2>
             <button class="modal-close" onclick="closeModal('addSongModal')">
                 <i class="fas fa-times"></i>
             </button>
         </div>
         <form id="addSongForm" class="modal-body">
+            <input type="hidden" id="editingSongId" value="">
             <div class="form-group">
                 <label class="form-label"><i class="fas fa-heading"></i> Título *</label>
                 <input type="text" name="title" class="form-control" required placeholder="Nome da música">
@@ -134,6 +135,12 @@
             </div>
             <div class="form-group">
                 <label class="form-label"><i class="fas fa-file-audio"></i> Arquivo de Áudio (VS/Playback)</label>
+                <div id="currentAudioInfo" style="display: none; padding: 0.75rem; background: var(--bg-secondary); border-radius: var(--radius-md); margin-bottom: 0.5rem; border-left: 3px solid var(--primary-500);">
+                    <i class="fas fa-music" style="color: var(--primary-600);"></i>
+                    <strong>Arquivo atual:</strong> <span id="currentAudioName"></span>
+                    <br>
+                    <small style="color: var(--text-muted);">Selecione um novo arquivo abaixo para substituir</small>
+                </div>
                 <input type="file" id="audioFileInput" name="audio_file" class="form-control" accept="audio/*" onchange="validateAudioFile(this)">
                 <small class="form-text text-muted">MP3, WAV, OGG, M4A, AAC, FLAC (máx 50MB)</small>
                 <small id="fileInfo" class="form-text text-success" style="display: none;"></small>
@@ -149,9 +156,9 @@
         </form>
         <div class="modal-footer">
             <button class="btn btn-outline" onclick="closeModal('addSongModal')">Cancelar</button>
-            <button class="btn btn-blue" onclick="saveSong()">
+            <button class="btn btn-blue" onclick="saveSong()" id="saveSongBtn">
                 <i class="fas fa-save"></i>
-                Salvar Música
+                <span id="saveSongBtnText">Salvar Música</span>
             </button>
         </div>
     </div>
@@ -166,6 +173,8 @@ let allSongs = [];
 
 // Funções locais para modal (evita dependência do App)
 function openModal(modalId) {
+    // Scroll suave para o topo antes de abrir o modal
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.add('active');
@@ -178,6 +187,15 @@ function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.remove('active');
+        // Limpar modo de edição
+        if (modalId === 'addSongModal') {
+            document.getElementById('editingSongId').value = '';
+            document.getElementById('songModalTitle').textContent = 'Adicionar Nova Música';
+            document.getElementById('saveSongBtnText').textContent = 'Salvar Música';
+            document.getElementById('addSongForm').reset();
+            document.getElementById('fileInfo').style.display = 'none';
+            document.getElementById('currentAudioInfo').style.display = 'none';
+        }
         setTimeout(() => {
             modal.style.display = 'none';
             document.body.style.overflow = '';
@@ -319,9 +337,14 @@ function renderSongs(songs) {
                         </p>
                     </div>
                     {% if current_user.is_admin %}
-                    <button onclick="deleteSong(${song.id})" class="btn btn-sm btn-danger" style="padding: 0.5rem;">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button onclick="editSong(${song.id})" class="btn btn-sm btn-primary" style="padding: 0.5rem;" title="Editar música">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="deleteSong(${song.id})" class="btn btn-sm btn-danger" style="padding: 0.5rem;" title="Excluir música">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
                     {% endif %}
                 </div>
                 <div style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
@@ -433,40 +456,106 @@ function validateAudioFile(input) {
     fileInfo.style.display = 'block';
 }
 
+// Abrir modal para editar música
+function editSong(songId) {
+    const song = allSongs.find(s => s.id === songId);
+    if (!song) {
+        showToast('Música não encontrada', 'error');
+        return;
+    }
+    
+    // Preencher formulário com dados da música
+    document.getElementById('editingSongId').value = song.id;
+    document.querySelector('[name="title"]').value = song.title || '';
+    document.querySelector('[name="artist"]').value = song.artist || '';
+    document.querySelector('[name="key_tone"]').value = song.key_tone || '';
+    document.querySelector('[name="tempo"]').value = song.tempo || '';
+    document.querySelector('[name="category"]').value = song.category || '';
+    document.querySelector('[name="link_video"]').value = song.link_video || '';
+    document.querySelector('[name="link_audio"]').value = song.link_audio || '';
+    document.querySelector('[name="lyrics"]').value = song.lyrics || '';
+    document.querySelector('[name="notes"]').value = song.notes || '';
+    
+    // Mostrar arquivo de áudio atual se existir
+    const currentAudioInfo = document.getElementById('currentAudioInfo');
+    const currentAudioName = document.getElementById('currentAudioName');
+    if (song.audio_file) {
+        currentAudioName.textContent = song.audio_file;
+        currentAudioInfo.style.display = 'block';
+    } else {
+        currentAudioInfo.style.display = 'none';
+    }
+    
+    // Atualizar título do modal e botão
+    document.getElementById('songModalTitle').textContent = 'Editar Música';
+    document.getElementById('saveSongBtnText').textContent = 'Atualizar Música';
+    
+    // Abrir modal
+    openModal('addSongModal');
+}
+
 async function saveSong() {
     const form = document.getElementById('addSongForm');
-    const formData = new FormData(form);
+    const editingId = document.getElementById('editingSongId').value;
+    const isEditing = editingId !== '';
     
     // Verificar se título foi preenchido
-    if (!formData.get('title')) {
+    const title = document.querySelector('[name="title"]').value;
+    if (!title) {
         showToast('O título da música é obrigatório!', 'error');
         return;
     }
     
-    // Verificar se há arquivo anexado
-    const audioFile = document.getElementById('audioFileInput').files[0];
-    const loadingMessage = audioFile ? 'Salvando música e enviando arquivo...' : 'Salvando música...';
-    
     try {
+        const formData = new FormData(form);
+        const audioFile = document.getElementById('audioFileInput').files[0];
+        const loadingMessage = audioFile ? 
+            (isEditing ? 'Atualizando música e enviando arquivo...' : 'Salvando música e enviando arquivo...') : 
+            (isEditing ? 'Atualizando música...' : 'Salvando música...');
+        
         showLoading(loadingMessage);
         
-        const response = await fetch('/add_musica', {
-            method: 'POST',
-            body: formData
-        });
+        let response, result;
         
-        const result = await response.json();
+        if (isEditing) {
+            // Modo edição - usar POST com FormData
+            response = await fetch(`/update_musica/${editingId}`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            result = await response.json();
+            
+            if (result.success) {
+                showToast('Música atualizada com sucesso!', 'success');
+            }
+        } else {
+            // Modo criação - usar POST com FormData
+            response = await fetch('/add_musica', {
+                method: 'POST',
+                body: formData
+            });
+            
+            result = await response.json();
+            
+            if (result.success) {
+                showToast('Música adicionada com sucesso!', 'success');
+            }
+        }
         
         hideLoading();
         
         if (result.success) {
-            showToast('Música adicionada com sucesso!', 'success');
             closeModal('addSongModal');
             form.reset();
             document.getElementById('fileInfo').style.display = 'none';
+            document.getElementById('currentAudioInfo').style.display = 'none';
+            document.getElementById('editingSongId').value = '';
+            document.getElementById('songModalTitle').textContent = 'Adicionar Nova Música';
+            document.getElementById('saveSongBtnText').textContent = 'Salvar Música';
             loadSongs();
         } else {
-            showToast(result.message || 'Erro ao adicionar música', 'error');
+            showToast(result.message || 'Erro ao salvar música', 'error');
         }
     } catch (error) {
         hideLoading();

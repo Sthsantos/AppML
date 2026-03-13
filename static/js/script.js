@@ -17,23 +17,28 @@ const App = {
     theme: {
         current: 'light',
         storageAvailable: false,
+        transitioning: false,
 
         init() {
+            console.log('🎨 Iniciando sistema de tema...');
+            
             // Verificar se localStorage está disponível (iOS modo privado pode bloquear)
             this.storageAvailable = this.checkStorageAvailable();
+            console.log('💾 LocalStorage disponível?', this.storageAvailable);
             
-            // Carregar tema salvo ou detectar preferência do sistema
-            let savedTheme = null;
-            if (this.storageAvailable) {
-                savedTheme = localStorage.getItem('theme');
-            }
-            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            // Ler tema atual do data-theme (já foi aplicado no head)
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            console.log('📖 Tema lido do HTML:', currentTheme);
             
-            this.current = savedTheme || (prefersDark ? 'dark' : 'light');
-            this.apply(this.current);
+            this.current = currentTheme || 'light';
+            console.log('✅ Tema atual definido:', this.current);
             
             // Atualizar ícone
             this.updateIcon();
+            console.log('🔄 Ícone atualizado');
+            
+            // Adicionar classe de transição suave ao body
+            document.body.style.transition = 'background-color 0.3s ease, color 0.3s ease';
         },
 
         checkStorageAvailable() {
@@ -49,35 +54,93 @@ const App = {
         },
 
         apply(theme) {
-            document.documentElement.setAttribute('data-theme', theme);
+            console.log('🎨 Aplicando tema:', theme);
+            const html = document.documentElement;
+            const oldTheme = html.getAttribute('data-theme');
+            
+            // Prevenir múltiplas transições simultâneas
+            if (this.transitioning) {
+                console.log('⏸️ Transição em andamento, aguardando...');
+                return;
+            }
+            
+            this.transitioning = true;
+            
+            // Aplicar tema ao elemento HTML
+            html.setAttribute('data-theme', theme);
+            console.log('📝 HTML attribute alterado de', oldTheme, 'para', html.getAttribute('data-theme'));
+            
+            // Atualizar meta theme-color para navegadores móveis
+            this.updateMetaThemeColor(theme);
+            
             this.current = theme;
+            
+            // Salvar no localStorage
             if (this.storageAvailable) {
                 try {
                     localStorage.setItem('theme', theme);
+                    console.log('💾 Tema salvo no localStorage:', theme);
                 } catch(e) {
                     console.warn('⚠️ Não foi possível salvar tema:', e);
                 }
             }
+            
+            // Liberar transição após animação
+            setTimeout(() => {
+                this.transitioning = false;
+            }, 350);
         },
 
         toggle() {
+            console.log('🔄 Toggle tema - Atual:', this.current);
             const newTheme = this.current === 'light' ? 'dark' : 'light';
+            console.log('🔄 Novo tema:', newTheme);
+            
+            // Adicionar animação de rotação ao botão clicado
+            const buttons = document.querySelectorAll('.theme-toggle, .theme-toggle-login');
+            buttons.forEach(btn => {
+                btn.style.transform = 'rotate(360deg)';
+                setTimeout(() => {
+                    btn.style.transform = '';
+                }, 300);
+            });
+            
             this.apply(newTheme);
             this.updateIcon();
             
+            console.log('✅ Tema aplicado!');
+            
             // Feedback visual
             if (App.toast && App.toast.success) {
-                App.toast.success(`Tema ${newTheme === 'dark' ? 'escuro' : 'claro'} ativado!`);
+                const message = newTheme === 'dark' ? '🌙 Tema escuro ativado!' : '☀️ Tema claro ativado!';
+                App.toast.success(message);
             }
         },
 
         updateIcon() {
             const icons = document.querySelectorAll('.theme-toggle i, .theme-toggle-login i');
+            const iconClass = this.current === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+            console.log('🎭 Atualizando ícones para:', iconClass, '(', icons.length, 'encontrados)');
+            
             icons.forEach(icon => {
                 if (icon) {
-                    icon.className = this.current === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+                    // Animação suave de fade para o ícone
+                    icon.style.opacity = '0';
+                    setTimeout(() => {
+                        icon.className = iconClass;
+                        icon.style.opacity = '1';
+                    }, 150);
                 }
             });
+        },
+        
+        updateMetaThemeColor(theme) {
+            const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+            if (metaThemeColor) {
+                const color = theme === 'dark' ? '#1a1a2e' : '#667eea';
+                metaThemeColor.setAttribute('content', color);
+                console.log('🎨 Meta theme-color atualizado para:', color);
+            }
         }
     },
 
@@ -828,6 +891,55 @@ async function loadDashboardStats() {
 }
 
 // ========================================
+// EXPORTAR APP GLOBALMENTE (IMPORTANTE!)
+// ========================================
+window.App = App;
+console.log('✅ App exportado para window.App');
+
+// ========================================
+// FUNÇÃO GLOBAL PARA TOGGLE DE TEMA (SEMPRE DISPONÍVEL)
+// ========================================
+function toggleTheme() {
+    console.log('🔄 toggleTheme() chamado!');
+    
+    // Verificar se App.theme está disponível
+    if (window.App && window.App.theme && typeof window.App.theme.toggle === 'function') {
+        console.log('✅ Usando App.theme.toggle()');
+        window.App.theme.toggle();
+    } else {
+        // Fallback robusto
+        console.warn('⚠️ App.theme não disponível, usando fallback');
+        const html = document.documentElement;
+        const currentTheme = html.getAttribute('data-theme') || 'light';
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        
+        console.log('🔄 Alternando:', currentTheme, '→', newTheme);
+        html.setAttribute('data-theme', newTheme);
+        
+        // Atualizar ícones
+        const icons = document.querySelectorAll('.theme-toggle i, .theme-toggle-login i');
+        const iconClass = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+        icons.forEach(icon => {
+            if (icon) {
+                icon.className = iconClass;
+            }
+        });
+        
+        // Salvar no localStorage
+        try {
+            localStorage.setItem('theme', newTheme);
+            console.log('💾 Tema salvo:', newTheme);
+        } catch(e) {
+            console.warn('⚠️ Erro ao salvar:', e);
+        }
+    }
+}
+
+// Tornar função disponível globalmente
+window.toggleTheme = toggleTheme;
+console.log('✅ toggleTheme() disponível globalmente');
+
+// ========================================
 // INICIALIZAÇÃO
 // ========================================
 document.addEventListener('DOMContentLoaded', () => {
@@ -885,6 +997,3 @@ document.addEventListener('DOMContentLoaded', () => {
         }, index * 100);
     });
 });
-
-// Exportar App para uso global
-window.App = App;

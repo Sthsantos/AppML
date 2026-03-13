@@ -1,0 +1,404 @@
+{% extends "base.html" %}
+
+<!-- Template Avisos - Corrigido -->
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <i class="fas fa-bullhorn"></i>
+            Avisos e Comunicados
+        </h1>
+        <p class="page-subtitle">Fique por dentro das novidades do ministério</p>
+    </div>
+    {% if current_user.is_admin %}
+    <button onclick="openAddAvisoModal()" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Criar Novo Aviso
+    </button>
+    {% endif %}
+</div>
+
+<!-- Lista de Avisos -->
+<div class="section">
+    <div class="card">
+        <div class="card-body">
+            <div id="avisosList" style="display: flex; flex-direction: column; gap: 1rem;">
+                <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i>
+                    <p style="margin-top: 1rem;">Carregando avisos...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Adicionar Aviso -->
+{% if current_user.is_admin %}
+<div id="addAvisoModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="fas fa-bullhorn"></i> Novo Aviso</h2>
+            <button class="modal-close" onclick="closeAddAvisoModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form onsubmit="submitAviso(event)">
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-heading"></i> Título
+                </label>
+                <input type="text" id="avisoTitle" class="form-control" required placeholder="Digite o título do aviso">
+            </div>
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-align-left"></i> Mensagem
+                </label>
+                <textarea id="avisoMessage" class="form-control" rows="4" required placeholder="Digite a mensagem do aviso"></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-flag"></i> Prioridade
+                </label>
+                <select id="avisoPriority" class="form-control">
+                    <option value="low">Baixa</option>
+                    <option value="normal" selected>Normal</option>
+                    <option value="high">Alta</option>
+                    <option value="urgent">Urgente</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">
+                <i class="fas fa-paper-plane"></i> Publicar Aviso
+            </button>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Abrir modal de adicionar aviso
+    function openAddAvisoModal() {
+        document.getElementById('addAvisoModal').style.display = 'flex';
+    }
+
+    // Fechar modal
+    function closeAddAvisoModal() {
+        document.getElementById('addAvisoModal').style.display = 'none';
+    }
+
+    // Carregar avisos
+    async function loadAvisos() {
+        const avisosList = document.getElementById('avisosList');
+        if (!avisosList) return;
+
+        try {
+            const response = await fetch('/get_avisos');
+            const avisos = await response.json();
+            
+            if (avisos.length === 0) {
+                avisosList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-bullhorn"></i>
+                        <h3>Nenhum aviso disponível</h3>
+                        <p>Não há avisos publicados no momento</p>
+                    </div>
+                `;
+            } else {
+                const priorityConfig = {
+                    urgent: { icon: 'fa-exclamation-circle', color: '#ef4444', label: 'Urgente' },
+                    high: { icon: 'fa-exclamation-triangle', color: '#f59e0b', label: 'Alta' },
+                    normal: { icon: 'fa-info-circle', color: '#3b82f6', label: 'Normal' },
+                    low: { icon: 'fa-check-circle', color: '#10b981', label: 'Baixa' }
+                };
+                
+                avisosList.innerHTML = avisos.map((aviso, index) => {
+                    const config = priorityConfig[aviso.priority] || priorityConfig.normal;
+                    return `
+                        <div style="padding: 1.5rem; background: var(--bg-secondary); border-radius: var(--border-radius); border-left: 4px solid ${config.color}; animation: fadeIn 0.3s ease-in-out; animation-delay: ${index * 0.1}s; opacity: 0; animation-fill-mode: forwards;">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                                <div style="flex: 1;">
+                                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                                        <i class="fas ${config.icon}" style="color: ${config.color}; font-size: 1.3rem;"></i>
+                                        <h3 style="margin: 0; color: var(--text-color); font-size: 1.3rem;">${aviso.title}</h3>
+                                    </div>
+                                    <span style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.75rem; background: ${config.color}20; color: ${config.color}; border-radius: 4px; font-size: 0.85rem; font-weight: 600;">
+                                        ${config.label}
+                                    </span>
+                                </div>
+                                {% if current_user.is_admin %}
+                                <button onclick="deleteAviso(${aviso.id})" class="btn btn-danger" style="padding: 0.5rem 1rem;">
+                                    <i class="fas fa-trash"></i> Remover
+                                </button>
+                                {% endif %}
+                            </div>
+                            <p style="margin: 1rem 0 0.5rem 0; color: var(--text-secondary); font-size: 1.05rem; line-height: 1.6;">${aviso.message}</p>
+                            <small style="color: var(--text-muted); display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-clock"></i> ${App.format.datetime(aviso.created_at)}
+                            </small>
+                        </div>
+                    `;
+                }).join('');
+            }
+        } catch (error) {
+            console.error('Erro ao carregar avisos:', error);
+            avisosList.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>Erro ao carregar avisos</h3>
+                    <p>Tente novamente mais tarde</p>
+                </div>
+            `;
+        }
+    }
+
+    // Enviar novo aviso
+    async function submitAviso(event) {
+        event.preventDefault();
+        
+        const title = document.getElementById('avisoTitle').value;
+        const message = document.getElementById('avisoMessage').value;
+        const priority = document.getElementById('avisoPriority').value;
+        
+        try {
+            const response = await fetch('/add_aviso', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ title, message, priority })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                App.toast.show('Aviso publicado com sucesso!', 'success');
+                closeAddAvisoModal();
+                document.getElementById('avisoTitle').value = '';
+                document.getElementById('avisoMessage').value = '';
+                document.getElementById('avisoPriority').value = 'normal';
+                loadAvisos();
+            } else {
+                App.toast.show(result.message || 'Erro ao publicar aviso', 'error');
+            }
+        } catch (error) {
+            console.error('Erro ao publicar aviso:', error);
+            App.toast.show('Erro ao publicar aviso', 'error');
+        }
+    }
+
+    // Deletar aviso
+    async function deleteAviso(avisoId) {
+        GlobalModals.confirm(
+            'Deseja realmente remover este aviso?',
+            async () => {
+                try {
+                    const response = await fetch(`/delete_aviso/${avisoId}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        GlobalModals.toast('Aviso removido com sucesso!', 'success');
+                        loadAvisos();
+                    } else {
+                        GlobalModals.toast(result.message || 'Erro ao remover aviso', 'error');
+                    }
+                } catch (error) {
+                    console.error('Erro ao remover aviso:', error);
+                    GlobalModals.toast('Erro ao remover aviso', 'error');
+                }
+            },
+            'Confirmar Exclusão'
+        );
+    }
+
+    // Fechar modal ao clicar fora
+    window.onclick = function(event) {
+        const modal = document.getElementById('addAvisoModal');
+        if (event.target === modal) {
+            closeAddAvisoModal();
+        }
+    }
+
+    // Carregar ao iniciar
+    document.addEventListener('DOMContentLoaded', loadAvisos);
+</script>
+
+<style>
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .modal-content {
+        background-color: var(--bg-primary);
+        margin: auto;
+        padding: 0;
+        border-radius: var(--border-radius);
+        width: 90%;
+        max-width: 600px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .modal-header h2 {
+        margin: 0;
+        color: var(--text-color);
+    }
+    
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: var(--text-muted);
+        transition: color 0.3s;
+    }
+    
+    .modal-close:hover {
+        color: var(--text-color);
+    }
+    
+    .modal-content form {
+        padding: 1.5rem;
+    }
+</style>
+{% endblock %}
+            
+            if (result.success) {
+                const avisos = result.data;
+                
+                if (avisos.length === 0) {
+                    avisosList.innerHTML = '<p class="no-announcements">Nenhum aviso disponível.</p>';
+                } else {
+                    avisosList.innerHTML = '';
+                    avisos.forEach((aviso, index) => {
+                        const div = document.createElement('div');
+                        div.className = 'announcement-item animate-slide-left';
+                        div.style.animationDelay = `${index * 0.1}s`;
+                        
+                        const priorityIcons = {
+                            urgent: '🔴',
+                            high: '🟠',
+                            normal: '🟢',
+                            low: '🔵'
+                        };
+                        
+                        const priorityLabels = {
+                            urgent: 'Urgente',
+                            high: 'Alta',
+                            normal: 'Normal',
+                            low: 'Baixa'
+                        };
+                        
+                        div.innerHTML = `
+                            <div class="d-flex justify-between align-center mb-2">
+                                <div>
+                                    <strong style="font-size: 1.2rem;">${priorityIcons[aviso.priority]} ${aviso.title}</strong>
+                                    <br>
+                                    <span class="badge badge-pill badge-${aviso.priority === 'urgent' || aviso.priority === 'high' ? 'danger' : 'primary'}">
+                                        ${priorityLabels[aviso.priority]}
+                                    </span>
+                                </div>
+                                {% if current_user.is_admin %}
+                                <button onclick="deleteAviso(${aviso.id})" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                            <p style="margin-top: 0.5rem;">${aviso.message}</p>
+                            <small style="color: var(--text-muted);">
+                                <i class="fas fa-clock"></i> ${aviso.created_at}
+                            </small>
+                        `;
+                        avisosList.appendChild(div);
+                    });
+                }
+            } else {
+                avisosList.innerHTML = '<p class="text-center">Erro ao carregar avisos.</p>';
+            }
+        }
+
+        // Enviar novo aviso
+        async function submitAviso(event) {
+            event.preventDefault();
+            
+            const title = document.getElementById('avisoTitle').value;
+            const message = document.getElementById('avisoMessage').value;
+            const priority = document.getElementById('avisoPriority').value;
+            
+            App.loading.show('Publicando aviso...');
+            
+            const result = await App.api.post('/add_aviso', { title, message, priority });
+            
+            App.loading.hide();
+            
+            if (result.success && result.data.success) {
+                App.toast.success('Aviso publicado com sucesso!');
+                App.modal.close('addAvisoModal');
+                document.getElementById('avisoTitle').value = '';
+                document.getElementById('avisoMessage').value = '';
+                document.getElementById('avisoPriority').value = 'normal';
+                loadAvisos();
+            } else {
+                App.toast.error('Erro ao publicar aviso.');
+            }
+        }
+
+        // Deletar aviso
+        async function deleteAviso(avisoId) {
+            GlobalModals.confirm(
+                'Deseja realmente remover este aviso?',
+                async () => {
+                    App.loading.show('Removendo aviso...');
+                    
+                    const result = await App.api.delete(`/delete_aviso/${avisoId}`);
+                    
+                    App.loading.hide();
+                    
+                    if (result.success && result.data.success) {
+                        GlobalModals.toast('Aviso removido com sucesso!', 'success');
+                        loadAvisos();
+                    } else {
+                        GlobalModals.toast('Erro ao remover aviso.', 'error');
+                    }
+                },
+                'Confirmar Exclusão'
+            );
+            }
+        }
+
+        // Carregar ao iniciar
+        document.addEventListener('DOMContentLoaded', loadAvisos);
+    </script>
+</body>
+</html>

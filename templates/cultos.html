@@ -456,6 +456,9 @@ function openEditCultoModal(id, name, dateTime, description) {
     document.getElementById('editCultoDateTime').value = dateTime;
     document.getElementById('editCultoDescription').value = description || '';
     
+    // Scroll suave para o topo antes de abrir o modal
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
     if (typeof App !== 'undefined' && App.modal) {
         App.modal.open('editCultoModal');
     } else {

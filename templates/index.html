@@ -116,6 +116,24 @@
                 </div>
             </div>
         </a>
+        
+        <!-- Meu Perfil (Novo) -->
+        <a href="{{ url_for('perfil') }}" class="card feature-card fade-in" style="text-decoration: none; animation-delay: 0.05s;">
+            <div class="card-body" style="display: flex; flex-direction: column; gap: 1rem;">
+                <div style="width: 60px; height: 60px; border-radius: 12px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.8rem;">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <div>
+                    <h3 class="feature-title">Meu Perfil</h3>
+                    <p class="feature-description">
+                        Edite suas informações pessoais e adicione sua foto
+                    </p>
+                </div>
+                <div class="feature-arrow">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+            </div>
+        </a>
 
         <a href="{{ url_for('cultos') }}" class="card feature-card fade-in" style="text-decoration: none; animation-delay: 0.1s;">
             <div class="card-body" style="display: flex; flex-direction: column; gap: 1rem;">
@@ -500,6 +518,23 @@
 </style>
 
 <script>
+// Formatar data relativa local
+function formatRelativeDate(dateTimeString) {
+    const date = new Date(dateTimeString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Agora';
+    if (diffMins < 60) return `${diffMins} min atrás`;
+    if (diffHours < 24) return `${diffHours}h atrás`;
+    if (diffDays === 1) return 'Ontem';
+    if (diffDays < 7) return `${diffDays} dias atrás`;
+    return date.toLocaleDateString('pt-BR');
+}
+
 // Carregar avisos
 async function loadAnnouncements() {
     try {
@@ -509,24 +544,51 @@ async function loadAnnouncements() {
         
         if (avisos && avisos.length > 0) {
             const latest = avisos.slice(0, 3);
-            container.innerHTML = latest.map(aviso => {
+            container.innerHTML = latest.map((aviso, index) => {
                 const priorityConfig = {
-                    urgent: { icon: 'fa-exclamation-circle', color: '#ef4444', label: 'Urgente' },
-                    high: { icon: 'fa-exclamation-triangle', color: '#f59e0b', label: 'Alta' },
-                    normal: { icon: 'fa-info-circle', color: '#3b82f6', label: 'Normal' },
-                    low: { icon: 'fa-check-circle', color: '#10b981', label: 'Baixa' }
+                    urgent: { 
+                        icon: 'fa-exclamation-circle', 
+                        color: '#ef4444', 
+                        bg: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.05))',
+                        label: 'Urgente' 
+                    },
+                    high: { 
+                        icon: 'fa-exclamation-triangle', 
+                        color: '#f59e0b', 
+                        bg: 'linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.05))',
+                        label: 'Alta' 
+                    },
+                    normal: { 
+                        icon: 'fa-info-circle', 
+                        color: '#3b82f6', 
+                        bg: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.05))',
+                        label: 'Normal' 
+                    },
+                    low: { 
+                        icon: 'fa-check-circle', 
+                        color: '#10b981', 
+                        bg: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.05))',
+                        label: 'Baixa' 
+                    }
                 };
                 const config = priorityConfig[aviso.priority] || priorityConfig.normal;
                 
                 return `
-                    <div class="card fade-in" style="border-left: 4px solid ${config.color};">
+                    <div class="card fade-in" style="border-left: 4px solid ${config.color}; animation-delay: ${index * 0.1}s; background: ${config.bg};">
                         <div class="card-body">
                             <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-                                <i class="fas ${config.icon}" style="color: ${config.color}; font-size: 1.2rem;"></i>
-                                <h3 style="margin: 0; font-weight: 600; color: var(--text-color); flex: 1;">${aviso.title}</h3>
-                                <span style="font-size: 0.85rem; color: var(--text-muted);">${App.format.relativeDate(aviso.created_at)}</span>
+                                <i class="fas ${config.icon}" style="color: ${config.color}; font-size: 1.25rem;"></i>
+                                <h3 style="margin: 0; font-weight: 700; color: var(--gray-900); flex: 1; font-size: 1.1rem;">${aviso.title}</h3>
+                                <span style="display: inline-block; padding: 0.25rem 0.5rem; background: var(--gray-100); border-radius: 1rem; font-size: 0.75rem; font-weight: 600; color: var(--gray-700);">
+                                    <i class="fas fa-clock"></i> ${formatRelativeDate(aviso.created_at)}
+                                </span>
                             </div>
-                            <p style="margin: 0; color: var(--text-secondary); line-height: 1.6;">${aviso.message}</p>
+                            <p style="margin: 0.5rem 0 0 0; color: var(--gray-700); line-height: 1.6; white-space: pre-wrap;">${aviso.message}</p>
+                            <div style="margin-top: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="display: inline-block; padding: 0.2rem 0.6rem; background: ${config.color}; color: white; border-radius: 0.5rem; font-size: 0.75rem; font-weight: 600;">
+                                    <i class="fas fa-flag"></i> ${config.label}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -536,12 +598,22 @@ async function loadAnnouncements() {
                 <div class="empty-state">
                     <i class="fas fa-bullhorn"></i>
                     <h3>Nenhum aviso recente</h3>
-                    <p>Não há avisos publicados no momento</p>
+                    <p>Quando houver avisos publicados, eles aparecerão aqui</p>
                 </div>
             `;
         }
     } catch (error) {
         console.error('Erro ao carregar avisos:', error);
+        const container = document.getElementById('announcementsList');
+        if (container) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-exclamation-triangle" style="color: var(--danger-color);"></i>
+                    <h3>Erro ao carregar avisos</h3>
+                    <p>Por favor, recarregue a página</p>
+                </div>
+            `;
+        }
     }
 }
 
