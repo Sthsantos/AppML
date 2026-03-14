@@ -110,7 +110,7 @@ class User(db.Model, UserMixin):
     """Modelo para usuários administradores."""
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(120), nullable=False)  # Armazena o hash da senha
+    password = db.Column(db.String(255), nullable=False)  # Armazena o hash da senha
     is_admin = db.Column(db.Boolean, default=False)  # Mantido para compatibilidade
     role = db.Column(db.String(20), default=ROLE_MEMBRO)  # Nível de permissão
     avatar = db.Column(db.String(255), nullable=True, default='default-avatar.png')  # Foto de perfil
@@ -142,7 +142,7 @@ class Member(db.Model, UserMixin):
     instrument = db.Column(db.String(120), nullable=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     phone = db.Column(db.String(20), nullable=True)
-    password = db.Column(db.String(120), nullable=False)  # Armazena o hash da senha para membros
+    password = db.Column(db.String(255), nullable=False)  # Armazena o hash da senha para membros
     suspended = db.Column(db.Boolean, default=False)  # Campo para indicar suspensão
     is_admin = db.Column(db.Boolean, default=False)  # Mantido para compatibilidade
     role = db.Column(db.String(20), default=ROLE_MEMBRO)  # Nível de permissão
