@@ -136,6 +136,8 @@
                     <option value="Baterista">Baterista</option>
                     <option value="Tecladista">Tecladista</option>
                     <option value="Baixista">Baixista</option>
+                    <option value="Ministro">Ministro</option>
+                    <option value="Back Vocal">Back Vocal</option>
                 </select>
             </div>
             <div class="form-group">
@@ -228,6 +230,8 @@
                     <option value="Baterista">Baterista</option>
                     <option value="Tecladista">Tecladista</option>
                     <option value="Baixista">Baixista</option>
+                    <option value="Ministro">Ministro</option>
+                    <option value="Back Vocal">Back Vocal</option>
                 </select>
             </div>
             <div class="form-group">
@@ -690,11 +694,11 @@ async function loadCultosPendentes() {
         
         console.log('Escalas por culto:', escalasPorCulto);
         
-        // Cultos pendentes (sem 5 membros)
+        // Cultos pendentes (sem membros escalados)
         const cultosPendentes = cultosFuturos.filter(c => {
             const count = escalasPorCulto[c.id] || 0;
-            const isPendente = count < 5;
-            console.log(`Culto ${c.id} (${c.name}): ${count}/5 membros - Pendente: ${isPendente}`);
+            const isPendente = count === 0;
+            console.log(`Culto ${c.id} (${c.name}): ${count} membros - Pendente: ${isPendente}`);
             return isPendente;
         });
         
@@ -706,7 +710,7 @@ async function loadCultosPendentes() {
             container.innerHTML = `
                 <div class="empty-state">
                     <i class="fas fa-check-circle" style="color: var(--accent-success);"></i>
-                    <h3>Todos os cultos têm escalas completas!</h3>
+                    <h3>Todos os cultos têm escalas!</h3>
                     <p>Não há cultos pendentes</p>
                 </div>
             `;
@@ -740,7 +744,6 @@ async function loadCultosPendentes() {
         
         container.innerHTML = cultosComIndisponibilidade.map(culto => {
             const count = escalasPorCulto[culto.id] || 0;
-            const faltam = 5 - count;
             
             // Garantir que membrosAtualizado existe e tem dados
             if (!culto.membrosAtualizado || culto.membrosAtualizado.length === 0) {
@@ -751,8 +754,7 @@ async function loadCultosPendentes() {
             console.log(`🎨 Renderizando culto ${culto.id}:`, {
                 name: culto.name,
                 membrosAtualizado: culto.membrosAtualizado ? culto.membrosAtualizado.length : 'UNDEFINED',
-                count: count,
-                faltam: faltam
+                count: count
             });
             
             // Detecta Santa Ceia pela descrição
@@ -762,8 +764,8 @@ async function loadCultosPendentes() {
             
             // Texto do botão
             const btnText = count === 0 
-                ? '<i class="fas fa-plus"></i> Criar Escala Completa'
-                : `<i class="fas fa-user-plus"></i> Adicionar Membros (${count}/5 - faltam ${faltam})`;
+                ? '<i class="fas fa-plus"></i> Criar Escala'
+                : `<i class="fas fa-user-plus"></i> Adicionar Membros`;
             
             return `
                 <div class="card mb-3 fade-in" style="border-left: 4px solid ${badgeColor};">
@@ -774,7 +776,6 @@ async function loadCultosPendentes() {
                                 ${isSantaCeia ? '<span class="badge" style="background: #dc2626; color: white; margin-left: 0.5rem;">SANTA CEIA</span>' : ''}
                             </h3>
                             <p class="card-subtitle">${formatDatetime(culto.date_time)}</p>
-                            ${count > 0 ? `<span class="badge" style="background: var(--accent-warning); color: white; margin-top: 0.5rem;"><i class="fas fa-exclamation-circle"></i> ${count}/5 membros - Faltam ${faltam}</span>` : ''}
                         </div>
                         <button class="btn btn-blue" onclick="toggleCreateEscalaForm(${culto.id})" id="toggleBtn${culto.id}">
                             ${btnText}
@@ -783,21 +784,29 @@ async function loadCultosPendentes() {
                     <div class="card-body" id="createEscalaForm${culto.id}" style="display: none; background: var(--gradient-soft); border-top: 1px solid var(--border-color);">
                         <h4 style="margin-bottom: 1.5rem; color: var(--primary-color);">
                             <i class="fas fa-users"></i>
-                            Selecione os 5 membros da escala
+                            Selecione os membros da escala
                         </h4>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-                            ${['Guitarrista', 'Violonista', 'Baterista', 'Tecladista', 'Baixista'].map(instrumento => {
+                            ${['Guitarrista', 'Violonista', 'Baterista', 'Tecladista', 'Baixista', 'Ministro', 'Back Vocal', 'Back Vocal', 'Back Vocal', 'Back Vocal', 'Back Vocal'].map((instrumento, index) => {
                                 console.log(`Filtrando membros para ${instrumento}:`, {
                                     total: culto.membrosAtualizado.length,
                                     amostra: culto.membrosAtualizado.slice(0, 2).map(m => ({ id: m.id, name: m.name, instrument: m.instrument, suspended: m.suspended }))
                                 });
                                 const membrosInstrumento = culto.membrosAtualizado.filter(m => m.instrument === instrumento && !m.suspended);
                                 console.log(`Culto ${culto.id} - ${instrumento}: ${membrosInstrumento.length} membros disponíveis`);
+                                
+                                // Numerar back vocals
+                                let labelInstrumento = instrumento;
+                                if (instrumento === 'Back Vocal' && index >= 6) {
+                                    const numeroBackVocal = index - 5; // 6->1, 7->2, etc.
+                                    labelInstrumento = `Back Vocal ${numeroBackVocal}`;
+                                }
+                                
                                 return `
                                     <div class="form-group" style="margin: 0;">
                                         <label class="form-label">
                                             <i class="fas fa-music"></i>
-                                            ${instrumento}
+                                            ${labelInstrumento}
                                         </label>
                                         <select class="form-control escala-member-select" data-culto="${culto.id}" data-instrument="${instrumento}">
                                             <option value="">Selecione...</option>
@@ -868,9 +877,9 @@ async function saveEscalaCompleta(cultoId) {
         }
     });
     
-    // Validar se 5 membros foram selecionados
-    if (membrosEscolhidos.length < 5) {
-        showToast('Selecione os 5 membros da escala!', 'error');
+    // Validar se pelo menos 1 membro foi selecionado
+    if (membrosEscolhidos.length < 1) {
+        showToast('Selecione pelo menos 1 membro para a escala!', 'error');
         return;
     }
     
