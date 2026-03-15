@@ -426,6 +426,14 @@ function renderMembers(members) {
                             <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">
                                 <i class="fas fa-phone" style="width: 16px;"></i>
                                 <span>${member.phone}</span>
+                                <a href="https://wa.me/55${member.phone.replace(/\D/g, '')}" 
+                                   target="_blank" 
+                                   title="Conversar no WhatsApp"
+                                   style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: #25D366; color: white; border-radius: 50%; text-decoration: none; margin-left: 0.5rem; transition: transform 0.2s, background 0.2s;"
+                                   onmouseover="this.style.transform='scale(1.1)'; this.style.background='#128C7E'"
+                                   onmouseout="this.style.transform='scale(1)'; this.style.background='#25D366'">
+                                    <i class="fab fa-whatsapp" style="font-size: 16px;"></i>
+                                </a>
                             </div>
                         ` : ''}
                     </div>
