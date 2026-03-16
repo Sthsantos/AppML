@@ -259,6 +259,23 @@ class Configuracao(db.Model):
     descricao = db.Column(db.String(300), nullable=True)
     atualizado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+class Substituicao(db.Model):
+    """Modelo para solicitações de substituição de escalas."""
+    id = db.Column(db.Integer, primary_key=True)
+    escala_id = db.Column(db.Integer, db.ForeignKey('escala.id'), nullable=False)  # Escala original
+    membro_solicitante_id = db.Column(db.Integer, db.ForeignKey('member.id'), nullable=False)  # Quem está pedindo
+    membro_substituto_id = db.Column(db.Integer, db.ForeignKey('member.id'), nullable=False)  # Quem vai substituir
+    status = db.Column(db.String(20), default='pendente')  # pendente, aceito, recusado, cancelado
+    mensagem = db.Column(db.Text, nullable=True)  # Mensagem opcional do solicitante
+    resposta = db.Column(db.Text, nullable=True)  # Resposta do substituto
+    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+    respondido_em = db.Column(db.DateTime, nullable=True)
+    
+    # Relacionamentos
+    escala = db.relationship('Escala', backref=db.backref('substituicoes', lazy=True))
+    solicitante = db.relationship('Member', foreign_keys=[membro_solicitante_id], backref=db.backref('substituicoes_solicitadas', lazy=True))
+    substituto = db.relationship('Member', foreign_keys=[membro_substituto_id], backref=db.backref('substituicoes_recebidas', lazy=True))
+
 # Carregar usuário para Flask-Login (suporta tanto User quanto Member)
 @login_manager.user_loader
 def load_user(user_id):
@@ -1849,6 +1866,277 @@ def delete_feedback(feedback_id):
     except Exception as e:
         db.session.rollback()
         print(f"❌ Erro ao deletar feedback: {str(e)}")
+        return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
+
+# ========================================
+# ROTAS PARA SUBSTITUIÇÃO DE ESCALAS
+# ========================================
+@app.route('/substituicoes')
+@login_required
+def substituicoes():
+    """Página de substituições de escalas."""
+    return render_template('substituicoes.html')
+
+@app.route('/get_minhas_escalas_substituiveis', methods=['GET'])
+@login_required
+def get_minhas_escalas_substituiveis():
+    """Retorna as escalas do membro logado que podem ser substituídas."""
+    try:
+        member_id = current_user.id
+        
+        # Buscar escalas futuras do membro
+        escalas = db.session.query(Escala, Culto).join(
+            Culto, Escala.culto_id == Culto.id
+        ).filter(
+            Escala.member_id == member_id,
+            Culto.date >= date.today()
+        ).order_by(Culto.date, Culto.time).all()
+        
+        escalas_list = []
+        for escala, culto in escalas:
+            # Verificar se já tem substituição pendente ou aceita
+            sub_existente = Substituicao.query.filter_by(
+                escala_id=escala.id,
+                status='pendente'
+            ).first() or Substituicao.query.filter_by(
+                escala_id=escala.id,
+                status='aceito'
+            ).first()
+            
+            escalas_list.append({
+                'id': escala.id,
+                'culto_id': culto.id,
+                'culto_data': culto.date.strftime('%d/%m/%Y'),
+                'culto_hora': culto.time.strftime('%H:%M'),
+                'culto_descricao': culto.description,
+                'funcao': escala.role,
+                'tem_substituicao': sub_existente is not None,
+                'substituicao_status': sub_existente.status if sub_existente else None
+            })
+        
+        return jsonify(escalas_list), 200
+    except Exception as e:
+        print(f"❌ Erro ao buscar escalas substituíveis: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/get_membros_mesma_funcao/<int:escala_id>', methods=['GET'])
+@login_required
+def get_membros_mesma_funcao(escala_id):
+    """Retorna membros do mesmo instrumento/função que podem substituir."""
+    try:
+        escala = db.session.get(Escala, escala_id)
+        if not escala:
+            return jsonify({'error': 'Escala não encontrada'}), 404
+        
+        # Buscar membros com o mesmo instrumento, exceto o solicitante
+        funcao = escala.role
+        member_id = current_user.id
+        
+        # Extrair apenas o instrumento base (sem "Principal", "Base", etc)
+        funcao_base = funcao.split()[0] if funcao else ''
+        
+        membros = Member.query.filter(
+            Member.id != member_id,
+            Member.suspended == False,
+            Member.instrument.like(f'%{funcao_base}%')
+        ).all()
+        
+        membros_list = [{
+            'id': m.id,
+            'name': m.name,
+            'instrument': m.instrument
+        } for m in membros]
+        
+        return jsonify(membros_list), 200
+    except Exception as e:
+        print(f"❌ Erro ao buscar membros: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/solicitar_substituicao', methods=['POST'])
+@login_required
+def solicitar_substituicao():
+    """Cria uma solicitação de substituição."""
+    try:
+        data = request.get_json()
+        escala_id = data.get('escala_id')
+        membro_substituto_id = data.get('membro_substituto_id')
+        mensagem = data.get('mensagem', '')
+        
+        # Validações
+        escala = db.session.get(Escala, escala_id)
+        if not escala:
+            return jsonify({'success': False, 'message': 'Escala não encontrada'}), 404
+        
+        if escala.member_id != current_user.id:
+            return jsonify({'success': False, 'message': 'Você não está nesta escala'}), 403
+        
+        # Verificar se já existe substituição pendente ou aceita
+        sub_existente = Substituicao.query.filter_by(
+            escala_id=escala_id
+        ).filter(
+            Substituicao.status.in_(['pendente', 'aceito'])
+        ).first()
+        
+        if sub_existente:
+            return jsonify({'success': False, 'message': 'Já existe uma substituição para esta escala'}), 400
+        
+        # Criar substituição
+        substituicao = Substituicao(
+            escala_id=escala_id,
+            membro_solicitante_id=current_user.id,
+            membro_substituto_id=membro_substituto_id,
+            mensagem=mensagem,
+            status='pendente'
+        )
+        
+        db.session.add(substituicao)
+        db.session.commit()
+        
+        print(f"✅ Substituição solicitada: Escala {escala_id}, Substituto {membro_substituto_id}")
+        return jsonify({'success': True, 'message': 'Solicitação enviada com sucesso!'}), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Erro ao solicitar substituição: {str(e)}")
+        return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
+
+@app.route('/get_substituicoes_pendentes', methods=['GET'])
+@login_required
+def get_substituicoes_pendentes():
+    """Retorna substituições pendentes para o membro logado."""
+    try:
+        member_id = current_user.id
+        
+        substituicoes = db.session.query(Substituicao, Escala, Culto, Member).join(
+            Escala, Substituicao.escala_id == Escala.id
+        ).join(
+            Culto, Escala.culto_id == Culto.id
+        ).join(
+            Member, Substituicao.membro_solicitante_id == Member.id
+        ).filter(
+            Substituicao.membro_substituto_id == member_id,
+            Substituicao.status == 'pendente'
+        ).order_by(Culto.date, Culto.time).all()
+        
+        subs_list = []
+        for sub, escala, culto, solicitante in substituicoes:
+            subs_list.append({
+                'id': sub.id,
+                'culto_data': culto.date.strftime('%d/%m/%Y'),
+                'culto_hora': culto.time.strftime('%H:%M'),
+                'culto_descricao': culto.description,
+                'funcao': escala.role,
+                'solicitante_nome': solicitante.name,
+                'mensagem': sub.mensagem,
+                'criado_em': sub.criado_em.strftime('%d/%m/%Y %H:%M')
+            })
+        
+        return jsonify(subs_list), 200
+    except Exception as e:
+        print(f"❌ Erro ao buscar substituições pendentes: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/responder_substituicao/<int:sub_id>', methods=['POST'])
+@login_required
+def responder_substituicao(sub_id):
+    """Aceita ou recusa uma solicitação de substituição."""
+    try:
+        data = request.get_json()
+        acao = data.get('acao')  # 'aceitar' ou 'recusar'
+        resposta_msg = data.get('resposta', '')
+        
+        substituicao = db.session.get(Substituicao, sub_id)
+        if not substituicao:
+            return jsonify({'success': False, 'message': 'Substituição não encontrada'}), 404
+        
+        if substituicao.membro_substituto_id != current_user.id:
+            return jsonify({'success': False, 'message': 'Você não pode responder esta solicitação'}), 403
+        
+        if substituicao.status != 'pendente':
+            return jsonify({'success': False, 'message': 'Esta solicitação já foi respondida'}), 400
+        
+        # Atualizar status
+        if acao == 'aceitar':
+            substituicao.status = 'aceito'
+            # Atualizar a escala original para apontar para o substituto
+            escala = db.session.get(Escala, substituicao.escala_id)
+            escala.member_id = substituicao.membro_substituto_id
+        else:
+            substituicao.status = 'recusado'
+        
+        substituicao.resposta = resposta_msg
+        substituicao.respondido_em = datetime.utcnow()
+        
+        db.session.commit()
+        
+        print(f"✅ Substituição {sub_id} {acao}(a) por {current_user.name}")
+        return jsonify({'success': True, 'message': f'Substituição {acao}(a) com sucesso!'}), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Erro ao responder substituição: {str(e)}")
+        return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
+
+@app.route('/get_todas_substituicoes_admin', methods=['GET'])
+@login_required
+@admin_required
+def get_todas_substituicoes_admin():
+    """Retorna todas as substituições para o painel admin."""
+    try:
+        substituicoes = db.session.query(Substituicao, Escala, Culto, Member, Member).join(
+            Escala, Substituicao.escala_id == Escala.id
+        ).join(
+            Culto, Escala.culto_id == Culto.id
+        ).join(
+            Member, Substituicao.membro_solicitante_id == Member.id
+        ).join(
+            Member, Substituicao.membro_substituto_id == Member.id,
+            aliased=True
+        ).order_by(Substituicao.criado_em.desc()).all()
+        
+        subs_list = []
+        for sub, escala, culto, solicitante, substituto in substituicoes:
+            subs_list.append({
+                'id': sub.id,
+                'culto_data': culto.date.strftime('%d/%m/%Y'),
+                'culto_hora': culto.time.strftime('%H:%M'),
+                'culto_descricao': culto.description,
+                'funcao': escala.role,
+                'solicitante_nome': solicitante.name,
+                'substituto_nome': substituto.name,
+                'status': sub.status,
+                'mensagem': sub.mensagem,
+                'resposta': sub.resposta,
+                'criado_em': sub.criado_em.strftime('%d/%m/%Y %H:%M'),
+                'respondido_em': sub.respondido_em.strftime('%d/%m/%Y %H:%M') if sub.respondido_em else None
+            })
+        
+        return jsonify(subs_list), 200
+    except Exception as e:
+        print(f"❌ Erro ao buscar substituições admin: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/cancelar_substituicao/<int:sub_id>', methods=['POST'])
+@login_required
+def cancelar_substituicao(sub_id):
+    """Cancela uma substituição pendente (apenas o solicitante pode cancelar)."""
+    try:
+        substituicao = db.session.get(Substituicao, sub_id)
+        if not substituicao:
+            return jsonify({'success': False, 'message': 'Substituição não encontrada'}), 404
+        
+        if substituicao.membro_solicitante_id != current_user.id:
+            return jsonify({'success': False, 'message': 'Você não pode cancelar esta solicitação'}), 403
+        
+        if substituicao.status != 'pendente':
+            return jsonify({'success': False, 'message': 'Apenas substituições pendentes podem ser canceladas'}), 400
+        
+        substituicao.status = 'cancelado'
+        db.session.commit()
+        
+        print(f"✅ Substituição {sub_id} cancelada por {current_user.name}")
+        return jsonify({'success': True, 'message': 'Substituição cancelada com sucesso!'}), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Erro ao cancelar substituição: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
 # ========================================

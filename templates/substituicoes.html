@@ -1,0 +1,659 @@
+{% extends "base.html" %}
+
+{% block title %}Substituições - Ministry Management{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="page-title">
+        <i class="fas fa-exchange-alt"></i> Substituições de Escalas
+    </h1>
+
+    <!-- Tabs de Navegação -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('solicitar')">
+            <i class="fas fa-hand-paper"></i> Solicitar Substituição
+        </button>
+        <button class="tab-btn" onclick="switchTab('pendentes')">
+            <i class="fas fa-clock"></i> Solicitações Recebidas
+            <span id="badgePendentes" class="badge"></span>
+        </button>
+        <button class="tab-btn" onclick="switchTab('historico')">
+            <i class="fas fa-history"></i> Histórico
+        </button>
+    </div>
+
+    <!-- Tab: Solicitar Substituição -->
+    <div id="tab-solicitar" class="tab-content active">
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-calendar-alt"></i> Minhas Escalas Futuras</h2>
+            </div>
+            <div class="card-body">
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                    Selecione uma escala para solicitar substituição com outro membro do mesmo instrumento/função.
+                </p>
+                <div id="escalasContainer" class="escalas-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Solicitações Recebidas -->
+    <div id="tab-pendentes" class="tab-content">
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-inbox"></i> Solicitações Pendentes de Resposta</h2>
+            </div>
+            <div class="card-body">
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                    Outros membros solicitaram que você os substitua nas seguintes escalas:
+                </p>
+                <div id="pendentesContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Histórico -->
+    <div id="tab-historico" class="tab-content">
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-list"></i> Histórico de Substituições</h2>
+            </div>
+            <div class="card-body">
+                <div id="historicoContainer"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Solicitar Substituição -->
+<div id="modalSolicitarSub" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="fas fa-exchange-alt"></i> Solicitar Substituição</h2>
+            <span class="close" onclick="closeModalSolicitar()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div id="infoEscala" style="background: var(--card-bg); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;"></div>
+            
+            <div class="form-group">
+                <label for="selectSubstituto"><i class="fas fa-user"></i> Quem pode substituir?</label>
+                <select id="selectSubstituto" class="form-control" required>
+                    <option value="">Selecione um membro...</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="mensagemSub"><i class="fas fa-comment"></i> Mensagem (opcional)</label>
+                <textarea id="mensagemSub" class="form-control" rows="3" placeholder="Explique o motivo da substituição..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModalSolicitar()">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+            <button class="btn btn-primary" onclick="enviarSolicitacao()">
+                <i class="fas fa-paper-plane"></i> Enviar Solicitação
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Responder Substituição -->
+<div id="modalResponderSub" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="fas fa-reply"></i> Responder Solicitação</h2>
+            <span class="close" onclick="closeModalResponder()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div id="infoSubstituicao" style="background: var(--card-bg); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;"></div>
+            
+            <div class="form-group">
+                <label for="respostaSub"><i class="fas fa-comment"></i> Resposta (opcional)</label>
+                <textarea id="respostaSub" class="form-control" rows="3" placeholder="Deixe uma mensagem..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-danger" onclick="responderSub('recusar')">
+                <i class="fas fa-times-circle"></i> Recusar
+            </button>
+            <button class="btn btn-success" onclick="responderSub('aceitar')">
+                <i class="fas fa-check-circle"></i> Aceitar
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+.tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid var(--border-color);
+    flex-wrap: wrap;
+}
+
+.tab-btn {
+    padding: 0.75rem 1.5rem;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+}
+
+.tab-btn:hover {
+    color: var(--primary-color);
+    background: var(--hover-bg);
+}
+
+.tab-btn.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+    animation: fadeIn 0.3s;
+}
+
+.badge {
+    background: var(--danger-color);
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    min-width: 20px;
+    text-align: center;
+}
+
+.escalas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.escala-card {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.25rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+}
+
+.escala-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+    border-color: var(--primary-color);
+}
+
+.escala-card.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: var(--hover-bg);
+}
+
+.escala-card.disabled:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: var(--border-color);
+}
+
+.escala-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+}
+
+.escala-date {
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.escala-time {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.escala-funcao {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.escala-descricao {
+    color: var(--text-color);
+    margin: 0.5rem 0;
+    font-weight: 500;
+}
+
+.escala-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-top: 0.75rem;
+}
+
+.status-pendente {
+    background: #f59e0b;
+    color: white;
+}
+
+.status-aceito {
+    background: #10b981;
+    color: white;
+}
+
+.solicitacao-card {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.solicitacao-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.solicitacao-info h3 {
+    margin: 0 0 0.5rem 0;
+    color: var(--text-color);
+    font-size: 1.1rem;
+}
+
+.solicitacao-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.solicitacao-funcao {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.35rem 0.85rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.mensagem-box {
+    background: var(--hover-bg);
+    padding: 1rem;
+    border-left: 4px solid var(--primary-color);
+    border-radius: 6px;
+    margin: 1rem 0;
+}
+
+.mensagem-box p {
+    margin: 0;
+    color: var(--text-color);
+    font-style: italic;
+}
+
+.solicitacao-acoes {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-secondary);
+}
+
+.empty-state i {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.3;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .tabs {
+        gap: 0.25rem;
+    }
+    
+    .tab-btn {
+        padding: 0.6rem 0.75rem;
+        font-size: 0.85rem;
+    }
+    
+    .escalas-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .escala-header {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .solicitacao-header {
+        flex-direction: column;
+    }
+    
+    .solicitacao-acoes {
+        flex-direction: column;
+    }
+    
+    .solicitacao-acoes .btn {
+        width: 100%;
+    }
+}
+</style>
+
+<script>
+let escalaAtual = null;
+let substituicaoAtual = null;
+
+// Alternar entre tabs
+function switchTab(tabName) {
+    // Atualizar botões
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.closest('.tab-btn').classList.add('active');
+    
+    // Atualizar conteúdo
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    document.getElementById(`tab-${tabName}`).classList.add('active');
+    
+    // Carregar dados
+    if (tabName === 'solicitar') {
+        carregarEscalasSubstituiveis();
+    } else if (tabName === 'pendentes') {
+        carregarSubstituicoesPendentes();
+    } else if (tabName === 'historico') {
+        carregarHistorico();
+    }
+}
+
+// Carregar escalas substituíveis
+async function carregarEscalasSubstituiveis() {
+    try {
+        const response = await fetch('/get_minhas_escalas_substituiveis');
+        const escalas = await response.json();
+        
+        const container = document.getElementById('escalasContainer');
+        
+        if (escalas.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-calendar-times"></i>
+                    <h3>Nenhuma escala futura encontrada</h3>
+                    <p>Você não está escalado em nenhum culto futuro.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = escalas.map(e => {
+            const disabled = e.tem_substituicao ? 'disabled' : '';
+            const statusHtml = e.tem_substituicao ? `
+                <div class="escala-status status-${e.substituicao_status}">
+                    <i class="fas fa-${e.substituicao_status === 'pendente' ? 'clock' : 'check'}"></i>
+                    Substituição ${e.substituicao_status}
+                </div>
+            ` : '';
+            
+            return `
+                <div class="escala-card ${disabled}" onclick="${!disabled ? `abrirModalSolicitar(${e.id})` : 'void(0)'}">
+                    <div class="escala-header">
+                        <div>
+                            <div class="escala-date">${e.culto_data}</div>
+                            <div class="escala-time">${e.culto_hora}</div>
+                        </div>
+                        <div class="escala-funcao">${e.funcao}</div>
+                    </div>
+                    <div class="escala-descricao">${e.culto_descricao}</div>
+                    ${statusHtml}
+                </div>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Erro ao carregar escalas:', error);
+        showNotification('Erro ao carregar escalas', 'error');
+    }
+}
+
+// Abrir modal de solicitação
+async function abrirModalSolicitar(escalaId) {
+    escalaAtual = escalaId;
+    
+    try {
+        // Buscar membros da mesma função
+        const response = await fetch(`/get_membros_mesma_funcao/${escalaId}`);
+        const membros = await response.json();
+        
+        const select = document.getElementById('selectSubstituto');
+        select.innerHTML = '<option value="">Selecione um membro...</option>' +
+            membros.map(m => `<option value="${m.id}">${m.name} - ${m.instrument}</option>`).join('');
+        
+        document.getElementById('modalSolicitarSub').style.display = 'block';
+    } catch (error) {
+        console.error('Erro ao carregar membros:', error);
+        showNotification('Erro ao carregar membros disponíveis', 'error');
+    }
+}
+
+// Fechar modal de solicitação
+function closeModalSolicitar() {
+    document.getElementById('modalSolicitarSub').style.display = 'none';
+    document.getElementById('mensagemSub').value = '';
+    escalaAtual = null;
+}
+
+// Enviar solicitação
+async function enviarSolicitacao() {
+    const substitutoId = document.getElementById('selectSubstituto').value;
+    const mensagem = document.getElementById('mensagemSub').value;
+    
+    if (!substitutoId) {
+        showNotification('Selecione um membro para substituir', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/solicitar_substituicao', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                escala_id: escalaAtual,
+                membro_substituto_id: parseInt(substitutoId),
+                mensagem: mensagem
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(result.message, 'success');
+            closeModalSolicitar();
+            carregarEscalasSubstituiveis();
+        } else {
+            showNotification(result.message, 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao enviar solicitação:', error);
+        showNotification('Erro ao enviar solicitação', 'error');
+    }
+}
+
+// Carregar substituições pendentes
+async function carregarSubstituicoesPendentes() {
+    try {
+        const response = await fetch('/get_substituicoes_pendentes');
+        const substituicoes = await response.json();
+        
+        const badge = document.getElementById('badgePendentes');
+        badge.textContent = substituicoes.length || '';
+        badge.style.display = substituicoes.length > 0 ? 'inline-block' : 'none';
+        
+        const container = document.getElementById('pendentesContainer');
+        
+        if (substituicoes.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <h3>Nenhuma solicitação pendente</h3>
+                    <p>Você não tem solicitações de substituição aguardando resposta.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = substituicoes.map(s => `
+            <div class="solicitacao-card">
+                <div class="solicitacao-header">
+                    <div class="solicitacao-info">
+                        <h3><i class="fas fa-calendar-alt"></i> ${s.culto_descricao}</h3>
+                        <div class="solicitacao-meta">
+                            <div><i class="fas fa-calendar"></i> ${s.culto_data} às ${s.culto_hora}</div>
+                            <div><i class="fas fa-user"></i> Solicitado por: <strong>${s.solicitante_nome}</strong></div>
+                            <div><i class="fas fa-clock"></i> ${s.criado_em}</div>
+                        </div>
+                    </div>
+                    <div class="solicitacao-funcao">${s.funcao}</div>
+                </div>
+                ${s.mensagem ? `
+                    <div class="mensagem-box">
+                        <p><i class="fas fa-comment"></i> <strong>Mensagem:</strong> ${s.mensagem}</p>
+                    </div>
+                ` : ''}
+                <div class="solicitacao-acoes">
+                    <button class="btn btn-success" onclick="abrirModalResponder(${s.id}, 'aceitar')">
+                        <i class="fas fa-check-circle"></i> Aceitar
+                    </button>
+                    <button class="btn btn-danger" onclick="abrirModalResponder(${s.id}, 'recusar')">
+                        <i class="fas fa-times-circle"></i> Recusar
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Erro ao carregar substituições pendentes:', error);
+        showNotification('Erro ao carregar solicitações', 'error');
+    }
+}
+
+// Abrir modal de resposta
+function abrirModalResponder(subId, acao) {
+    substituicaoAtual = { id: subId, acao: acao };
+    document.getElementById('modalResponderSub').style.display = 'block';
+}
+
+// Fechar modal de resposta
+function closeModalResponder() {
+    document.getElementById('modalResponderSub').style.display = 'none';
+    document.getElementById('respostaSub').value = '';
+    substituicaoAtual = null;
+}
+
+// Responder substituição
+async function responderSub(acao) {
+    const resposta = document.getElementById('respostaSub').value;
+    
+    try {
+        const response = await fetch(`/responder_substituicao/${substituicaoAtual.id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ acao: acao, resposta: resposta })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(result.message, 'success');
+            closeModalResponder();
+            carregarSubstituicoesPendentes();
+        } else {
+            showNotification(result.message, 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao responder substituição:', error);
+        showNotification('Erro ao responder solicitação', 'error');
+    }
+}
+
+// Carregar histórico (placeholder)
+function carregarHistorico() {
+    const container = document.getElementById('historicoContainer');
+    container.innerHTML = `
+        <div class="empty-state">
+            <i class="fas fa-history"></i>
+            <h3>Em desenvolvimento</h3>
+            <p>O histórico completo de substituições estará disponível em breve.</p>
+        </div>
+    `;
+}
+
+// Notificações
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+        color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 10000;
+        animation: slideIn 0.3s;
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 3000);
+}
+
+// Carregar ao iniciar
+document.addEventListener('DOMContentLoaded', () => {
+    carregarEscalasSubstituiveis();
+    carregarSubstituicoesPendentes();
+});
+
+// Fechar modais ao clicar fora
+window.onclick = function(event) {
+    const modalSolicitar = document.getElementById('modalSolicitarSub');
+    const modalResponder = document.getElementById('modalResponderSub');
+    if (event.target === modalSolicitar) closeModalSolicitar();
+    if (event.target === modalResponder) closeModalResponder();
+}
+</script>
+{% endblock %}

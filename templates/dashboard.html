@@ -13,12 +13,15 @@
 
 <!-- Sistema de Tabs -->
 <div class="tabs-container">
-    <div class="tabs" style="display: flex; gap: 1rem; border-bottom: 2px solid var(--border-color); margin-bottom: 1.5rem;">
+    <div class="tabs" style="display: flex; gap: 1rem; border-bottom: 2px solid var(--border-color); margin-bottom: 1.5rem; flex-wrap: wrap;">
         <button class="tab-button active" onclick="switchTab('rankings')" style="padding: 0.75rem 1.5rem; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-weight: 600; color: var(--text-secondary); transition: all 0.3s;">
             <i class="fas fa-trophy"></i> Rankings
         </button>
         <button class="tab-button" onclick="switchTab('indisponibilidades')" style="padding: 0.75rem 1.5rem; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-weight: 600; color: var(--text-secondary); transition: all 0.3s;">
             <i class="fas fa-calendar-times"></i> Indisponibilidades
+        </button>
+        <button class="tab-button" onclick="switchTab('substituicoes')" style="padding: 0.75rem 1.5rem; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-weight: 600; color: var(--text-secondary); transition: all 0.3s;">
+            <i class="fas fa-exchange-alt"></i> Substituições
         </button>
         <button class="tab-button" onclick="switchTab('distribuicao')" style="padding: 0.75rem 1.5rem; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-weight: 600; color: var(--text-secondary); transition: all 0.3s;">
             <i class="fas fa-chart-pie"></i> Distribuição
@@ -139,6 +142,77 @@
                             <p style="margin-top: 1rem;">Carregando...</p>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Substituições -->
+    <div class="tab-content" id="tab-substituicoes" style="display: none;">
+        <div class="section">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">
+                        <i class="fas fa-exchange-alt"></i>
+                        Controle de Substituições
+                    </h2>
+                    <p class="section-subtitle">Todas as solicitações de substituição de escalas</p>
+                </div>
+                <a href="{{ url_for('substituicoes') }}" class="btn btn-outline">
+                    <i class="fas fa-external-link-alt"></i> Página Completa
+                </a>
+            </div>
+            
+            <!-- Estatísticas de Substituições -->
+            <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                <div class="stat-card" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <div style="font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem;" id="totalPendentes">-</div>
+                            <div style="opacity: 0.9; font-size: 0.9rem;">Pendentes</div>
+                        </div>
+                        <i class="fas fa-clock" style="font-size: 2.5rem; opacity: 0.3;"></i>
+                    </div>
+                </div>
+                
+                <div class="stat-card" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <div style="font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem;" id="totalAceitas">-</div>
+                            <div style="opacity: 0.9; font-size: 0.9rem;">Aceitas</div>
+                        </div>
+                        <i class="fas fa-check-circle" style="font-size: 2.5rem; opacity: 0.3;"></i>
+                    </div>
+                </div>
+                
+                <div class="stat-card" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <div style="font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem;" id="totalRecusadas">-</div>
+                            <div style="opacity: 0.9; font-size: 0.9rem;">Recusadas</div>
+                        </div>
+                        <i class="fas fa-times-circle" style="font-size: 2.5rem; opacity: 0.3;"></i>
+                    </div>
+                </div>
+                
+                <div class="stat-card" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <div style="font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem;" id="totalCanceladas">-</div>
+                            <div style="opacity: 0.9; font-size: 0.9rem;">Canceladas</div>
+                        </div>
+                        <i class="fas fa-ban" style="font-size: 2.5rem; opacity: 0.3;"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Lista de Substituições -->
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-list"></i> Todas as Substituições</h3>
+                </div>
+                <div class="card-body">
+                    <div id="substituicoesList"></div>
                 </div>
             </div>
         </div>
@@ -590,6 +664,8 @@ function switchTab(tabName) {
     } else if (tabName === 'indisponibilidades') {
         loadRankingIndisponibilidades();
         loadIndisponibilidades();
+    } else if (tabName === 'substituicoes') {
+        loadSubstituicoesAdmin();
     } else if (tabName === 'distribuicao') {
         loadDistribuicaoInstrumentos();
     } else if (tabName === 'musicas') {
@@ -928,6 +1004,175 @@ async function loadIndisponibilidades() {
     } catch (error) {
         console.error('Erro ao carregar indisponibilidades:', error);
         const container = document.getElementById('indisponibilidadesList');
+        if (container) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>Erro ao carregar dados</h3>
+                    <p>Tente novamente mais tarde</p>
+                </div>
+            `;
+        }
+    }
+}
+
+// Carregar substituições (admin)
+async function loadSubstituicoesAdmin() {
+    try {
+        const response = await fetch('/get_todas_substituicoes_admin');
+        const substituicoes = await response.json();
+        
+        // Atualizar estatísticas
+        const pendentes = substituicoes.filter(s => s.status === 'pendente').length;
+        const aceitas = substituicoes.filter(s => s.status === 'aceito').length;
+        const recusadas = substituicoes.filter(s => s.status === 'recusado').length;
+        const canceladas = substituicoes.filter(s => s.status === 'cancelado').length;
+        
+        document.getElementById('totalPendentes').textContent = pendentes;
+        document.getElementById('totalAceitas').textContent = aceitas;
+        document.getElementById('totalRecusadas').textContent = recusadas;
+        document.getElementById('totalCanceladas').textContent = canceladas;
+        
+        const container = document.getElementById('substituicoesList');
+        if (!container) return;
+        
+        if (substituicoes.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-exchange-alt"></i>
+                    <h3>Nenhuma substituição registrada</h3>
+                    <p>Ainda não há solicitações de substituição no sistema</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Mapear status para cores e ícones
+        const statusConfig = {
+            'pendente': { color: '#f59e0b', icon: 'fa-clock', label: 'Pendente' },
+            'aceito': { color: '#10b981', icon: 'fa-check-circle', label: 'Aceita' },
+            'recusado': { color: '#ef4444', icon: 'fa-times-circle', label: 'Recusada' },
+            'cancelado': { color: '#6366f1', icon: 'fa-ban', label: 'Cancelada' }
+        };
+        
+        container.innerHTML = substituicoes.map(sub => {
+            const config = statusConfig[sub.status] || statusConfig['pendente'];
+            const dataCulto = new Date(sub.culto_data).toLocaleDateString('pt-BR');
+            const dataSolicitacao = new Date(sub.criado_em).toLocaleDateString('pt-BR');
+            const horaSolicitacao = new Date(sub.criado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            
+            let dataResposta = '';
+            if (sub.respondido_em) {
+                const dr = new Date(sub.respondido_em);
+                dataResposta = `${dr.toLocaleDateString('pt-BR')} às ${dr.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+            }
+            
+            return `
+                <div style="display: flex; flex-direction: column; gap: 1rem; padding: 1.25rem; background: var(--bg-secondary); border-radius: var(--border-radius); border-left: 4px solid ${config.color}; margin-bottom: 1rem;">
+                    <!-- Cabeçalho -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <div style="width: 45px; height: 45px; background: linear-gradient(135deg, ${config.color}, ${config.color}dd); color: white; display: flex; align-items: center; justify-content: center; border-radius: 10px; flex-shrink: 0;">
+                                <i class="fas ${config.icon}" style="font-size: 1.3rem;"></i>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.95rem; font-weight: 600; color: var(--text-color);">
+                                    <i class="fas fa-church"></i> ${sub.culto_descricao}
+                                </div>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                                    <i class="fas fa-calendar"></i> ${dataCulto} às ${sub.culto_hora}
+                                </div>
+                            </div>
+                        </div>
+                        <span style="padding: 0.4rem 0.9rem; background: ${config.color}22; color: ${config.color}; border-radius: 20px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap;">
+                            <i class="fas ${config.icon}"></i> ${config.label}
+                        </span>
+                    </div>
+                    
+                    <!-- Grid de informações -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                        <!-- Solicitante -->
+                        <div style="background: var(--bg-primary); padding: 0.9rem; border-radius: 8px;">
+                            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.4rem; font-weight: 600;">
+                                <i class="fas fa-user"></i> Solicitante
+                            </div>
+                            <div style="font-weight: 600; color: var(--text-color); margin-bottom: 0.2rem;">
+                                ${sub.solicitante_nome}
+                            </div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                                ${sub.funcao}
+                            </div>
+                        </div>
+                        
+                        <!-- Substituto -->
+                        <div style="background: var(--bg-primary); padding: 0.9rem; border-radius: 8px;">
+                            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.4rem; font-weight: 600;">
+                                <i class="fas fa-user-check"></i> Substituto
+                            </div>
+                            <div style="font-weight: 600; color: var(--text-color); margin-bottom: 0.2rem;">
+                                ${sub.substituto_nome}
+                            </div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                                ${sub.funcao}
+                            </div>
+                        </div>
+                        
+                        <!-- Data de solicitação -->
+                        <div style="background: var(--bg-primary); padding: 0.9rem; border-radius: 8px;">
+                            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.4rem; font-weight: 600;">
+                                <i class="fas fa-clock"></i> Solicitado em
+                            </div>
+                            <div style="font-weight: 600; color: var(--text-color); margin-bottom: 0.2rem;">
+                                ${dataSolicitacao}
+                            </div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                                ${horaSolicitacao}
+                            </div>
+                        </div>
+                        
+                        ${dataResposta ? `
+                        <!-- Data de resposta -->
+                        <div style="background: var(--bg-primary); padding: 0.9rem; border-radius: 8px;">
+                            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.4rem; font-weight: 600;">
+                                <i class="fas fa-reply"></i> Respondido em
+                            </div>
+                            <div style="font-weight: 600; color: var(--text-color);">
+                                ${dataResposta}
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    ${sub.mensagem ? `
+                    <!-- Mensagem do solicitante -->
+                    <div style="background: var(--bg-primary); padding: 1rem; border-radius: 8px; border-left: 3px solid ${config.color};">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem; font-weight: 600;">
+                            <i class="fas fa-comment"></i> Mensagem
+                        </div>
+                        <div style="color: var(--text-color); font-style: italic;">
+                            "${sub.mensagem}"
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    ${sub.resposta ? `
+                    <!-- Resposta do substituto -->
+                    <div style="background: var(--bg-primary); padding: 1rem; border-radius: 8px; border-left: 3px solid ${config.color};">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem; font-weight: 600;">
+                            <i class="fas fa-reply"></i> Resposta
+                        </div>
+                        <div style="color: var(--text-color); font-style: italic;">
+                            "${sub.resposta}"
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+        }).join('');
+        
+    } catch (error) {
+        console.error('Erro ao carregar substituições:', error);
+        const container = document.getElementById('substituicoesList');
         if (container) {
             container.innerHTML = `
                 <div class="empty-state">
