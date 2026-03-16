@@ -213,7 +213,8 @@ async function loadMinhasEscalas() {
                     dateOnly: escala.culto_date.split('T')[0],
                     time: escala.culto_date.split('T')[1],
                     escalas: [],
-                    minhaEscala: null
+                    minhaEscala: null,
+                    ja_passou: escala.ja_passou || false
                 };
             }
             // Separar minha escala das outras
@@ -307,18 +308,21 @@ async function loadMinhasEscalas() {
             const meuGradient = instrumentColors[minhaEscala.role] || 'var(--gradient-success)';
             
             return `
-                <div class="card mb-3 fade-in">
+                <div class="card mb-3 fade-in" style="${group.ja_passou ? 'opacity: 0.6; background: var(--bg-secondary);' : ''}">
                     <div class="card-header">
                         <div>
-                            <h3 class="card-title">${group.name}</h3>
+                            <h3 class="card-title">
+                                ${group.name}
+                                ${group.ja_passou ? '<span style="margin-left: 0.5rem; font-size: 0.85rem; color: #6b7280; font-weight: 500;">(CULTO REALIZADO)</span>' : ''}
+                            </h3>
                             <p class="card-subtitle">${timeStr}</p>
                         </div>
                     </div>
                     <div class="card-body">
                         <!-- Sua Função -->
-                        <div style="margin-bottom: 1.5rem; padding: 1.5rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.05)); border-radius: var(--radius-lg); border: 2px solid var(--accent-success);">
+                        <div style="margin-bottom: 1.5rem; padding: 1.5rem; background: ${group.ja_passou ? 'var(--bg-secondary)' : 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.05))'}; border-radius: var(--radius-lg); border: 2px solid ${group.ja_passou ? 'var(--gray-300)' : 'var(--accent-success)'};">
                             <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-                                <div style="width: 56px; height: 56px; border-radius: 50%; background: ${meuGradient}; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); flex-shrink: 0;">
+                                <div style="width: 56px; height: 56px; border-radius: 50%; background: ${meuGradient}; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); flex-shrink: 0; ${group.ja_passou ? 'opacity: 0.5;' : ''}">
                                     <i class="fas ${meuIcon}"></i>
                                 </div>
                                 <div style="flex: 1; min-width: 200px;">
@@ -326,20 +330,27 @@ async function loadMinhasEscalas() {
                                         Você está escalado como:
                                     </div>
                                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                        <i class="fas fa-music" style="color: var(--accent-success);"></i>
-                                        <span style="font-size: 1rem; font-weight: 600; color: var(--accent-success);">
+                                        <i class="fas fa-music" style="color: ${group.ja_passou ? '#6b7280' : 'var(--accent-success)'};"></i>
+                                        <span style="font-size: 1rem; font-weight: 600; color: ${group.ja_passou ? '#6b7280' : 'var(--accent-success)'};">
                                             ${minhaEscala.role}
                                         </span>
                                     </div>
                                 </div>
                                 <div style="flex-shrink: 0;">
-                                    <button onclick="solicitarSubstituicao(${minhaEscala.escala_id}, '${group.name}', '${timeStr}', '${minhaEscala.role}')" 
-                                            style="padding: 0.75rem 1.25rem; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: all 0.3s; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);"
-                                            onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(245, 158, 11, 0.4)'"
-                                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(245, 158, 11, 0.3)'">
-                                        <i class="fas fa-exchange-alt"></i>
-                                        <span>Solicitar Substituição</span>
-                                    </button>
+                                    ${group.ja_passou ? `
+                                        <div style="padding: 0.75rem 1.25rem; background: #6b7280; color: white; border-radius: 8px; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; cursor: not-allowed;">
+                                            <i class="fas fa-check-circle"></i>
+                                            <span>Culto Realizado</span>
+                                        </div>
+                                    ` : `
+                                        <button onclick="solicitarSubstituicao(${minhaEscala.escala_id}, '${group.name}', '${timeStr}', '${minhaEscala.role}')" 
+                                                style="padding: 0.75rem 1.25rem; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: all 0.3s; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);"
+                                                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(245, 158, 11, 0.4)'"
+                                                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(245, 158, 11, 0.3)'">
+                                            <i class="fas fa-exchange-alt"></i>
+                                            <span>Solicitar Substituição</span>
+                                        </button>
+                                    `}
                                 </div>
                             </div>
                         </div>
