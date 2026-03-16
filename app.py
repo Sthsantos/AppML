@@ -1905,6 +1905,10 @@ def get_minhas_escalas_substituiveis():
                 status='aceito'
             ).first()
             
+            # Verificar se o culto je passou
+            culto_datetime = datetime.combine(culto.date, culto.time)
+            ja_passou = culto_datetime < datetime.now()
+            
             escalas_list.append({
                 'id': escala.id,
                 'culto_id': culto.id,
@@ -1913,6 +1917,7 @@ def get_minhas_escalas_substituiveis():
                 'culto_descricao': culto.description,
                 'funcao': escala.role,
                 'tem_substituicao': sub_existente is not None,
+                'ja_passou': ja_passou,
                 'substituicao_status': sub_existente.status if sub_existente else None
             })
         
@@ -2021,6 +2026,10 @@ def get_substituicoes_pendentes():
         
         subs_list = []
         for sub, escala, culto, solicitante in substituicoes:
+            # Verificar se o culto je passou
+            culto_datetime = datetime.combine(culto.date, culto.time)
+            ja_passou = culto_datetime < datetime.now()
+            
             subs_list.append({
                 'id': sub.id,
                 'culto_data': culto.date.strftime('%d/%m/%Y'),
@@ -2029,7 +2038,8 @@ def get_substituicoes_pendentes():
                 'funcao': escala.role,
                 'solicitante_nome': solicitante.name,
                 'mensagem': sub.mensagem,
-                'criado_em': sub.criado_em.strftime('%d/%m/%Y %H:%M')
+                'criado_em': sub.criado_em.strftime('%d/%m/%Y %H:%M'),
+                'ja_passou': ja_passou
             })
         
         return jsonify(subs_list), 200
@@ -2140,6 +2150,59 @@ def cancelar_substituicao(sub_id):
         db.session.rollback()
         print(f"? Erro ao cancelar substituicao: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
+
+@app.route('/get_historico_substituicoes', methods=['GET'])
+@login_required
+def get_historico_substituicoes():
+    """Retorna o historico de substituieees do membro atual (solicitadas e recebidas)."""
+    try:
+        member_id = current_user.id
+        
+        # Buscar substituieees onde o usuario foi solicitante OU substituto
+        substituicoes = db.session.query(Substituicao, Escala, Culto, Member, Member).join(
+            Escala, Substituicao.escala_id == Escala.id
+        ).join(
+            Culto, Escala.culto_id == Culto.id
+        ).join(
+            Member, Substituicao.membro_solicitante_id == Member.id
+        ).outerjoin(
+            Member, Substituicao.membro_substituto_id == Member.id,
+            aliased=True
+        ).filter(
+            db.or_(
+                Substituicao.membro_solicitante_id == member_id,
+                Substituicao.membro_substituto_id == member_id
+            ),
+            Substituicao.status.in_(['aceito', 'recusado', 'cancelado'])
+        ).order_by(Substituicao.respondido_em.desc()).all()
+        
+        historico = []
+        for sub, escala, culto, solicitante, substituto in substituicoes:
+            # Verificar se ja passou
+            culto_datetime = datetime.combine(culto.date, culto.time)
+            ja_passou = culto_datetime < datetime.now()
+            
+            historico.append({
+                'id': sub.id,
+                'culto_data': culto.date.strftime('%d/%m/%Y'),
+                'culto_hora': culto.time.strftime('%H:%M'),
+                'culto_descricao': culto.description,
+                'funcao': escala.role,
+                'solicitante_nome': solicitante.name,
+                'substituto_nome': substituto.name if substituto else 'N/A',
+                'status': sub.status,
+                'mensagem': sub.mensagem,
+                'resposta': sub.resposta,
+                'criado_em': sub.criado_em.strftime('%d/%m/%Y %H:%M'),
+                'respondido_em': sub.respondido_em.strftime('%d/%m/%Y %H:%M') if sub.respondido_em else None,
+                'eu_solicitei': sub.membro_solicitante_id == member_id,
+                'ja_passou': ja_passou
+            })
+        
+        return jsonify(historico), 200
+    except Exception as e:
+        print(f"? Erro ao buscar historico de substituieees: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 # ========================================
 # ROTAS PARA AVISOS/notificacoes

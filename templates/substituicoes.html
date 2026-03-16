@@ -398,16 +398,32 @@ async function carregarEscalasSubstituiveis() {
         }
         
         container.innerHTML = escalas.map(e => {
-            const disabled = e.tem_substituicao ? 'disabled' : '';
+            const disabled = e.tem_substituicao || e.ja_passou ? 'disabled' : '';
             const statusHtml = e.tem_substituicao ? `
                 <div class="escala-status status-${e.substituicao_status}">
                     <i class="fas fa-${e.substituicao_status === 'pendente' ? 'clock' : 'check'}"></i>
                     Substituição ${e.substituicao_status}
                 </div>
+            ` : e.ja_passou ? `
+                <div class="escala-status" style="background: #6b7280; color: white;">
+                    <i class="fas fa-check-circle"></i>
+                    CULTO REALIZADO
+                </div>
             ` : '';
             
             return `
-                <div class="escala-card ${disabled}" data-escala-id="${e.id}" onclick="${!disabled ? `abrirModalSolicitar(${e.id})` : 'void(0)'}">
+                <div class="escala-card ${disabled}" data-escala-id="${e.id}" onclick="${!disabled ? `abrirModalSolicitar(${e.id})` : 'void(0)'}" style="${e.ja_passou ? 'opacity: 0.5; cursor: not-allowed; background: var(--bg-secondary);' : ''}">
+                    <div class="escala-header">
+                        <div>
+                            <div class="escala-date">${e.culto_data}</div>
+                            <div class="escala-time">${e.culto_hora}</div>
+                        </div>
+                        <div class="escala-funcao">${e.funcao}</div>
+                    </div>
+                    <div class="escala-descricao">${e.culto_descricao}${e.ja_passou ? ' <span style="color: #6b7280; font-size: 0.85rem;">(Realizado)</span>' : ''}</div>
+                    ${statusHtml}
+                </div>
+            `;
                     <div class="escala-header">
                         <div>
                             <div class="escala-date">${e.culto_data}</div>
@@ -513,10 +529,13 @@ async function carregarSubstituicoesPendentes() {
         }
         
         container.innerHTML = substituicoes.map(s => `
-            <div class="solicitacao-card" id="solicitacao-${s.id}">
+            <div class="solicitacao-card" id="solicitacao-${s.id}" style="${s.ja_passou ? 'opacity: 0.6; background: var(--bg-secondary);' : ''}">
                 <div class="solicitacao-header">
                     <div class="solicitacao-info">
-                        <h3><i class="fas fa-calendar-alt"></i> ${s.culto_descricao}</h3>
+                        <h3>
+                            <i class="fas fa-calendar-alt"></i> ${s.culto_descricao}
+                            ${s.ja_passou ? '<span style="margin-left: 0.5rem; font-size: 0.85rem; color: #6b7280;">(CULTO REALIZADO)</span>' : ''}
+                        </h3>
                         <div class="solicitacao-meta">
                             <div><i class="fas fa-calendar"></i> ${s.culto_data} às ${s.culto_hora}</div>
                             <div><i class="fas fa-user"></i> Solicitado por: <strong>${s.solicitante_nome}</strong></div>
@@ -530,14 +549,21 @@ async function carregarSubstituicoesPendentes() {
                         <p><i class="fas fa-comment"></i> <strong>Mensagem:</strong> ${s.mensagem}</p>
                     </div>
                 ` : ''}
-                <div class="solicitacao-acoes">
-                    <button class="btn btn-success" onclick="responderSubstituicao(${s.id}, 'aceitar')">
-                        <i class="fas fa-check-circle"></i> Aceitar
-                    </button>
-                    <button class="btn btn-danger" onclick="responderSubstituicao(${s.id}, 'recusar')">
-                        <i class="fas fa-times-circle"></i> Recusar
-                    </button>
-                </div>
+                ${s.ja_passou ? `
+                    <div class="solicitacao-acoes" style="background: var(--bg-secondary); padding: 1rem; border-radius: 8px; text-align: center;">
+                        <i class="fas fa-check-circle" style="color: #6b7280; font-size: 1.5rem; margin-bottom: 0.5rem;"></i>
+                        <p style="margin: 0; color: #6b7280; font-weight: 600;">Culto já realizado - Não é mais possível responder</p>
+                    </div>
+                ` : `
+                    <div class="solicitacao-acoes">
+                        <button class="btn btn-success" onclick="responderSubstituicao(${s.id}, 'aceitar')">
+                            <i class="fas fa-check-circle"></i> Aceitar
+                        </button>
+                        <button class="btn btn-danger" onclick="responderSubstituicao(${s.id}, 'recusar')">
+                            <i class="fas fa-times-circle"></i> Recusar
+                        </button>
+                    </div>
+                `}
             </div>
         `).join('');
     } catch (error) {
@@ -589,15 +615,80 @@ async function responderSubstituicao(subId, acao) {
 }
 
 // Carregar histórico (placeholder)
-function carregarHistorico() {
-    const container = document.getElementById('historicoContainer');
-    container.innerHTML = `
-        <div class="empty-state">
-            <i class="fas fa-history"></i>
-            <h3>Em desenvolvimento</h3>
-            <p>O histórico completo de substituições estará disponível em breve.</p>
-        </div>
-    `;
+async function carregarHistorico() {
+    try {
+        const response = await fetch('/get_historico_substituicoes');
+        const historico = await response.json();
+        
+        const container = document.getElementById('historicoContainer');
+        
+        if (historico.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-history"></i>
+                    <h3>Sem histórico</h3>
+                    <p>Você ainda não tem substituições finalizadas.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = historico.map(h => {
+            const statusConfig = {
+                'aceito': { color: '#10b981', icon: 'fa-check-circle', text: 'ACEITA' },
+                'recusado': { color: '#ef4444', icon: 'fa-times-circle', text: 'RECUSADA' },
+                'cancelado': { color: '#6b7280', icon: 'fa-ban', text: 'CANCELADA' }
+            };
+            
+            const config = statusConfig[h.status] || statusConfig['cancelado'];
+            const tipo = h.eu_solicitei ? 'Você solicitou' : 'Solicitaram para você';
+            
+            return `
+                <div class="solicitacao-card" style="${h.ja_passou ? 'opacity: 0.6; background: var(--bg-secondary);' : ''}">
+                    <div class="solicitacao-header">
+                        <div class="solicitacao-info">
+                            <h3>
+                                <i class="fas fa-calendar-alt"></i> ${h.culto_descricao}
+                                ${h.ja_passou ? '<span style="margin-left: 0.5rem; font-size: 0.85rem; color: #6b7280;">(CULTO REALIZADO)</span>' : ''}
+                            </h3>
+                            <div class="solicitacao-meta">
+                                <div><i class="fas fa-calendar"></i> ${h.culto_data} às ${h.culto_hora}</div>
+                                <div><i class="fas ${h.eu_solicitei ? 'fa-user-arrow-right' : 'fa-user-arrow-left'}"></i> ${tipo}</div>
+                                ${h.eu_solicitei ? `<div><i class="fas fa-user"></i> Substituto: <strong>${h.substituto_nome}</strong></div>` : `<div><i class="fas fa-user"></i> Solicitante: <strong>${h.solicitante_nome}</strong></div>`}
+                                <div><i class="fas fa-clock"></i> Respondido em: ${h.respondido_em || 'N/A'}</div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="solicitacao-funcao">${h.funcao}</div>
+                            <div style="margin-top: 0.5rem; padding: 0.35rem 0.85rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; background: ${config.color}; color: white; text-align: center;">
+                                <i class="fas ${config.icon}"></i> ${config.text}
+                            </div>
+                        </div>
+                    </div>
+                    ${h.mensagem ? `
+                        <div class="mensagem-box">
+                            <p><i class="fas fa-comment"></i> <strong>Mensagem:</strong> ${h.mensagem}</p>
+                        </div>
+                    ` : ''}
+                    ${h.resposta ? `
+                        <div class="mensagem-box" style="background: var(--bg-secondary); border-left-color: ${config.color};">
+                            <p><i class="fas fa-reply"></i> <strong>Resposta:</strong> ${h.resposta}</p>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Erro ao carregar histórico:', error);
+        const container = document.getElementById('historicoContainer');
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Erro ao carregar histórico</h3>
+                <p>Tente novamente mais tarde.</p>
+            </div>
+        `;
+    }
 }
 
 // Notificações
@@ -625,6 +716,7 @@ function showNotification(message, type = 'info') {
 document.addEventListener('DOMContentLoaded', () => {
     carregarEscalasSubstituiveis();
     carregarSubstituicoesPendentes();
+    carregarHistorico();
     
     // Verifica se ha uma escala pre-selecionada do localStorage
     const substituicaoData = localStorage.getItem('substituicao_escala');
