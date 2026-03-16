@@ -1573,6 +1573,10 @@ def get_user_data():
         role = user.role if hasattr(user, 'role') else ROLE_MEMBRO
     
     print(f"User data: {name}, role: {role}, is_admin: {isinstance(user, User)}")  # Depuraeeo
+    
+    # Obter avatar
+    avatar = getattr(user, 'avatar', 'default-avatar.png') or 'default-avatar.png'
+    
     return jsonify({
         'logged_in': True,
         'name': name,
@@ -1580,7 +1584,8 @@ def get_user_data():
         'role': role,
         'instrument': user.instrument if hasattr(user, 'instrument') and user.instrument else 'N/A',
         'phone': user.phone if hasattr(user, 'phone') and user.phone else 'N/A',
-        'is_admin': isinstance(user, User)
+        'is_admin': isinstance(user, User),
+        'avatar': avatar
     })
 
 @app.route('/get_announcements', methods=['GET'])

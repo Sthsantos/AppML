@@ -87,7 +87,13 @@
     <nav class="navbar">
         <div class="navbar-container">
             <a href="{{ url_for('index') }}" class="navbar-brand">
-                <i class="fas fa-music"></i>
+                {% if current_user.is_authenticated %}
+                    <img id="navbarAvatar" src="/static/uploads/avatars/default-avatar.png" 
+                         alt="Avatar" 
+                         style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-500); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
+                {% else %}
+                    <i class="fas fa-music"></i>
+                {% endif %}
             </a>
             
             <div class="navbar-menu">
@@ -774,6 +780,7 @@
             if (data.logged_in && data.name) {
                 const userName = document.getElementById('userName');
                 const userInitials = document.getElementById('userInitials');
+                const navbarAvatar = document.getElementById('navbarAvatar');
                 
                 if (userName) {
                     userName.textContent = data.name;
@@ -786,6 +793,14 @@
                         ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
                         : (nameParts[0][0] + (nameParts[0][1] || '')).toUpperCase();
                     userInitials.textContent = initials;
+                }
+                
+                // Carregar avatar na navbar
+                if (navbarAvatar && data.avatar) {
+                    const avatarPath = data.avatar && data.avatar !== 'default-avatar.png' 
+                        ? `/static/uploads/avatars/${data.avatar}` 
+                        : '/static/uploads/avatars/default-avatar.png';
+                    navbarAvatar.src = avatarPath;
                 }
             }
         } catch (error) {
