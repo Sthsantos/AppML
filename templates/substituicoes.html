@@ -70,7 +70,6 @@
     <div class="modal-content">
         <div class="modal-header">
             <h2><i class="fas fa-exchange-alt"></i> Solicitar Substituição</h2>
-            <span class="close" onclick="closeModalSolicitar()">&times;</span>
         </div>
         <div class="modal-body">
             <div id="infoEscala" style="background: var(--card-bg); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;"></div>
@@ -103,7 +102,6 @@
     <div class="modal-content">
         <div class="modal-header">
             <h2><i class="fas fa-reply"></i> Responder Solicitação</h2>
-            <span class="close" onclick="closeModalResponder()">&times;</span>
         </div>
         <div class="modal-body">
             <div id="infoSubstituicao" style="background: var(--card-bg); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;"></div>
@@ -680,13 +678,5 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 });
-
-// Fechar modais ao clicar fora
-window.onclick = function(event) {
-    const modalSolicitar = document.getElementById('modalSolicitarSub');
-    const modalResponder = document.getElementById('modalResponderSub');
-    if (event.target === modalSolicitar) closeModalSolicitar();
-    if (event.target === modalResponder) closeModalResponder();
-}
 </script>
 {% endblock %}
