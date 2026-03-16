@@ -549,9 +549,13 @@ async function carregarSubstituicoesPendentes() {
 // Responder substituição direto (sem modal)
 async function responderSubstituicao(subId, acao) {
     const acaoTexto = acao === 'aceitar' ? 'aceitar' : 'recusar';
-    const confirmacao = confirm(`Deseja realmente ${acaoTexto} esta solicitação de substituição?`);
     
-    if (!confirmacao) return;
+    const confirmado = await window.GlobalModals.confirm(
+        `Deseja realmente ${acaoTexto} esta solicitação de substituição?`,
+        acaoTexto === 'aceitar' ? 'Aceitar Substituição' : 'Recusar Substituição'
+    );
+    
+    if (!confirmado) return;
     
     try {
         const response = await fetch(`/responder_substituicao/${subId}`, {

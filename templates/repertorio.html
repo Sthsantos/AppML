@@ -574,8 +574,14 @@ async function deleteSong(songId) {
             },
             'Confirmar Exclusão'
         );
-    } else if (confirm('Deseja realmente remover esta música? Esta ação não pode ser desfeita.')) {
-        await executeDelete(songId);
+    } else {
+        const confirmado = await window.GlobalModals.confirm(
+            'Deseja realmente remover esta música? Esta ação não pode ser desfeita.',
+            'Confirmar Exclusão'
+        );
+        if (confirmado) {
+            await executeDelete(songId);
+        }
     }
 }
 

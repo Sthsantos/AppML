@@ -632,7 +632,7 @@
                 if (window.GlobalModals && window.GlobalModals.alert) {
                     window.GlobalModals.alert('A instalação não está disponível neste navegador ou o aplicativo já foi instalado.');
                 } else {
-                    alert('A instalação não está disponível neste momento.');
+                    window.GlobalModals.alert('A instalação não está disponível neste momento.');
                 }
                 return;
             }

@@ -195,7 +195,7 @@ function openModalIndisponibilidade() {
         if (typeof App !== 'undefined' && App.toast) {
             App.toast.warning('Período de registro está fechado no momento.');
         } else {
-            alert('Período de registro está fechado no momento.');
+            window.GlobalModals.alert('Período de registro está fechado no momento.', 'warning');
         }
         return;
     }
@@ -385,7 +385,7 @@ async function saveIndisponibilidade() {
         if (typeof App !== 'undefined' && App.toast) {
             App.toast.error('Selecione pelo menos um culto');
         } else {
-            alert('Selecione pelo menos um culto');
+            window.GlobalModals.alert('Selecione pelo menos um culto', 'error');
         }
         return;
     }
@@ -394,7 +394,7 @@ async function saveIndisponibilidade() {
         if (typeof App !== 'undefined' && App.toast) {
             App.toast.error('Informe o motivo da indisponibilidade');
         } else {
-            alert('Informe o motivo da indisponibilidade');
+            window.GlobalModals.alert('Informe o motivo da indisponibilidade', 'error');
         }
         return;
     }
@@ -419,7 +419,7 @@ async function saveIndisponibilidade() {
             if (typeof App !== 'undefined' && App.toast) {
                 App.toast.success(data.message);
             } else {
-                alert(data.message);
+                window.GlobalModals.alert(data.message, 'success');
             }
             closeModalIndisponibilidade();
             loadIndisponibilidades();
@@ -427,7 +427,7 @@ async function saveIndisponibilidade() {
             if (typeof App !== 'undefined' && App.toast) {
                 App.toast.error(data.message || 'Erro ao registrar indisponibilidade');
             } else {
-                alert(data.message || 'Erro ao registrar indisponibilidade');
+                window.GlobalModals.alert(data.message || 'Erro ao registrar indisponibilidade', 'error');
             }
         }
     } catch (error) {
@@ -435,14 +435,18 @@ async function saveIndisponibilidade() {
         if (typeof App !== 'undefined' && App.toast) {
             App.toast.error('Erro ao processar requisição');
         } else {
-            alert('Erro ao processar requisição');
+            window.GlobalModals.alert('Erro ao processar requisição', 'error');
         }
     }
 }
 
 // Deletar indisponibilidade
 async function deleteIndisponibilidade(id) {
-    if (!confirm('Tem certeza que deseja remover esta indisponibilidade?')) {
+    const confirmado = await window.GlobalModals.confirm(
+        'Tem certeza que deseja remover esta indisponibilidade?',
+        'Confirmar Remoção'
+    );
+    if (!confirmado) {
         return;
     }
     
@@ -457,14 +461,14 @@ async function deleteIndisponibilidade(id) {
             if (typeof App !== 'undefined' && App.toast) {
                 App.toast.success('Indisponibilidade removida com sucesso!');
             } else {
-                alert('Indisponibilidade removida com sucesso!');
+                window.GlobalModals.alert('Indisponibilidade removida com sucesso!', 'success');
             }
             loadIndisponibilidades();
         } else {
             if (typeof App !== 'undefined' && App.toast) {
                 App.toast.error(data.message || 'Erro ao remover indisponibilidade');
             } else {
-                alert(data.message || 'Erro ao remover indisponibilidade');
+                window.GlobalModals.alert(data.message || 'Erro ao remover indisponibilidade', 'error');
             }
         }
     } catch (error) {
@@ -472,7 +476,7 @@ async function deleteIndisponibilidade(id) {
         if (typeof App !== 'undefined' && App.toast) {
             App.toast.error('Erro ao remover indisponibilidade');
         } else {
-            alert('Erro ao remover indisponibilidade');
+            window.GlobalModals.alert('Erro ao remover indisponibilidade', 'error');
         }
     }
 }

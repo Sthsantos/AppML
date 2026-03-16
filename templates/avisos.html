@@ -334,7 +334,10 @@
 
     // Deletar aviso
     async function deleteAviso(avisoId) {
-        const confirmar = confirm('Deseja realmente remover este aviso?');
+        const confirmar = await window.GlobalModals.confirm(
+            'Deseja realmente remover este aviso?',
+            'Confirmar Remoção'
+        );
         if (!confirmar) return;
 
         try {

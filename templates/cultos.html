@@ -473,7 +473,8 @@ async function deleteCulto(id, name, dateTime) {
     
     const confirmMessage = `Tem certeza que deseja excluir o culto?\n\n${name}\n${formattedDate} às ${formattedTime}h`;
     
-    if (!confirm(confirmMessage)) {
+    const confirmado = await window.GlobalModals.confirm(confirmMessage, 'Confirmar Exclusão');
+    if (!confirmado) {
         return;
     }
     

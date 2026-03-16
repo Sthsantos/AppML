@@ -625,7 +625,11 @@
         // Install PWA
         async function installPWA() {
             if (!deferredPrompt) {
-                alert('A instalação não está disponível neste navegador ou o aplicativo já foi instalado.');
+                if (window.GlobalModals && window.GlobalModals.alert) {
+                    window.GlobalModals.alert('A instalação não está disponível neste navegador ou o aplicativo já foi instalado.');
+                } else {
+                    console.log('GlobalModals não disponível na página de login');
+                }
                 return;
             }
             
@@ -634,7 +638,9 @@
             
             if (outcome === 'accepted') {
                 console.log('✅ PWA instalado com sucesso!');
-                alert('Aplicativo instalado com sucesso! 🎉');
+                if (window.GlobalModals && window.GlobalModals.alert) {
+                    window.GlobalModals.alert('Aplicativo instalado com sucesso! 🎉', 'success');
+                }
             }
             
             deferredPrompt = null;
@@ -659,7 +665,9 @@
             console.log('✅ PWA instalado!');
             installPrompt.style.display = 'none';
             localStorage.setItem('pwa-installed', 'true');
-            alert('Aplicativo instalado com sucesso! Agora você pode acessar diretamente da tela inicial. 🎉');
+            if (window.GlobalModals && window.GlobalModals.alert) {
+                window.GlobalModals.alert('Aplicativo instalado com sucesso! Agora você pode acessar diretamente da tela inicial. 🎉', 'success');
+            }
         });
         
         // Detect standalone mode (already installed)
@@ -674,12 +682,15 @@
             
             if (isIOS && !isStandalone && !localStorage.getItem('ios-install-shown')) {
                 setTimeout(() => {
-                    alert(
-                        'Para instalar no iOS:\n\n' +
-                        '1. Toque no ícone de compartilhar (quadrado com seta)\n' +
-                        '2. Role para baixo e toque em "Adicionar à Tela de Início"\n' +
-                        '3. Toque em "Adicionar"'
-                    );
+                    if (window.GlobalModals && window.GlobalModals.alert) {
+                        window.GlobalModals.alert(
+                            'Para instalar no iOS:\n\n' +
+                            '1. Toque no ícone de compartilhar (quadrado com seta)\n' +
+                            '2. Role para baixo e toque em "Adicionar à Tela de Início"\n' +
+                            '3. Toque em "Adicionar"',
+                            'info'
+                        );
+                    }
                     localStorage.setItem('ios-install-shown', 'true');
                 }, 5000);
             }
