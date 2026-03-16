@@ -2,6 +2,47 @@
 
 {% block title %}Meu Perfil - Ministério de Louvor{% endblock %}
 
+{% block extra_css %}
+<style>
+.profile-grid {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    gap: 1.5rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.profile-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .profile-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .profile-buttons {
+        flex-direction: column;
+    }
+    
+    .profile-buttons button {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="page-header">
     <div>
@@ -13,7 +54,7 @@
     </div>
 </div>
 
-<div class="grid" style="grid-template-columns: 350px 1fr; gap: 1.5rem;">
+<div class="profile-grid">
     <!-- Card do Avatar -->
     <div class="card" style="text-align: center;">
         <div class="card-body">
@@ -62,7 +103,7 @@
                     </small>
                 </div>
 
-                <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-grid">
                     <div class="form-group">
                         <label class="form-label">
                             <i class="fas fa-phone"></i>
@@ -118,7 +159,7 @@
                     </div>
                 </div>
 
-                <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem;">
+                <div class="profile-buttons">
                     <button type="button" onclick="window.location.reload()" class="btn btn-outline">
                         <i class="fas fa-undo"></i>
                         Cancelar
