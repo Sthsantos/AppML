@@ -97,30 +97,7 @@
     </div>
 </div>
 
-<!-- Modal: Responder Substituição -->
-<div id="modalResponderSub" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2><i class="fas fa-reply"></i> Responder Solicitação</h2>
-        </div>
-        <div class="modal-body">
-            <div id="infoSubstituicao" style="background: var(--card-bg); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;"></div>
-            
-            <div class="form-group">
-                <label for="respostaSub"><i class="fas fa-comment"></i> Resposta (opcional)</label>
-                <textarea id="respostaSub" class="form-control" rows="3" placeholder="Deixe uma mensagem..."></textarea>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-danger" onclick="responderSub('recusar')">
-                <i class="fas fa-times-circle"></i> Recusar
-            </button>
-            <button class="btn btn-success" onclick="responderSub('aceitar')">
-                <i class="fas fa-check-circle"></i> Aceitar
-            </button>
-        </div>
-    </div>
-</div>
+
 
 <style>
 .tabs {
@@ -270,6 +247,7 @@
     border-radius: 12px;
     padding: 1.5rem;
     margin-bottom: 1rem;
+    transition: all 0.3s ease;
 }
 
 .solicitacao-header {
@@ -535,7 +513,7 @@ async function carregarSubstituicoesPendentes() {
         }
         
         container.innerHTML = substituicoes.map(s => `
-            <div class="solicitacao-card">
+            <div class="solicitacao-card" id="solicitacao-${s.id}">
                 <div class="solicitacao-header">
                     <div class="solicitacao-info">
                         <h3><i class="fas fa-calendar-alt"></i> ${s.culto_descricao}</h3>
@@ -553,10 +531,10 @@ async function carregarSubstituicoesPendentes() {
                     </div>
                 ` : ''}
                 <div class="solicitacao-acoes">
-                    <button class="btn btn-success" onclick="abrirModalResponder(${s.id}, 'aceitar')">
+                    <button class="btn btn-success" onclick="responderSubstituicao(${s.id}, 'aceitar')">
                         <i class="fas fa-check-circle"></i> Aceitar
                     </button>
-                    <button class="btn btn-danger" onclick="abrirModalResponder(${s.id}, 'recusar')">
+                    <button class="btn btn-danger" onclick="responderSubstituicao(${s.id}, 'recusar')">
                         <i class="fas fa-times-circle"></i> Recusar
                     </button>
                 </div>
@@ -568,36 +546,35 @@ async function carregarSubstituicoesPendentes() {
     }
 }
 
-// Abrir modal de resposta
-function abrirModalResponder(subId, acao) {
-    substituicaoAtual = { id: subId, acao: acao };
-    document.getElementById('modalResponderSub').style.display = 'block';
-}
-
-// Fechar modal de resposta
-function closeModalResponder() {
-    document.getElementById('modalResponderSub').style.display = 'none';
-    document.getElementById('respostaSub').value = '';
-    substituicaoAtual = null;
-}
-
-// Responder substituição
-async function responderSub(acao) {
-    const resposta = document.getElementById('respostaSub').value;
+// Responder substituição direto (sem modal)
+async function responderSubstituicao(subId, acao) {
+    const acaoTexto = acao === 'aceitar' ? 'aceitar' : 'recusar';
+    const confirmacao = confirm(`Deseja realmente ${acaoTexto} esta solicitação de substituição?`);
+    
+    if (!confirmacao) return;
     
     try {
-        const response = await fetch(`/responder_substituicao/${substituicaoAtual.id}`, {
+        const response = await fetch(`/responder_substituicao/${subId}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ acao: acao, resposta: resposta })
+            body: JSON.stringify({ acao: acao, resposta: '' })
         });
         
         const result = await response.json();
         
         if (result.success) {
             showNotification(result.message, 'success');
-            closeModalResponder();
-            carregarSubstituicoesPendentes();
+            // Remover o card com animação
+            const card = document.getElementById(`solicitacao-${subId}`);
+            if (card) {
+                card.style.opacity = '0';
+                card.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    carregarSubstituicoesPendentes();
+                }, 300);
+            } else {
+                carregarSubstituicoesPendentes();
+            }
         } else {
             showNotification(result.message, 'error');
         }
