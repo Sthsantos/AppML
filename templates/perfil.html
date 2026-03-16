@@ -23,6 +23,49 @@
     margin-top: 1.5rem;
 }
 
+/* Estilos para sliders do editor de avatar */
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--bg-tertiary);
+    outline: none;
+    border-radius: 4px;
+    height: 8px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--primary-500);
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+    background: var(--primary-600);
+    transform: scale(1.1);
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--primary-500);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+    background: var(--primary-600);
+    transform: scale(1.1);
+}
+
 @media (max-width: 768px) {
     .profile-grid {
         grid-template-columns: 1fr;
@@ -173,6 +216,91 @@
         </div>
     </div>
 </div>
+
+<!-- Modal de Edição de Avatar -->
+<div id="avatarEditorModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 10000; align-items: center; justify-content: center;">
+    <div style="background: var(--bg-primary); border-radius: var(--radius-lg); padding: 2rem; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h3 style="margin: 0; color: var(--text-color); font-size: 1.5rem;">
+                <i class="fas fa-crop"></i>
+                Ajustar Foto de Perfil
+            </h3>
+            <button onclick="closeAvatarEditor()" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 1.5rem;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <!-- Preview Container -->
+        <div style="position: relative; width: 300px; height: 300px; margin: 0 auto 2rem; border-radius: 50%; overflow: hidden; border: 4px solid var(--primary-500); background: #f0f0f0;">
+            <img id="avatarEditorImage" src="" style="position: absolute; transform-origin: center; width: 100%; height: 100%;">
+        </div>
+        
+        <!-- Controles -->
+        <div style="margin-bottom: 2rem;">
+            <!-- Zoom -->
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; color: var(--text-color); font-weight: 600;">
+                    <i class="fas fa-search-plus"></i>
+                    Zoom
+                </label>
+                <input type="range" id="zoomSlider" min="100" max="300" value="100" step="1" 
+                       style="width: 100%; height: 8px; border-radius: 4px; background: var(--bg-tertiary); outline: none; -webkit-appearance: none;"
+                       oninput="updateAvatarPreview()">
+                <div style="display: flex; justify-content: space-between; color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.25rem;">
+                    <span>100%</span>
+                    <span id="zoomValue">100%</span>
+                    <span>300%</span>
+                </div>
+            </div>
+            
+            <!-- Posição Horizontal -->
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; color: var(--text-color); font-weight: 600;">
+                    <i class="fas fa-arrows-alt-h"></i>
+                    Posição Horizontal
+                </label>
+                <input type="range" id="posXSlider" min="-100" max="100" value="0" step="1" 
+                       style="width: 100%; height: 8px; border-radius: 4px; background: var(--bg-tertiary); outline: none; -webkit-appearance: none;"
+                       oninput="updateAvatarPreview()">
+                <div style="display: flex; justify-content: space-between; color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.25rem;">
+                    <span>Esquerda</span>
+                    <span>Centro</span>
+                    <span>Direita</span>
+                </div>
+            </div>
+            
+            <!-- Posição Vertical -->
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; color: var(--text-color); font-weight: 600;">
+                    <i class="fas fa-arrows-alt-v"></i>
+                    Posição Vertical
+                </label>
+                <input type="range" id="posYSlider" min="-100" max="100" value="0" step="1" 
+                       style="width: 100%; height: 8px; border-radius: 4px; background: var(--bg-tertiary); outline: none; -webkit-appearance: none;"
+                       oninput="updateAvatarPreview()">
+                <div style="display: flex; justify-content: space-between; color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.25rem;">
+                    <span>Cima</span>
+                    <span>Centro</span>
+                    <span>Baixo</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Botões de Ação -->
+        <div style="display: flex; gap: 1rem;">
+            <button onclick="closeAvatarEditor()" class="btn" style="flex: 1; background: var(--bg-tertiary); color: var(--text-color);">
+                <i class="fas fa-times"></i>
+                Cancelar
+            </button>
+            <button onclick="confirmAvatarUpload()" class="btn btn-blue" style="flex: 1;">
+                <i class="fas fa-check"></i>
+                Confirmar
+            </button>
+        </div>
+    </div>
+</div>
+
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -294,6 +422,122 @@ async function loadPerfil() {
     }
 }
 
+// Variáveis globais para edição de avatar
+let selectedAvatarFile = null;
+let currentImageData = null;
+
+// Abrir editor de avatar
+function openAvatarEditor(file) {
+    selectedAvatarFile = file;
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        currentImageData = e.target.result;
+        document.getElementById('avatarEditorImage').src = currentImageData;
+        document.getElementById('avatarEditorModal').style.display = 'flex';
+        
+        // Resetar controles
+        document.getElementById('zoomSlider').value = 100;
+        document.getElementById('posXSlider').value = 0;
+        document.getElementById('posYSlider').value = 0;
+        updateAvatarPreview();
+    };
+    reader.readAsDataURL(file);
+}
+
+// Fechar editor de avatar
+function closeAvatarEditor() {
+    document.getElementById('avatarEditorModal').style.display = 'none';
+    document.getElementById('avatarInput').value = ''; // Limpar input
+    selectedAvatarFile = null;
+    currentImageData = null;
+}
+
+// Atualizar preview com os ajustes
+function updateAvatarPreview() {
+    const zoom = document.getElementById('zoomSlider').value;
+    const posX = document.getElementById('posXSlider').value;
+    const posY = document.getElementById('posYSlider').value;
+    
+    const img = document.getElementById('avatarEditorImage');
+    const scale = zoom / 100;
+    
+    img.style.transform = `translate(${posX}%, ${posY}%) scale(${scale})`;
+    document.getElementById('zoomValue').textContent = `${zoom}%`;
+}
+
+// Confirmar upload com ajustes
+async function confirmAvatarUpload() {
+    if (!selectedAvatarFile) return;
+    
+    // Capturar a imagem ajustada usando canvas
+    const container = document.getElementById('avatarEditorImage').parentElement;
+    const img = document.getElementById('avatarEditorImage');
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 400;
+    const ctx = canvas.getContext('2d');
+    
+    // Criar imagem temporária para carregar
+    const tempImg = new Image();
+    tempImg.onload = async () => {
+        const zoom = document.getElementById('zoomSlider').value / 100;
+        const posX = document.getElementById('posXSlider').value;
+        const posY = document.getElementById('posYSlider').value;
+        
+        // Calcular dimensões e posição
+        const scaledWidth = tempImg.width * zoom;
+        const scaledHeight = tempImg.height * zoom;
+        
+        const offsetX = (canvas.width - scaledWidth) / 2 + (posX * canvas.width / 100);
+        const offsetY = (canvas.height - scaledHeight) / 2 + (posY * canvas.height / 100);
+        
+        // Desenhar no canvas
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(tempImg, offsetX, offsetY, scaledWidth, scaledHeight);
+        
+        // Converter para blob
+        canvas.toBlob(async (blob) => {
+            const formData = new FormData();
+            formData.append('avatar', blob, selectedAvatarFile.name);
+            
+            try {
+                closeAvatarEditor();
+                showToast('info', 'Enviando foto...');
+                
+                const response = await fetch('/upload_avatar', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showToast('success', 'Foto atualizada com sucesso!');
+                    // Atualizar preview na página
+                    document.getElementById('avatarPreview').src = `/static/uploads/avatars/${result.filename}?t=${Date.now()}`;
+                    
+                    // Atualizar também a navbar
+                    const navbarAvatar = document.getElementById('navbarAvatar');
+                    if (navbarAvatar) {
+                        navbarAvatar.src = `/static/uploads/avatars/${result.filename}?t=${Date.now()}`;
+                    }
+                } else {
+                    showToast('error', result.message || 'Erro ao atualizar foto');
+                    loadPerfil();
+                }
+            } catch (error) {
+                console.error('Erro ao fazer upload:', error);
+                showToast('error', 'Erro ao atualizar foto');
+                loadPerfil();
+            }
+        }, 'image/jpeg', 0.9);
+    };
+    tempImg.src = currentImageData;
+}
+
 // Upload de avatar
 document.getElementById('avatarInput').addEventListener('change', async (e) => {
     const file = e.target.files[0];
@@ -302,39 +546,19 @@ document.getElementById('avatarInput').addEventListener('change', async (e) => {
     // Validar tamanho (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
         showToast('error', 'A imagem deve ter no máximo 5MB');
+        e.target.value = '';
         return;
     }
     
-    // Preview local
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        document.getElementById('avatarPreview').src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-    
-    // Upload
-    const formData = new FormData();
-    formData.append('avatar', file);
-    
-    try {
-        const response = await fetch('/upload_avatar', {
-            method: 'POST',
-            body: formData
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            showToast('success', 'Foto atualizada com sucesso!');
-        } else {
-            showToast('error', result.message || 'Erro ao atualizar foto');
-            loadPerfil(); // Recarregar para restaurar avatar anterior
-        }
-    } catch (error) {
-        console.error('Erro ao fazer upload:', error);
-        showToast('error', 'Erro ao atualizar foto');
-        loadPerfil();
+    // Validar tipo
+    if (!file.type.startsWith('image/')) {
+        showToast('error', 'Por favor, selecione uma imagem válida');
+        e.target.value = '';
+        return;
     }
+    
+    // Abrir editor ao invés de fazer upload direto
+    openAvatarEditor(file);
 });
 
 // Salvar perfil
