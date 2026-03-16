@@ -768,18 +768,26 @@ async function loadCultosPendentes() {
                 : `<i class="fas fa-user-plus"></i> Adicionar Membros`;
             
             return `
-                <div class="card mb-3 fade-in" style="border-left: 4px solid ${badgeColor};">
+                <div class="card mb-3 fade-in" style="border-left: 4px solid ${badgeColor}; ${culto.ja_passou ? 'opacity: 0.6; background: var(--bg-secondary);' : ''}">
                     <div class="card-header">
                         <div>
                             <h3 class="card-title">
                                 ${iconEmoji} ${culto.name}
                                 ${isSantaCeia ? '<span class="badge" style="background: #dc2626; color: white; margin-left: 0.5rem;">SANTA CEIA</span>' : ''}
+                                ${culto.ja_passou ? '<span style="margin-left: 0.5rem; font-size: 0.85rem; color: #6b7280; font-weight: 500;">(CULTO REALIZADO)</span>' : ''}
                             </h3>
                             <p class="card-subtitle">${formatDatetime(culto.date_time)}</p>
                         </div>
-                        <button class="btn btn-blue" onclick="toggleCreateEscalaForm(${culto.id})" id="toggleBtn${culto.id}">
-                            ${btnText}
-                        </button>
+                        ${culto.ja_passou ? `
+                            <div style="padding: 0.75rem 1.25rem; background: #6b7280; color: white; border-radius: 8px; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; cursor: not-allowed;">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Culto Realizado</span>
+                            </div>
+                        ` : `
+                            <button class="btn btn-blue" onclick="toggleCreateEscalaForm(${culto.id})" id="toggleBtn${culto.id}">
+                                ${btnText}
+                            </button>
+                        `}
                     </div>
                     <div class="card-body" id="createEscalaForm${culto.id}" style="display: none; background: var(--gradient-soft); border-top: 1px solid var(--border-color);">
                         <h4 style="margin-bottom: 1.5rem; color: var(--primary-color);">
@@ -980,7 +988,8 @@ async function loadEscalas() {
                     date: escala.culto_date,
                     dateOnly: escala.culto_date.split('T')[0],
                     time: escala.culto_date.split('T')[1],
-                    escalas: []
+                    escalas: [],
+                    ja_passou: escala.ja_passou || false
                 };
             }
             byCulto[escala.culto_id].escalas.push(escala);
@@ -1005,7 +1014,8 @@ async function loadEscalas() {
                     date: cultos[0].date,
                     times: [cultos[0].time],
                     culto_ids: [cultos[0].culto_id],
-                    escalas: cultos[0].escalas
+                    escalas: cultos[0].escalas,
+                    ja_passou: cultos[0].ja_passou || false
                 });
             } else {
                 // Múltiplos cultos no mesmo dia - verificar se têm mesma equipe
@@ -1040,7 +1050,8 @@ async function loadEscalas() {
                         date: culto.date,
                         times: times,
                         culto_ids: culto_ids,
-                        escalas: culto.escalas
+                        escalas: culto.escalas,
+                        ja_passou: culto.ja_passou || false
                     });
                 });
             }
@@ -1082,29 +1093,37 @@ async function loadEscalas() {
             const cultoIdsStr = JSON.stringify(group.culto_ids);
             
             return `
-                <div class="card mb-3 fade-in" style="border-left: 4px solid ${badgeColor};">
+                <div class="card mb-3 fade-in" style="border-left: 4px solid ${badgeColor}; ${group.ja_passou ? 'opacity: 0.6; background: var(--bg-secondary);' : ''}">
                     <div class="card-header">
                         <div>
                             <h3 class="card-title">
                                 ${iconEmoji} ${group.name}
                                 ${isSantaCeia ? '<span class="badge" style="background: #dc2626; color: white; margin-left: 0.5rem;">SANTA CEIA</span>' : ''}
+                                ${group.ja_passou ? '<span style="margin-left: 0.5rem; font-size: 0.85rem; color: #6b7280; font-weight: 500;">(CULTO REALIZADO)</span>' : ''}
                             </h3>
                             <p class="card-subtitle">${timeStr}</p>
                         </div>
                         ${IS_ADMIN ? `
                         <div style="display: flex; gap: 0.75rem;">
-                            <button class="btn btn-success" onclick='openMusicasModal(${group.culto_ids[0]}, "${group.name}")' title="Gerenciar músicas do culto">
-                                <i class="fas fa-music"></i>
-                                Músicas
-                            </button>
-                            <button class="btn btn-blue" onclick='openAddSingleMember(${group.culto_ids[0]}, "${group.name}")' title="Adicionar membro à escala">
-                                <i class="fas fa-user-plus"></i>
-                                Adicionar Membro
-                            </button>
-                            <button class="btn btn-danger" onclick='deleteEscalaCompletaConfirm(${cultoIdsStr}, "${group.name}")' title="Excluir escala completa">
-                                <i class="fas fa-trash"></i>
-                                Excluir Escala
-                            </button>
+                            ${group.ja_passou ? `
+                                <div style="padding: 0.75rem 1.25rem; background: #6b7280; color: white; border-radius: 8px; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; cursor: not-allowed;">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>Culto Realizado</span>
+                                </div>
+                            ` : `
+                                <button class="btn btn-success" onclick='openMusicasModal(${group.culto_ids[0]}, "${group.name}")' title="Gerenciar músicas do culto">
+                                    <i class="fas fa-music"></i>
+                                    Músicas
+                                </button>
+                                <button class="btn btn-blue" onclick='openAddSingleMember(${group.culto_ids[0]}, "${group.name}")' title="Adicionar membro à escala">
+                                    <i class="fas fa-user-plus"></i>
+                                    Adicionar Membro
+                                </button>
+                                <button class="btn btn-danger" onclick='deleteEscalaCompletaConfirm(${cultoIdsStr}, "${group.name}")' title="Excluir escala completa">
+                                    <i class="fas fa-trash"></i>
+                                    Excluir Escala
+                                </button>
+                            `}
                         </div>
                         ` : ''}
                     </div>

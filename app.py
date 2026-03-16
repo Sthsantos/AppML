@@ -757,6 +757,11 @@ def get_escalas():
         escalas_list = []
         for escala, culto, membro in escalas:
             date_time_str = f"{culto.date.strftime('%Y-%m-%d')}T{culto.time.strftime('%H:%M')}"
+            
+            # Verificar se o culto já passou
+            culto_datetime = datetime.combine(culto.date, culto.time)
+            ja_passou = culto_datetime < datetime.now()
+            
             escalas_list.append({
                 'escala_id': escala.id,  # ID da escala para edieeo/excluseo
                 'id': escala.id,
@@ -766,7 +771,8 @@ def get_escalas():
                 'member_id': membro.id,
                 'member_name': membro.name,
                 'role': escala.role,
-                'instrument': membro.instrument
+                'instrument': membro.instrument,
+                'ja_passou': ja_passou
             })
         
         return jsonify({'escalas': escalas_list}), 200
@@ -871,13 +877,19 @@ def get_cultos():
     for culto in cultos:
         # Combinar data e hora em um enico datetime string
         date_time_str = f"{culto.date.strftime('%Y-%m-%d')}T{culto.time.strftime('%H:%M')}"
+        
+        # Verificar se o culto já passou
+        culto_datetime = datetime.combine(culto.date, culto.time)
+        ja_passou = culto_datetime < datetime.now()
+        
         cultos_list.append({
             'id': culto.id,
             'name': culto.description,  # Usar description como name
             'description': culto.description,
             'date': culto.date.strftime('%Y-%m-%d'),
             'time': culto.time.strftime('%H:%M'),
-            'date_time': date_time_str  # Campo esperado pelo template
+            'date_time': date_time_str,  # Campo esperado pelo template
+            'ja_passou': ja_passou
         })
     
     return jsonify({'cultos': cultos_list})
