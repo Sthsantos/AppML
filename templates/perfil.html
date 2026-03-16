@@ -266,10 +266,9 @@ input[type="range"]::-moz-range-thumb:active {
         </div>
         
         <!-- Preview Container (estilo WhatsApp/Instagram) -->
-        <div id="avatarContainer" style="position: relative; width: 100%; padding-bottom: 100%; margin-bottom: 2rem; background: #000; border-radius: var(--radius-lg); overflow: hidden; cursor: move; user-select: none;">
-            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                <img id="avatarEditorImage" src="" draggable="false" style="position: absolute; left: 50%; top: 50%; transform-origin: center; cursor: grab;">
-            </div>
+        <div id="avatarContainer" style="position: relative; width: 100%; padding-bottom: 100%; margin-bottom: 2rem; background: #000; border-radius: var(--radius-lg); overflow: hidden; cursor: move; user-select: none; -webkit-user-select: none;">
+            <canvas id="avatarCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none;"></canvas>
+            <img id="avatarEditorImage" draggable="false" style="position: absolute; display: block; cursor: grab;">
             <!-- Máscara circular -->
             <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none;">
                 <svg width="100%" height="100%" style="position: absolute;">
@@ -446,6 +445,8 @@ let isDragging = false;
 let startX = 0;
 let startY = 0;
 let imageElement = null;
+let containerSize = 0;
+let minScale = 1;
 
 // Abrir editor de avatar
 function openAvatarEditor(file) {
@@ -454,44 +455,81 @@ function openAvatarEditor(file) {
     const reader = new FileReader();
     reader.onload = (e) => {
         currentImageData = e.target.result;
+        const container = document.getElementById('avatarContainer');
+        containerSize = container.offsetWidth;
+        
         imageElement = document.getElementById('avatarEditorImage');
         imageElement.src = currentImageData;
         
-        // Resetar valores
-        currentScale = 1;
-        currentX = 0;
-        currentY = 0;
+        console.log('Imagem carregada, aguardando onload...');
         
-        // Aguardar carregamento da imagem
         imageElement.onload = () => {
-            const container = document.getElementById('avatarContainer');
-            const containerSize = container.offsetWidth;
+            console.log('Imagem onload disparado');
+            console.log('Dimensões naturais:', imageElement.naturalWidth, 'x', imageElement.naturalHeight);
+            console.log('Container size:', containerSize);
             
-            // Calcular escala inicial para cobrir o container
+            // Calcular escala mínima para cobrir o container
             const imgWidth = imageElement.naturalWidth;
             const imgHeight = imageElement.naturalHeight;
-            const minScale = Math.max(containerSize / imgWidth, containerSize / imgHeight);
+            minScale = Math.max(containerSize / imgWidth, containerSize / imgHeight);
             
-            // Definir dimensões da imagem
-            imageElement.style.width = imgWidth + 'px';
-            imageElement.style.height = imgHeight + 'px';
+            console.log('Min scale calculado:', minScale);
             
+            // Resetar valores
             currentScale = minScale;
             currentX = 0;
             currentY = 0;
             
-            document.getElementById('zoomSlider').min = minScale;
-            document.getElementById('zoomSlider').max = minScale * 3;
-            document.getElementById('zoomSlider').value = minScale;
+            // Configurar slider
+            const slider = document.getElementById('zoomSlider');
+            slider.min = minScale.toFixed(2);
+            slider.max = (minScale * 3).toFixed(2);
+            slider.value = minScale.toFixed(2);
             
-            updateImageTransform();
+            console.log('Slider configurado:', slider.min, '-', slider.max, 'value:', slider.value);
+            
+            // Posicionar e escalar imagem
+            positionImage();
+            
+            // Mostrar modal
             document.getElementById('avatarEditorModal').style.display = 'flex';
             
-            // Adicionar event listeners
+            // Configurar eventos
             setupDragAndZoom();
+        };
+        
+        imageElement.onerror = (err) => {
+            console.error('Erro ao carregar imagem:', err);
+            showToast('error', 'Erro ao carregar imagem');
+            closeAvatarEditor();
         };
     };
     reader.readAsDataURL(file);
+}
+
+// Posicionar imagem
+function positionImage() {
+    if (!imageElement) return;
+    
+    const imgWidth = imageElement.naturalWidth * currentScale;
+    const imgHeight = imageElement.naturalHeight * currentScale;
+    
+    // Centralizar a imagem no container
+    const left = (containerSize - imgWidth) / 2 + currentX;
+    const top = (containerSize - imgHeight) / 2 + currentY;
+    
+    imageElement.style.width = imgWidth + 'px';
+    imageElement.style.height = imgHeight + 'px';
+    imageElement.style.left = left + 'px';
+    imageElement.style.top = top + 'px';
+    
+    console.log('Imagem posicionada:', {
+        width: imgWidth,
+        height: imgHeight,
+        left: left,
+        top: top,
+        scale: currentScale
+    });
 }
 
 // Configurar drag e zoom
@@ -512,7 +550,7 @@ function setupDragAndZoom() {
         if (!isDragging) return;
         currentX = e.clientX - startX;
         currentY = e.clientY - startY;
-        updateImageTransform();
+        positionImage();
     };
     
     document.onmouseup = () => {
@@ -534,7 +572,7 @@ function setupDragAndZoom() {
         if (isDragging && e.touches.length === 1) {
             currentX = e.touches[0].clientX - startX;
             currentY = e.touches[0].clientY - startY;
-            updateImageTransform();
+            positionImage();
             e.preventDefault();
         }
     };
@@ -551,26 +589,19 @@ function setupDragAndZoom() {
     };
 }
 
-// Atualizar transformação da imagem
-function updateImageTransform() {
-    if (!imageElement) return;
-    // -50%, -50% para centralizar a imagem no ponto (50%, 50%), depois aplicar translação do usuário
-    imageElement.style.transform = `translate(calc(-50% + ${currentX}px), calc(-50% + ${currentY}px)) scale(${currentScale})`;
-}
-
 // Ajustar zoom
 function adjustZoom(delta) {
     const slider = document.getElementById('zoomSlider');
     const newScale = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), currentScale + delta));
     currentScale = newScale;
     slider.value = newScale;
-    updateImageTransform();
+    positionImage();
 }
 
 // Definir zoom pelo slider
 function setZoomFromSlider() {
     currentScale = parseFloat(document.getElementById('zoomSlider').value);
-    updateImageTransform();
+    positionImage();
 }
 
 // Fechar editor de avatar
@@ -595,9 +626,6 @@ function closeAvatarEditor() {
 async function confirmAvatarUpload() {
     if (!selectedAvatarFile || !imageElement) return;
     
-    const container = document.getElementById('avatarContainer');
-    const containerSize = container.offsetWidth;
-    
     // Criar canvas para capturar a área circular
     const canvas = document.createElement('canvas');
     const size = 400; // Tamanho final da imagem
@@ -608,10 +636,10 @@ async function confirmAvatarUpload() {
     // Criar imagem temporária
     const tempImg = new Image();
     tempImg.onload = async () => {
-        // Calcular proporção
+        // Calcular proporção entre canvas e container
         const scale = size / containerSize;
         
-        // Limpar canvas
+        // Limpar canvas com fundo branco
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, size, size);
         
@@ -621,11 +649,29 @@ async function confirmAvatarUpload() {
         ctx.closePath();
         ctx.clip();
         
-        // Calcular posição e tamanho da imagem
-        const imgWidth = tempImg.width * currentScale * scale;
-        const imgHeight = tempImg.height * currentScale * scale;
-        const imgX = (size / 2) + (currentX * scale) - (imgWidth / 2);
-        const imgY = (size / 2) + (currentY * scale) - (imgHeight / 2);
+        // Calcular posição e tamanho da imagem no canvas
+        // A imagem no container está em:
+        // left = (containerSize - imgWidth) / 2 + currentX
+        // top = (containerSize - imgHeight) / 2 + currentY
+        // width = naturalWidth * currentScale
+        // height = naturalHeight * currentScale
+        
+        const imgWidthInContainer = tempImg.width * currentScale;
+        const imgHeightInContainer = tempImg.height * currentScale;
+        const leftInContainer = (containerSize - imgWidthInContainer) / 2 + currentX;
+        const topInContainer = (containerSize - imgHeightInContainer) / 2 + currentY;
+        
+        // Converter para coordenadas do canvas
+        const imgX = leftInContainer * scale;
+        const imgY = topInContainer * scale;
+        const imgWidth = imgWidthInContainer * scale;
+        const imgHeight = imgHeightInContainer * scale;
+        
+        console.log('Canvas rendering:', {
+            imgX, imgY, imgWidth, imgHeight,
+            scale, containerSize,
+            currentX, currentY, currentScale
+        });
         
         // Desenhar imagem
         ctx.drawImage(tempImg, imgX, imgY, imgWidth, imgHeight);
