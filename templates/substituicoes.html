@@ -431,7 +431,7 @@ async function carregarEscalasSubstituiveis() {
             ` : '';
             
             return `
-                <div class="escala-card ${disabled}" onclick="${!disabled ? `abrirModalSolicitar(${e.id})` : 'void(0)'}">
+                <div class="escala-card ${disabled}" data-escala-id="${e.id}" onclick="${!disabled ? `abrirModalSolicitar(${e.id})` : 'void(0)'}">
                     <div class="escala-header">
                         <div>
                             <div class="escala-date">${e.culto_data}</div>
@@ -646,6 +646,39 @@ function showNotification(message, type = 'info') {
 document.addEventListener('DOMContentLoaded', () => {
     carregarEscalasSubstituiveis();
     carregarSubstituicoesPendentes();
+    
+    // Verifica se ha uma escala pre-selecionada do localStorage
+    const substituicaoData = localStorage.getItem('substituicao_escala');
+    if (substituicaoData) {
+        try {
+            const dados = JSON.parse(substituicaoData);
+            console.log('Escala pre-selecionada detectada:', dados);
+            
+            // Limpa o localStorage para nao abrir novamente
+            localStorage.removeItem('substituicao_escala');
+            
+            // Aguarda um pouco para garantir que as escalas foram carregadas
+            setTimeout(() => {
+                // Busca o card da escala na lista
+                const escalaCard = document.querySelector(`[data-escala-id="${dados.escala_id}"]`);
+                if (escalaCard) {
+                    // Simula o clique no botao de solicitar desta escala
+                    escalaCard.click();
+                } else {
+                    console.warn('Escala nao encontrada na lista:', dados.escala_id);
+                    // Mostra notificacao
+                    if (typeof App !== 'undefined' && App.toast) {
+                        App.toast.info('Voce foi redirecionado para solicitar substituicao. Selecione a escala abaixo.');
+                    }
+                    // Muda para a aba de solicitar
+                    switchTab('solicitar');
+                }
+            }, 500);
+        } catch (error) {
+            console.error('Erro ao processar dados de substituicao:', error);
+            localStorage.removeItem('substituicao_escala');
+        }
+    }
 });
 
 // Fechar modais ao clicar fora

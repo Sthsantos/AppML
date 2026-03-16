@@ -109,6 +109,30 @@
 .gap-2 {
     gap: 0.5rem;
 }
+
+/* Responsividade para botao de substituicao */
+@media (max-width: 768px) {
+    .grid-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    /* Botao de solicitar substituicao fica em largura total em mobile */
+    .escala-funcao-container {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+    
+    .escala-funcao-container button {
+        width: 100%;
+        margin-top: 1rem;
+    }
+    
+    .escala-funcao-container button span {
+        display: inline !important;
+    }
+}
 </style>
 
 <script>
@@ -293,11 +317,11 @@ async function loadMinhasEscalas() {
                     <div class="card-body">
                         <!-- Sua Função -->
                         <div style="margin-bottom: 1.5rem; padding: 1.5rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.05)); border-radius: var(--radius-lg); border: 2px solid var(--accent-success);">
-                            <div style="display: flex; align-items: center; gap: 1rem;">
-                                <div style="width: 56px; height: 56px; border-radius: 50%; background: ${meuGradient}; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                            <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                                <div style="width: 56px; height: 56px; border-radius: 50%; background: ${meuGradient}; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); flex-shrink: 0;">
                                     <i class="fas ${meuIcon}"></i>
                                 </div>
-                                <div style="flex: 1;">
+                                <div style="flex: 1; min-width: 200px;">
                                     <div style="font-weight: 700; color: var(--gray-900); font-size: 1.1rem; margin-bottom: 0.25rem;">
                                         Você está escalado como:
                                     </div>
@@ -307,6 +331,15 @@ async function loadMinhasEscalas() {
                                             ${minhaEscala.role}
                                         </span>
                                     </div>
+                                </div>
+                                <div style="flex-shrink: 0;">
+                                    <button onclick="solicitarSubstituicao(${minhaEscala.escala_id}, '${group.name}', '${timeStr}', '${minhaEscala.role}')" 
+                                            style="padding: 0.75rem 1.25rem; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: all 0.3s; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);"
+                                            onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(245, 158, 11, 0.4)'"
+                                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(245, 158, 11, 0.3)'">
+                                        <i class="fas fa-exchange-alt"></i>
+                                        <span>Solicitar Substituição</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -455,5 +488,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+// Funcao para solicitar substituicao
+function solicitarSubstituicao(escalaId, cultoNome, cultoData, funcao) {
+    // Armazena informacoes da escala no localStorage para a pagina de substituicoes
+    localStorage.setItem('substituicao_escala', JSON.stringify({
+        escala_id: escalaId,
+        culto_nome: cultoNome,
+        culto_data: cultoData,
+        funcao: funcao
+    }));
+    
+    // Redireciona para a pagina de substituicoes
+    window.location.href = '/substituicoes';
+}
 </script>
 {% endblock %}
