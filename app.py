@@ -829,6 +829,13 @@ def get_minhas_escalas():
         escalas_list = []
         for escala, culto, membro in escalas:
             date_time_str = f"{culto.date.strftime('%Y-%m-%d')}T{culto.time.strftime('%H:%M')}"
+            
+            # Verificar se o culto je passou
+            culto_datetime = datetime.combine(culto.date, culto.time)
+            ja_passou = culto_datetime < datetime.now()
+            
+            print(f"DEBUG: Culto {culto.description} - Data: {culto_datetime}, Agora: {datetime.now()}, ja_passou: {ja_passou}")
+            
             escalas_list.append({
                 'escala_id': escala.id,
                 'id': escala.id,
@@ -839,7 +846,8 @@ def get_minhas_escalas():
                 'member_name': membro.name,
                 'role': escala.role,
                 'instrument': membro.instrument,
-                'is_me': membro.id == member.id  # Marca se e o Usuario logado
+                'is_me': membro.id == member.id,  # Marca se e o Usuario logado
+                'ja_passou': ja_passou
             })
         
         print(f"OK - Retornando {len(escalas_list)} escalas")

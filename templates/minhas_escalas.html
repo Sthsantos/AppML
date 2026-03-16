@@ -227,6 +227,11 @@ async function loadMinhasEscalas() {
         
         console.log('[7] Agrupamento por culto:', byCulto);
         
+        // DEBUG: Verificar valores de ja_passou
+        Object.values(byCulto).forEach(grupo => {
+            console.log(`[DEBUG] Culto ${grupo.name} - ja_passou: ${grupo.ja_passou}`);
+        });
+        
         // Agrupar por data
         const byDate = {};
         Object.values(byCulto).forEach(culto => {
