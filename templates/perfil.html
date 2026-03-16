@@ -27,43 +27,65 @@
 input[type="range"] {
     -webkit-appearance: none;
     appearance: none;
-    background: var(--bg-tertiary);
+    background: transparent;
     outline: none;
-    border-radius: 4px;
-    height: 8px;
+    height: 6px;
+}
+
+input[type="range"]::-webkit-slider-track {
+    width: 100%;
+    height: 6px;
+    background: var(--bg-tertiary);
+    border-radius: 3px;
 }
 
 input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
     background: var(--primary-500);
     cursor: pointer;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    transition: all 0.3s;
+    transition: all 0.2s;
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
     background: var(--primary-600);
-    transform: scale(1.1);
+    transform: scale(1.15);
+}
+
+input[type="range"]::-webkit-slider-thumb:active {
+    transform: scale(1.05);
+}
+
+input[type="range"]::-moz-range-track {
+    width: 100%;
+    height: 6px;
+    background: var(--bg-tertiary);
+    border-radius: 3px;
+    border: none;
 }
 
 input[type="range"]::-moz-range-thumb {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
     background: var(--primary-500);
     cursor: pointer;
     border: none;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    transition: all 0.3s;
+    transition: all 0.2s;
 }
 
 input[type="range"]::-moz-range-thumb:hover {
     background: var(--primary-600);
-    transform: scale(1.1);
+    transform: scale(1.15);
+}
+
+input[type="range"]::-moz-range-thumb:active {
+    transform: scale(1.05);
 }
 
 @media (max-width: 768px) {
@@ -81,6 +103,19 @@ input[type="range"]::-moz-range-thumb:hover {
     
     .profile-buttons button {
         width: 100%;
+    }
+    
+    #avatarEditorModal > div {
+        padding: 1.5rem;
+        max-width: 95%;
+    }
+    
+    #avatarEditorModal h3 {
+        font-size: 1.1rem;
+    }
+    
+    #avatarEditorModal p {
+        font-size: 0.85rem;
     }
 }
 </style>
@@ -218,81 +253,60 @@ input[type="range"]::-moz-range-thumb:hover {
 </div>
 
 <!-- Modal de Edição de Avatar -->
-<div id="avatarEditorModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 10000; align-items: center; justify-content: center;">
-    <div style="background: var(--bg-primary); border-radius: var(--radius-lg); padding: 2rem; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h3 style="margin: 0; color: var(--text-color); font-size: 1.5rem;">
-                <i class="fas fa-crop"></i>
-                Ajustar Foto de Perfil
+<div id="avatarEditorModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 10000; align-items: center; justify-content: center;">
+    <div style="background: var(--bg-primary); border-radius: var(--radius-lg); padding: 2rem; max-width: 500px; width: 90%; position: relative;">
+        <!-- Header -->
+        <div style="text-align: center; margin-bottom: 1.5rem;">
+            <h3 style="margin: 0 0 0.5rem; color: var(--text-color); font-size: 1.3rem; font-weight: 600;">
+                Ajustar Foto
             </h3>
-            <button onclick="closeAvatarEditor()" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 1.5rem;">
-                <i class="fas fa-times"></i>
-            </button>
+            <p style="margin: 0; color: var(--text-secondary); font-size: 0.9rem;">
+                Arraste para reposicionar • Role para zoom
+            </p>
         </div>
         
-        <!-- Preview Container -->
-        <div style="position: relative; width: 300px; height: 300px; margin: 0 auto 2rem; border-radius: 50%; overflow: hidden; border: 4px solid var(--primary-500); background: #f0f0f0;">
-            <img id="avatarEditorImage" src="" style="position: absolute; transform-origin: center; width: 100%; height: 100%;">
+        <!-- Preview Container (estilo WhatsApp/Instagram) -->
+        <div id="avatarContainer" style="position: relative; width: 100%; padding-bottom: 100%; margin-bottom: 2rem; background: #000; border-radius: var(--radius-lg); overflow: hidden; cursor: move; user-select: none;">
+            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center;">
+                <img id="avatarEditorImage" src="" draggable="false" style="position: absolute; max-width: none; cursor: grab;">
+            </div>
+            <!-- Máscara circular -->
+            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none;">
+                <svg width="100%" height="100%" style="position: absolute;">
+                    <defs>
+                        <mask id="circleMask">
+                            <rect width="100%" height="100%" fill="white"/>
+                            <circle cx="50%" cy="50%" r="42%" fill="black"/>
+                        </mask>
+                    </defs>
+                    <rect width="100%" height="100%" fill="rgba(0,0,0,0.6)" mask="url(#circleMask)"/>
+                    <circle cx="50%" cy="50%" r="42%" fill="none" stroke="white" stroke-width="2"/>
+                </svg>
+            </div>
         </div>
         
-        <!-- Controles -->
+        <!-- Controle de Zoom -->
         <div style="margin-bottom: 2rem;">
-            <!-- Zoom -->
-            <div style="margin-bottom: 1.5rem;">
-                <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; color: var(--text-color); font-weight: 600;">
-                    <i class="fas fa-search-plus"></i>
-                    Zoom
-                </label>
-                <input type="range" id="zoomSlider" min="100" max="300" value="100" step="1" 
-                       style="width: 100%; height: 8px; border-radius: 4px; background: var(--bg-tertiary); outline: none; -webkit-appearance: none;"
-                       oninput="updateAvatarPreview()">
-                <div style="display: flex; justify-content: space-between; color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.25rem;">
-                    <span>100%</span>
-                    <span id="zoomValue">100%</span>
-                    <span>300%</span>
-                </div>
-            </div>
-            
-            <!-- Posição Horizontal -->
-            <div style="margin-bottom: 1.5rem;">
-                <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; color: var(--text-color); font-weight: 600;">
-                    <i class="fas fa-arrows-alt-h"></i>
-                    Posição Horizontal
-                </label>
-                <input type="range" id="posXSlider" min="-100" max="100" value="0" step="1" 
-                       style="width: 100%; height: 8px; border-radius: 4px; background: var(--bg-tertiary); outline: none; -webkit-appearance: none;"
-                       oninput="updateAvatarPreview()">
-                <div style="display: flex; justify-content: space-between; color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.25rem;">
-                    <span>Esquerda</span>
-                    <span>Centro</span>
-                    <span>Direita</span>
-                </div>
-            </div>
-            
-            <!-- Posição Vertical -->
-            <div style="margin-bottom: 1.5rem;">
-                <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; color: var(--text-color); font-weight: 600;">
-                    <i class="fas fa-arrows-alt-v"></i>
-                    Posição Vertical
-                </label>
-                <input type="range" id="posYSlider" min="-100" max="100" value="0" step="1" 
-                       style="width: 100%; height: 8px; border-radius: 4px; background: var(--bg-tertiary); outline: none; -webkit-appearance: none;"
-                       oninput="updateAvatarPreview()">
-                <div style="display: flex; justify-content: space-between; color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.25rem;">
-                    <span>Cima</span>
-                    <span>Centro</span>
-                    <span>Baixo</span>
-                </div>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button onclick="adjustZoom(-0.1)" style="background: var(--bg-tertiary); border: none; color: var(--text-color); width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-minus"></i>
+                </button>
+                <input type="range" id="zoomSlider" min="1" max="3" value="1" step="0.01" 
+                       style="flex: 1; height: 6px; border-radius: 3px; background: var(--bg-tertiary); outline: none; -webkit-appearance: none;"
+                       oninput="setZoomFromSlider()">
+                <button onclick="adjustZoom(0.1)" style="background: var(--bg-tertiary); border: none; color: var(--text-color); width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-plus"></i>
+                </button>
             </div>
         </div>
         
         <!-- Botões de Ação -->
-        <div style="display: flex; gap: 1rem;">
-            <button onclick="closeAvatarEditor()" class="btn" style="flex: 1; background: var(--bg-tertiary); color: var(--text-color);">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <button onclick="closeAvatarEditor()" class="btn" style="background: var(--bg-tertiary); color: var(--text-color);">
                 <i class="fas fa-times"></i>
                 Cancelar
             </button>
-            <button onclick="confirmAvatarUpload()" class="btn btn-blue" style="flex: 1;">
+            <button onclick="confirmAvatarUpload()" class="btn btn-blue">
                 <i class="fas fa-check"></i>
                 Confirmar
             </button>
@@ -425,6 +439,13 @@ async function loadPerfil() {
 // Variáveis globais para edição de avatar
 let selectedAvatarFile = null;
 let currentImageData = null;
+let currentScale = 1;
+let currentX = 0;
+let currentY = 0;
+let isDragging = false;
+let startX = 0;
+let startY = 0;
+let imageElement = null;
 
 // Abrir editor de avatar
 function openAvatarEditor(file) {
@@ -433,70 +454,173 @@ function openAvatarEditor(file) {
     const reader = new FileReader();
     reader.onload = (e) => {
         currentImageData = e.target.result;
-        document.getElementById('avatarEditorImage').src = currentImageData;
-        document.getElementById('avatarEditorModal').style.display = 'flex';
+        imageElement = document.getElementById('avatarEditorImage');
+        imageElement.src = currentImageData;
         
-        // Resetar controles
-        document.getElementById('zoomSlider').value = 100;
-        document.getElementById('posXSlider').value = 0;
-        document.getElementById('posYSlider').value = 0;
-        updateAvatarPreview();
+        // Resetar valores
+        currentScale = 1;
+        currentX = 0;
+        currentY = 0;
+        
+        // Aguardar carregamento da imagem
+        imageElement.onload = () => {
+            const container = document.getElementById('avatarContainer');
+            const containerSize = container.offsetWidth;
+            
+            // Calcular escala inicial para cobrir o container
+            const imgWidth = imageElement.naturalWidth;
+            const imgHeight = imageElement.naturalHeight;
+            const minScale = Math.max(containerSize / imgWidth, containerSize / imgHeight);
+            
+            currentScale = minScale;
+            document.getElementById('zoomSlider').min = minScale;
+            document.getElementById('zoomSlider').max = minScale * 3;
+            document.getElementById('zoomSlider').value = minScale;
+            
+            updateImageTransform();
+            document.getElementById('avatarEditorModal').style.display = 'flex';
+            
+            // Adicionar event listeners
+            setupDragAndZoom();
+        };
     };
     reader.readAsDataURL(file);
+}
+
+// Configurar drag e zoom
+function setupDragAndZoom() {
+    const container = document.getElementById('avatarContainer');
+    const img = imageElement;
+    
+    // Mouse drag
+    container.onmousedown = (e) => {
+        isDragging = true;
+        startX = e.clientX - currentX;
+        startY = e.clientY - currentY;
+        img.style.cursor = 'grabbing';
+        e.preventDefault();
+    };
+    
+    document.onmousemove = (e) => {
+        if (!isDragging) return;
+        currentX = e.clientX - startX;
+        currentY = e.clientY - startY;
+        updateImageTransform();
+    };
+    
+    document.onmouseup = () => {
+        isDragging = false;
+        if (img) img.style.cursor = 'grab';
+    };
+    
+    // Touch drag
+    container.ontouchstart = (e) => {
+        if (e.touches.length === 1) {
+            isDragging = true;
+            startX = e.touches[0].clientX - currentX;
+            startY = e.touches[0].clientY - currentY;
+            e.preventDefault();
+        }
+    };
+    
+    container.ontouchmove = (e) => {
+        if (isDragging && e.touches.length === 1) {
+            currentX = e.touches[0].clientX - startX;
+            currentY = e.touches[0].clientY - startY;
+            updateImageTransform();
+            e.preventDefault();
+        }
+    };
+    
+    container.ontouchend = () => {
+        isDragging = false;
+    };
+    
+    // Scroll zoom
+    container.onwheel = (e) => {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+        adjustZoom(delta);
+    };
+}
+
+// Atualizar transformação da imagem
+function updateImageTransform() {
+    if (!imageElement) return;
+    imageElement.style.transform = `translate(${currentX}px, ${currentY}px) scale(${currentScale})`;
+}
+
+// Ajustar zoom
+function adjustZoom(delta) {
+    const slider = document.getElementById('zoomSlider');
+    const newScale = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), currentScale + delta));
+    currentScale = newScale;
+    slider.value = newScale;
+    updateImageTransform();
+}
+
+// Definir zoom pelo slider
+function setZoomFromSlider() {
+    currentScale = parseFloat(document.getElementById('zoomSlider').value);
+    updateImageTransform();
 }
 
 // Fechar editor de avatar
 function closeAvatarEditor() {
     document.getElementById('avatarEditorModal').style.display = 'none';
-    document.getElementById('avatarInput').value = ''; // Limpar input
+    document.getElementById('avatarInput').value = '';
     selectedAvatarFile = null;
     currentImageData = null;
-}
-
-// Atualizar preview com os ajustes
-function updateAvatarPreview() {
-    const zoom = document.getElementById('zoomSlider').value;
-    const posX = document.getElementById('posXSlider').value;
-    const posY = document.getElementById('posYSlider').value;
     
-    const img = document.getElementById('avatarEditorImage');
-    const scale = zoom / 100;
-    
-    img.style.transform = `translate(${posX}%, ${posY}%) scale(${scale})`;
-    document.getElementById('zoomValue').textContent = `${zoom}%`;
+    // Remover event listeners
+    const container = document.getElementById('avatarContainer');
+    container.onmousedown = null;
+    document.onmousemove = null;
+    document.onmouseup = null;
+    container.ontouchstart = null;
+    container.ontouchmove = null;
+    container.ontouchend = null;
+    container.onwheel = null;
 }
 
 // Confirmar upload com ajustes
 async function confirmAvatarUpload() {
-    if (!selectedAvatarFile) return;
+    if (!selectedAvatarFile || !imageElement) return;
     
-    // Capturar a imagem ajustada usando canvas
-    const container = document.getElementById('avatarEditorImage').parentElement;
-    const img = document.getElementById('avatarEditorImage');
+    const container = document.getElementById('avatarContainer');
+    const containerSize = container.offsetWidth;
     
+    // Criar canvas para capturar a área circular
     const canvas = document.createElement('canvas');
-    canvas.width = 400;
-    canvas.height = 400;
+    const size = 400; // Tamanho final da imagem
+    canvas.width = size;
+    canvas.height = size;
     const ctx = canvas.getContext('2d');
     
-    // Criar imagem temporária para carregar
+    // Criar imagem temporária
     const tempImg = new Image();
     tempImg.onload = async () => {
-        const zoom = document.getElementById('zoomSlider').value / 100;
-        const posX = document.getElementById('posXSlider').value;
-        const posY = document.getElementById('posYSlider').value;
+        // Calcular proporção
+        const scale = size / containerSize;
         
-        // Calcular dimensões e posição
-        const scaledWidth = tempImg.width * zoom;
-        const scaledHeight = tempImg.height * zoom;
-        
-        const offsetX = (canvas.width - scaledWidth) / 2 + (posX * canvas.width / 100);
-        const offsetY = (canvas.height - scaledHeight) / 2 + (posY * canvas.height / 100);
-        
-        // Desenhar no canvas
+        // Limpar canvas
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(tempImg, offsetX, offsetY, scaledWidth, scaledHeight);
+        ctx.fillRect(0, 0, size, size);
+        
+        // Clipar em círculo
+        ctx.beginPath();
+        ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+        
+        // Calcular posição e tamanho da imagem
+        const imgWidth = tempImg.width * currentScale * scale;
+        const imgHeight = tempImg.height * currentScale * scale;
+        const imgX = (size / 2) + (currentX * scale) - (imgWidth / 2);
+        const imgY = (size / 2) + (currentY * scale) - (imgHeight / 2);
+        
+        // Desenhar imagem
+        ctx.drawImage(tempImg, imgX, imgY, imgWidth, imgHeight);
         
         // Converter para blob
         canvas.toBlob(async (blob) => {
@@ -516,13 +640,12 @@ async function confirmAvatarUpload() {
                 
                 if (result.success) {
                     showToast('success', 'Foto atualizada com sucesso!');
-                    // Atualizar preview na página
-                    document.getElementById('avatarPreview').src = `/static/uploads/avatars/${result.filename}?t=${Date.now()}`;
+                    const timestamp = Date.now();
+                    document.getElementById('avatarPreview').src = `/static/uploads/avatars/${result.filename}?t=${timestamp}`;
                     
-                    // Atualizar também a navbar
                     const navbarAvatar = document.getElementById('navbarAvatar');
                     if (navbarAvatar) {
-                        navbarAvatar.src = `/static/uploads/avatars/${result.filename}?t=${Date.now()}`;
+                        navbarAvatar.src = `/static/uploads/avatars/${result.filename}?t=${timestamp}`;
                     }
                 } else {
                     showToast('error', result.message || 'Erro ao atualizar foto');
@@ -533,7 +656,7 @@ async function confirmAvatarUpload() {
                 showToast('error', 'Erro ao atualizar foto');
                 loadPerfil();
             }
-        }, 'image/jpeg', 0.9);
+        }, 'image/jpeg', 0.92);
     };
     tempImg.src = currentImageData;
 }
