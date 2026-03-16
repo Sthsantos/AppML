@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request, redirect, url_for, session, flash, send_from_directory
+ï»¿from flask import Flask, render_template, jsonify, request, redirect, url_for, session, flash, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_required, login_user, logout_user, current_user
 from datetime import datetime, date
@@ -9,43 +9,43 @@ import os
 from functools import wraps  # Importando wraps para decoradores
 from dotenv import load_dotenv
 
-# Carrega variáveis de ambiente do arquivo .env
+# Carrega variaveis de ambiente do arquivo .env
 load_dotenv()
 
 # ========================================
-# CONSTANTES DE NÍVEIS DE PERMISSÃO
+# CONSTANTES DE NIVEIS DE PERMISSAO
 # ========================================
 ROLE_ADMIN = 'admin'  # Desenvolvedor - Acesso total ao sistema
 ROLE_PASTOR = 'pastor'  # Pastor - Acesso pleno
-ROLE_LIDER_BANDA = 'lider_banda'  # Líder de Banda - Acesso pleno (escalas de instrumentos)
-ROLE_LIDER_MINISTERIO = 'lider_ministerio'  # Líder de Ministério - Acesso pleno (escalas de ministros/back vocal)
-ROLE_MINISTRO = 'ministro'  # Ministro de Louvor - Gerencia músicas das próprias escalas
+ROLE_LIDER_BANDA = 'lider_banda'  # Lider de Banda - Acesso pleno (escalas de instrumentos)
+ROLE_LIDER_MINISTERIO = 'lider_ministerio'  # Lider de Ministerio - Acesso pleno (escalas de ministros/back vocal)
+ROLE_MINISTRO = 'ministro'  # Ministro de Louvor - Gerencia musicas das proprias escalas
 ROLE_MEMBRO = 'membro'  # Membro comum - Acesso limitado
 
 # Roles com acesso administrativo pleno
 ADMIN_ROLES = [ROLE_ADMIN, ROLE_PASTOR, ROLE_LIDER_BANDA, ROLE_LIDER_MINISTERIO]
 
-# Configuração do Flask
+# Configuracao do Flask
 app = Flask(__name__)
 
-# Validação do SECRET_KEY em produção
+# Validacao do SECRET_KEY em producao
 secret_key = os.environ.get('SECRET_KEY')
 flask_env = os.environ.get('FLASK_ENV', 'development')
 
 if flask_env == 'production' and not secret_key:
-    print("??  AVISO: SECRET_KEY não definido em produção! Usando chave temporária.")
-    print("??  Configure a variável de ambiente SECRET_KEY no Render!")
+    print("AVISO: SECRET_KEY nao definido em producao! Usando chave temporaria.")
+    print("Configure a variavel de ambiente SECRET_KEY no Render!")
     secret_key = secrets.token_hex(32)
 elif not secret_key:
     secret_key = secrets.token_hex(16)
 
 app.secret_key = secret_key
 
-# Configurações de sessão para manter login persistente (especialmente em mobile)
-app.config['SESSION_COOKIE_SECURE'] = flask_env == 'production'  # HTTPS em produção
+# Configuracoes de sessao para manter login persistente (especialmente em mobile)
+app.config['SESSION_COOKIE_SECURE'] = flask_env == 'production'  # HTTPS em producao
 app.config['SESSION_COOKIE_HTTPONLY'] = True  # Protege contra XSS
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Proteção CSRF básica
-app.config['SESSION_REFRESH_EACH_REQUEST'] = False  # Não renovar cookie a cada request
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # protecao CSRF basica
+app.config['SESSION_REFRESH_EACH_REQUEST'] = False  # Nao renovar cookie a cada request
 app.config['PERMANENT_SESSION_LIFETIME'] = 2592000  # 30 dias em segundos
 app.config['SESSION_COOKIE_NAME'] = 'ministry_session'  # Nome customizado
 app.config['REMEMBER_COOKIE_NAME'] = 'ministry_remember'  # Cookie "lembrar-me"
@@ -55,25 +55,25 @@ app.config['REMEMBER_COOKIE_HTTPONLY'] = True
 app.config['REMEMBER_COOKIE_SAMESITE'] = 'Lax'
 
 # Configura o banco de dados SQLite na pasta 'instance'
-# Em produção, use DATABASE_URL do ambiente (ex: PostgreSQL do Render/Heroku)
+# Em producao, use DATABASE_URL do ambiente (ex: PostgreSQL do Render/Heroku)
 database_url = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(app.instance_path, 'ministry.db'))
 # Render usa postgres:// mas SQLAlchemy 1.4+ requer postgresql://
 if database_url and database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Desativa notificações de modificação para performance
-app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')  # Pasta para uploads de áudio
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Desativa notificacoes de modificacao para performance
+app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')  # Pasta para uploads de audio
 app.config['AVATAR_FOLDER'] = os.path.join('static', 'uploads', 'avatars')  # Pasta para fotos de perfil
 app.config['MAX_CONTENT_LENGTH'] = int(os.environ.get('MAX_CONTENT_LENGTH', 50 * 1024 * 1024))  # 50 MB max file size
 
-# Extensões de arquivo permitidas
+# Extensoes de arquivo permitidas
 ALLOWED_AUDIO_EXTENSIONS = {'mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'}
-ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}  # Extensões permitidas para avatares
+ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}  # Extensoes permitidas para avatares
 
-# Configuração para CSRF (opcional, caso queira usar Flask-WTF)
-# Desativando temporariamente para testes, caso o Flask-WTF não esteja instalado
-app.config['WTF_CSRF_ENABLED'] = False  # Desativa proteção CSRF temporariamente para testes
-app.config['WTF_CSRF_CHECK_DEFAULT'] = False  # Desativa verificação CSRF por padrão temporariamente
+# Configuracao para CSRF (opcional, caso queira usar Flask-WTF)
+# Desativando temporariamente para testes, caso o Flask-WTF nao esteja instalado
+app.config['WTF_CSRF_ENABLED'] = False  # Desativa protecao CSRF temporariamente para testes
+app.config['WTF_CSRF_CHECK_DEFAULT'] = False  # Desativa verificacao CSRF por padrao temporariamente
 
 # Garante que a pasta 'instance' exista
 try:
@@ -82,41 +82,41 @@ try:
 except OSError as e:
     print(f"Erro ao criar pastas: {e}")
 
-# Função auxiliar para validar extensão de arquivo de áudio
+# Funcao auxiliar para validar extensao de arquivo de audio
 def allowed_audio_file(filename):
-    """Verifica se a extensão do arquivo é permitida."""
+    """Verifica se a extensao do arquivo e permitida."""
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_AUDIO_EXTENSIONS
 
-# Configuração do banco de dados
+# Configuracao do banco de dados
 db = SQLAlchemy(app)
 
-# Configuração do Flask-Login para autenticação
+# Configuracao do Flask-Login para autenticacao
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'login'  # Define a rota de login como padrão
+login_manager.login_view = 'login'  # Define a rota de login como padrao
 
-# Configuração opcional do Flask-WTF para CSRF
+# Configuracao opcional do Flask-WTF para CSRF
 try:
     from flask_wtf.csrf import CSRFProtect
     csrf = CSRFProtect(app)
 except ImportError:
-    print("Flask-WTF não instalado. Proteção CSRF desativada. Instale com 'pip install flask-wtf' para habilitar.")
+    print("Flask-WTF nao instalado. protecao CSRF desativada. Instale com 'pip install flask-wtf' para habilitar.")
     app.config['WTF_CSRF_ENABLED'] = False
     app.config['WTF_CSRF_CHECK_DEFAULT'] = False
 
 # Modelos para o banco de dados
 class User(db.Model, UserMixin):
-    """Modelo para usuários administradores."""
+    """Modelo para Usuarios administradores."""
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)  # Armazena o hash da senha
     is_admin = db.Column(db.Boolean, default=False)  # Mantido para compatibilidade
-    role = db.Column(db.String(20), default=ROLE_MEMBRO)  # Nível de permissão
+    role = db.Column(db.String(20), default=ROLE_MEMBRO)  # Nivel de permissao
     avatar = db.Column(db.String(255), nullable=True, default='default-avatar.png')  # Foto de perfil
 
     def set_password(self, password):
-        """Define a senha como hash para o usuário."""
+        """Define a senha como hash para o Usuario."""
         self.password = generate_password_hash(password)
 
     def check_password(self, password):
@@ -124,28 +124,28 @@ class User(db.Model, UserMixin):
         return check_password_hash(self.password, password)
     
     def has_admin_access(self):
-        """Verifica se o usuário tem acesso administrativo pleno."""
+        """Verifica se o Usuario tem acesso administrativo pleno."""
         return self.role in ADMIN_ROLES
     
     def is_ministro(self):
-        """Verifica se o usuário é ministro de louvor."""
+        """Verifica se o Usuario e ministro de louvor."""
         return self.role == ROLE_MINISTRO
     
     def get_id(self):
-        """Retorna o ID do usuário com prefixo para distinguir de membros."""
+        """Retorna o ID do Usuario com prefixo para distinguir de membros."""
         return f"user_{self.id}"
 
 class Member(db.Model, UserMixin):
-    """Modelo para membros comuns do ministério."""
+    """Modelo para membros comuns do Ministerio."""
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
     instrument = db.Column(db.String(120), nullable=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     phone = db.Column(db.String(20), nullable=True)
     password = db.Column(db.String(255), nullable=False)  # Armazena o hash da senha para membros
-    suspended = db.Column(db.Boolean, default=False)  # Campo para indicar suspensão
+    suspended = db.Column(db.Boolean, default=False)  # Campo para indicar Suspensao
     is_admin = db.Column(db.Boolean, default=False)  # Mantido para compatibilidade
-    role = db.Column(db.String(20), default=ROLE_MEMBRO)  # Nível de permissão
+    role = db.Column(db.String(20), default=ROLE_MEMBRO)  # Nivel de permissao
     avatar = db.Column(db.String(255), nullable=True, default='default-avatar.png')  # Foto de perfil
 
     def set_password(self, password):
@@ -161,25 +161,25 @@ class Member(db.Model, UserMixin):
         return self.role in ADMIN_ROLES
     
     def is_ministro(self):
-        """Verifica se o membro é ministro de louvor."""
+        """Verifica se o membro e ministro de louvor."""
         return self.role == ROLE_MINISTRO
     
     def get_id(self):
-        """Retorna o ID do membro com prefixo para distinguir de usuários."""
+        """Retorna o ID do membro com prefixo para distinguir de Usuarios."""
         return f"member_{self.id}"
 
-# Tabela de associação para relacionamento many-to-many entre Culto e Repertorio
+# Tabela de associacao para relacionamento many-to-many entre Culto e Repertorio
 culto_repertorio = db.Table('culto_repertorio',
     db.Column('culto_id', db.Integer, db.ForeignKey('culto.id'), primary_key=True),
     db.Column('repertorio_id', db.Integer, db.ForeignKey('repertorio.id'), primary_key=True),
-    db.Column('order', db.Integer, default=0)  # Ordem das músicas no culto
+    db.Column('order', db.Integer, default=0)  # Ordem das musicas no culto
 )
 
 class Culto(db.Model):
-    """Modelo para cultos do ministério."""
+    """Modelo para cultos do Ministerio."""
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.Date, nullable=False)
-    time = db.Column(db.Time, nullable=False)  # Alterado para db.Time para melhor manipulação
+    time = db.Column(db.Time, nullable=False)  # Alterado para db.Time para melhor manipulacao
     description = db.Column(db.String(255), nullable=False)
     
     # Relacionamento many-to-many com Repertorio
@@ -198,7 +198,7 @@ class Escala(db.Model):
     culto = db.relationship('Culto', backref=db.backref('escalas', lazy=True))
 
 class Aviso(db.Model):
-    """Modelo para avisos/notificações do ministério."""
+    """Modelo para avisos/notificacoes do Ministerio."""
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(120), nullable=False)
     message = db.Column(db.Text, nullable=False)
@@ -208,18 +208,18 @@ class Aviso(db.Model):
     active = db.Column(db.Boolean, default=True)
 
 class Repertorio(db.Model):
-    """Modelo para repertório musical."""
+    """Modelo para repertorio musical."""
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
     artist = db.Column(db.String(120), nullable=True)
-    key_tone = db.Column(db.String(20), nullable=True)  # Tom da música (ex: C, D, Em)
+    key_tone = db.Column(db.String(20), nullable=True)  # Tom da musica (ex: C, D, Em)
     tempo = db.Column(db.String(20), nullable=True)  # Tempo/andamento
     link_video = db.Column(db.String(300), nullable=True)
     link_audio = db.Column(db.String(300), nullable=True)
-    audio_file = db.Column(db.String(300), nullable=True)  # Arquivo de áudio local (VS)
+    audio_file = db.Column(db.String(300), nullable=True)  # Arquivo de audio local (VS)
     lyrics = db.Column(db.Text, nullable=True)
     notes = db.Column(db.Text, nullable=True)
-    category = db.Column(db.String(50), nullable=True)  # louvor, adoração, etc
+    category = db.Column(db.String(50), nullable=True)  # louvor, adoracao, etc
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     added_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
@@ -239,7 +239,7 @@ class Indisponibilidade(db.Model):
     culto = db.relationship('Culto', backref=db.backref('indisponibilidades', lazy=True), foreign_keys=[culto_id])
 
 class Feedback(db.Model):
-    """Modelo para armazenar feedback dos usuários."""
+    """Modelo para armazenar feedback dos Usuarios."""
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, nullable=True)
     email = db.Column(db.String(120), nullable=False)
@@ -252,7 +252,7 @@ class Feedback(db.Model):
     responded_by = db.Column(db.Integer, nullable=True)  # ID do admin que respondeu
 
 class Configuracao(db.Model):
-    """Modelo para configurações do sistema."""
+    """Modelo para configuracoes do sistema."""
     id = db.Column(db.Integer, primary_key=True)
     chave = db.Column(db.String(100), unique=True, nullable=False)
     valor = db.Column(db.String(200), nullable=False)
@@ -260,10 +260,10 @@ class Configuracao(db.Model):
     atualizado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class Substituicao(db.Model):
-    """Modelo para solicitações de substituição de escalas."""
+    """Modelo para solicitacoes de substituicao de escalas."""
     id = db.Column(db.Integer, primary_key=True)
     escala_id = db.Column(db.Integer, db.ForeignKey('escala.id'), nullable=False)  # Escala original
-    membro_solicitante_id = db.Column(db.Integer, db.ForeignKey('member.id'), nullable=False)  # Quem está pedindo
+    membro_solicitante_id = db.Column(db.Integer, db.ForeignKey('member.id'), nullable=False)  # Quem esta pedindo
     membro_substituto_id = db.Column(db.Integer, db.ForeignKey('member.id'), nullable=False)  # Quem vai substituir
     status = db.Column(db.String(20), default='pendente')  # pendente, aceito, recusado, cancelado
     mensagem = db.Column(db.Text, nullable=True)  # Mensagem opcional do solicitante
@@ -276,11 +276,11 @@ class Substituicao(db.Model):
     solicitante = db.relationship('Member', foreign_keys=[membro_solicitante_id], backref=db.backref('substituicoes_solicitadas', lazy=True))
     substituto = db.relationship('Member', foreign_keys=[membro_substituto_id], backref=db.backref('substituicoes_recebidas', lazy=True))
 
-# Carregar usuário para Flask-Login (suporta tanto User quanto Member)
+# Carregar Usuario para Flask-Login (suporta tanto User quanto Member)
 @login_manager.user_loader
 def load_user(user_id):
-    """Carrega um usuário ou membro pelo ID para autenticação."""
-    with db.session.no_autoflush:  # Evita flush automático durante a sessão
+    """Carrega um Usuario ou membro pelo ID para autenticacao."""
+    with db.session.no_autoflush:  # Evita flush automatico durante a sessao
         # Verifica o prefixo para determinar qual tabela consultar
         if isinstance(user_id, str):
             if user_id.startswith('user_'):
@@ -292,17 +292,17 @@ def load_user(user_id):
                 numeric_id = int(user_id.replace('member_', ''))
                 return db.session.get(Member, numeric_id)
         
-        # Compatibilidade com sessões antigas (sem prefixo)
+        # Compatibilidade com sessoes antigas (sem prefixo)
         # Tenta User primeiro, depois Member
         user = db.session.get(User, int(user_id))
         if not user:
             return db.session.get(Member, int(user_id))
         return user
 
-# Context processor para disponibilizar informações de permissão nos templates
+# Context processor para disponibilizar informaeees de permissao nos templates
 @app.context_processor
 def inject_user_permissions():
-    """Injeta variáveis de permissão em todos os templates."""
+    """Injeta variaveis de permissao em todos os templates."""
     if current_user.is_authenticated:
         user_role = getattr(current_user, 'role', ROLE_MEMBRO)
         is_old_admin = getattr(current_user, 'is_admin', False)
@@ -330,12 +330,12 @@ def inject_user_permissions():
         'HAS_MINISTRO_ACCESS': False
     }
 
-# Configurar headers de cache para PWA e arquivos estáticos
+# Configurar headers de cache para PWA e arquivos estaticos
 @app.after_request
 def add_cache_headers(response):
-    """Adiciona headers de cache para arquivos estáticos e ícones PWA."""
+    """Adiciona headers de cache para arquivos estaticos e econes PWA."""
     if request.path.startswith('/static/'):
-        # Cache de 1 ano para ícones e assets estáticos
+        # Cache de 1 ano para econes e assets estaticos
         if any(request.path.endswith(ext) for ext in ['.svg', '.png', '.jpg', '.jpeg', '.gif', '.ico', '.woff', '.woff2', '.ttf', '.eot']):
             response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
         # Cache de 1 dia para CSS e JS
@@ -350,22 +350,22 @@ def add_cache_headers(response):
     
     return response
 
-# Decorador para verificar se o usuário é admin
+# Decorador para verificar se o Usuario e admin
 def admin_required(f):
-    """Requer acesso administrativo pleno (Admin, Pastor ou Líder)."""
+    """Requer acesso administrativo pleno (Admin, Pastor ou Lider)."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Verifica se o usuário tem role de admin ou usa o is_admin antigo
+        # Verifica se o Usuario tem role de admin ou usa o is_admin antigo
         user_role = getattr(current_user, 'role', None)
         is_old_admin = getattr(current_user, 'is_admin', False)
         
         if not (user_role in ADMIN_ROLES or is_old_admin):
-            flash('Acesso negado. Somente administradores podem acessar esta página.', 'error')
+            flash('Acesso negado. Somente administradores podem acessar esta pegina.', 'error')
             return redirect(url_for('index'))
         return f(*args, **kwargs)
     return decorated_function
 
-# Decorador para verificar se é ministro ou admin
+# Decorador para verificar se e ministro ou admin
 def ministro_or_admin_required(f):
     """Requer acesso de ministro de louvor ou superior."""
     @wraps(f)
@@ -380,24 +380,24 @@ def ministro_or_admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# Função auxiliar para verificar se usuário pode gerenciar músicas de uma escala
+# funcao auxiliar para verificar se Usuario pode gerenciar musicas de uma escala
 def can_manage_escala_musicas(culto_id, user):
     """
-    Verifica se o usuário pode gerenciar músicas de um culto/escala específico.
-    - Admin/Pastor/Líder: pode gerenciar qualquer escala
-    - Ministro: pode gerenciar apenas escalas onde está escalado
-    - Membro comum: não pode gerenciar
+    Verifica se o Usuario pode gerenciar musicas de um culto/escala especefico.
+    - Admin/Pastor/Lider: pode gerenciar qualquer escala
+    - Ministro: pode gerenciar apenas escalas onde esta escalado
+    - Membro comum: nao pode gerenciar
     """
     user_role = getattr(user, 'role', ROLE_MEMBRO)
     is_old_admin = getattr(user, 'is_admin', False)
     
-    # Admin, Pastor e Líder podem tudo
+    # Admin, Pastor e Lider podem tudo
     if user_role in ADMIN_ROLES or is_old_admin:
         return True
     
     # Ministro pode gerenciar apenas suas escalas
     if user_role == ROLE_MINISTRO:
-        # Verificar se o ministro está escalado neste culto
+        # Verificar se o ministro esta escalado neste culto
         # Para Member, precisamos buscar por email; para User, por id
         if isinstance(user, Member):
             escala_do_ministro = Escala.query.join(Member).filter(
@@ -405,16 +405,16 @@ def can_manage_escala_musicas(culto_id, user):
                 Member.email == user.email
             ).first()
         else:
-            # Para User, não há escalas vinculadas diretamente
+            # Para User, nao he escalas vinculadas diretamente
             return False
         
         return escala_do_ministro is not None
     
     return False
 
-# Criar um administrador padrão
+# Criar um administrador padrao
 def create_admin():
-    """Cria um administrador padrão se não existir."""
+    """Cria um administrador padrao se nao existir."""
     email = "admin@ministry.com"
     password = "admin123"
     try:
@@ -426,21 +426,21 @@ def create_admin():
             db.session.commit()
             print(f"? Administrador criado: {email} / {password}")
         else:
-            # Atualizar role se já existe mas não tem role definido
+            # Atualizar role se je existe mas nao tem role definido
             if not existing_admin.role or existing_admin.role == ROLE_MEMBRO:
                 existing_admin.role = ROLE_ADMIN
                 existing_admin.is_admin = True
                 db.session.commit()
                 print(f"? Role do administrador atualizado: {email}")
             else:
-                print(f"?? Administrador já existe: {email}")
+                print(f"?? Administrador je existe: {email}")
     except Exception as e:
         db.session.rollback()
         print(f"?? Erro ao criar admin: {e}")
 
-# Função para verificar e garantir a criação do banco de dados
+# funcao para verificar e garantir a criaeeo do banco de dados
 def ensure_database_exists():
-    """Verifica se o banco de dados existe e o cria, se necessário."""
+    """Verifica se o banco de dados existe e o cria, se necesserio."""
     # Garantir que a pasta instance existe (apenas para SQLite local)
     database_uri = app.config['SQLALCHEMY_DATABASE_URI']
     is_sqlite = database_uri.startswith('sqlite:///')
@@ -474,36 +474,36 @@ def ensure_database_exists():
 @app.route('/')
 @login_required
 def index():
-    """Rota para a página inicial."""
-    print(f"User is admin: {current_user.is_admin}")  # Depuração para verificar is_admin
+    """Rota para a pegina inicial."""
+    print(f"User is admin: {current_user.is_admin}")  # Depuraeeo para verificar is_admin
     return render_template('index.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """Rota para login de usuários e membros."""
+    """Rota para login de Usuarios e membros."""
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
         
         try:
-            # Tenta encontrar o usuário como User ou Member
+            # Tenta encontrar o Usuario como User ou Member
             user = User.query.filter_by(email=email).first()
             if not user:
                 user = Member.query.filter_by(email=email).first()
             
             if user and user.check_password(password):
-                # Verifica se é membro suspenso
+                # Verifica se e membro suspenso
                 if isinstance(user, Member) and user.suspended:
                     flash('Sua conta foi suspensa. Entre em contato com o administrador.', 'error')
                     return render_template('login.html')
                 
-                # Marca sessão como permanente (mantém login por 30 dias)
+                # Marca sessao como permanente (mantem login por 30 dias)
                 session.permanent = True
                 
                 login_user(user, remember=True)  # remember=True ativa cookie "lembrar-me"
                 session['user_id'] = user.id
-                session['is_admin'] = getattr(user, 'is_admin', False)  # Verifica se é admin (só User tem is_admin)
-                print(f"? Login bem-sucedido: {email} (Admin: {session['is_admin']}) - Sessão permanente ativada")
+                session['is_admin'] = getattr(user, 'is_admin', False)  # Verifica se e admin (se User tem is_admin)
+                print(f"? Login bem-sucedido: {email} (Admin: {session['is_admin']}) - sessao permanente ativada")
                 return redirect(url_for('index'))
             
             flash('Login falhou. Verifique email e senha.', 'error')
@@ -529,19 +529,19 @@ def logout():
 @app.route('/perfil')
 @login_required
 def perfil():
-    """Rota para a página de perfil do usuário."""
+    """Rota para a pegina de perfil do Usuario."""
     return render_template('perfil.html')
 
 @app.route('/get_perfil', methods=['GET'])
 @login_required
 def get_perfil():
-    """Retorna os dados do perfil do usuário logado."""
+    """Retorna os dados do perfil do Usuario logado."""
     try:
-        # Usar current_user do Flask-Login (já carregado corretamente pelo load_user)
+        # Usar current_user do Flask-Login (je carregado corretamente pelo load_user)
         user = current_user
         
         if not user or not user.is_authenticated:
-            return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 404
+            return jsonify({'success': False, 'message': 'Usuario nao encontrado'}), 404
         
         # Se for User (admin), buscar Member associado pelo email
         member = None
@@ -573,14 +573,14 @@ def get_perfil():
 @app.route('/update_perfil', methods=['POST'])
 @login_required
 def update_perfil():
-    """Atualiza os dados do perfil do usuário logado."""
+    """Atualiza os dados do perfil do Usuario logado."""
     try:
         data = request.get_json()
         # Usar current_user do Flask-Login
         user = current_user
         
         if not user or not user.is_authenticated:
-            return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 404
+            return jsonify({'success': False, 'message': 'Usuario nao encontrado'}), 404
         
         # Se for Member, atualizar diretamente
         if isinstance(user, Member):
@@ -617,7 +617,7 @@ def update_perfil():
 @app.route('/upload_avatar', methods=['POST'])
 @login_required
 def upload_avatar():
-    """Faz upload da foto de perfil do usuário."""
+    """Faz upload da foto de perfil do Usuario."""
     try:
         if 'avatar' not in request.files:
             return jsonify({'success': False, 'message': 'Nenhuma imagem enviada'}), 400
@@ -627,18 +627,18 @@ def upload_avatar():
         if file.filename == '':
             return jsonify({'success': False, 'message': 'Nenhum arquivo selecionado'}), 400
         
-        # Verificar extensão do arquivo
+        # Verificar extensao do arquivo
         if '.' not in file.filename:
-            return jsonify({'success': False, 'message': 'Arquivo inválido'}), 400
+            return jsonify({'success': False, 'message': 'Arquivo invelido'}), 400
         
         ext = file.filename.rsplit('.', 1)[1].lower()
         if ext not in ALLOWED_IMAGE_EXTENSIONS:
-            return jsonify({'success': False, 'message': f'Apenas arquivos {", ".join(ALLOWED_IMAGE_EXTENSIONS)} são permitidos'}), 400
+            return jsonify({'success': False, 'message': f'Apenas arquivos {", ".join(ALLOWED_IMAGE_EXTENSIONS)} seo permitidos'}), 400
         
-        # Gerar nome único para o arquivo
+        # Gerar nome enico para o arquivo
         filename = secure_filename(f"avatar_{current_user.id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.{ext}")
         
-        # Criar pasta de avatares se não existir
+        # Criar pasta de avatares se nao existir
         os.makedirs(app.config['AVATAR_FOLDER'], exist_ok=True)
         
         # Salvar arquivo
@@ -649,9 +649,9 @@ def upload_avatar():
         user = current_user
         
         if not user:
-            return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 404
+            return jsonify({'success': False, 'message': 'Usuario nao encontrado'}), 404
         
-        # Remover avatar antigo se não for o padrão
+        # Remover avatar antigo se nao for o padrao
         if hasattr(user, 'avatar') and user.avatar and user.avatar != 'default-avatar.png':
             old_path = os.path.join(app.config['AVATAR_FOLDER'], user.avatar)
             if os.path.exists(old_path):
@@ -672,8 +672,8 @@ def upload_avatar():
 @app.route('/membros')
 @login_required
 def membros():
-    """Rota para a página de membros."""
-    print(f"User is admin in /membros: {current_user.is_admin}")  # Depuração
+    """Rota para a pegina de membros."""
+    print(f"User is admin in /membros: {current_user.is_admin}")  # Depuraeeo
     return render_template('membros.html')
 
 @app.route('/get_members', methods=['GET'])
@@ -681,7 +681,7 @@ def membros():
 def get_members():
     """Retorna todos os membros em formato JSON."""
     try:
-        # Pegar parâmetro opcional de culto_id para filtrar indisponíveis
+        # Pegar paremetro opcional de culto_id para filtrar indispoNiveis
         culto_id = request.args.get('culto_id', type=int)
         
         with db.session.no_autoflush:
@@ -705,8 +705,8 @@ def get_members():
                 'email': member.email,
                 'phone': member.phone,
                 'suspended': member.suspended,
-                'role': getattr(member, 'role', ROLE_MEMBRO),  # Nível de permissão
-                'indisponivel': member.id in indisponiveis_ids  # Flag para indicar se está indisponível
+                'role': getattr(member, 'role', ROLE_MEMBRO),  # Nivel de permissao
+                'indisponivel': member.id in indisponiveis_ids  # Flag para indicar se esta indispoNivel
             }
             members_list.append(member_data)
         
@@ -718,13 +718,13 @@ def get_members():
 @app.route('/feedback')
 @login_required
 def feedback():
-    """Rota para a página de feedback."""
+    """Rota para a pegina de feedback."""
     return render_template('feedback.html')
 
 @app.route('/cultos')
 @login_required
 def cultos():
-    """Rota para a página de cultos."""
+    """Rota para a pegina de cultos."""
     with db.session.no_autoflush:
         cultos = Culto.query.order_by(Culto.date.asc()).all()  # Ordena por data ascendente
     return render_template('cultos.html', cultos=cultos)
@@ -732,19 +732,19 @@ def cultos():
 @app.route('/escalas')
 @login_required
 def escalas():
-    """Rota para a página de escalas gerais (todas as escalas do ministério)."""
+    """Rota para a pegina de escalas gerais (todas as escalas do Ministerio)."""
     return render_template('escalas.html')
 
 @app.route('/minhas_escalas')
 @login_required
 def minhas_escalas():
-    """Rota para a página de escalas pessoais (apenas escalas onde o usuário está escalado)."""
+    """Rota para a pegina de escalas pessoais (apenas escalas onde o Usuario esta escalado)."""
     return render_template('minhas_escalas.html')
 
 @app.route('/get_escalas', methods=['GET'])
 @login_required
 def get_escalas():
-    """Retorna todas as escalas com informações dos cultos e membros."""
+    """Retorna todas as escalas com informaeees dos cultos e membros."""
     try:
         # Buscar todas as escalas com joins
         escalas = db.session.query(Escala, Culto, Member).join(
@@ -758,7 +758,7 @@ def get_escalas():
         for escala, culto, membro in escalas:
             date_time_str = f"{culto.date.strftime('%Y-%m-%d')}T{culto.time.strftime('%H:%M')}"
             escalas_list.append({
-                'escala_id': escala.id,  # ID da escala para edição/exclusão
+                'escala_id': escala.id,  # ID da escala para edieeo/excluseo
                 'id': escala.id,
                 'culto_id': culto.id,
                 'culto_name': culto.description,
@@ -777,14 +777,14 @@ def get_escalas():
 @app.route('/get_minhas_escalas', methods=['GET'])
 @login_required
 def get_minhas_escalas():
-    """Retorna as escalas onde o usuário logado está escalado + outros membros da mesma equipe."""
+    """Retorna as escalas onde o Usuario logado esta escalado + outros membros da mesma equipe."""
     try:
         print(f"\nDEBUG: get_minhas_escalas chamado")
         print(f"current_user: {current_user}")
         print(f"current_user.id: {current_user.id if current_user.is_authenticated else 'Not authenticated'}")
         print(f"current_user type: {type(current_user)}")
         
-        # Usar current_user ao invés de session para evitar problemas
+        # Usar current_user ao inves de session para evitar problemas
         user = current_user
         print(f"User encontrado: {user}")
         
@@ -802,7 +802,7 @@ def get_minhas_escalas():
         
         print(f"OK - Membro: {member.name} (ID: {member.id})")
         
-        # 1. Buscar cultos onde o usuário está escalado
+        # 1. Buscar cultos onde o Usuario esta escalado
         meus_cultos = db.session.query(Escala.culto_id).filter(
             Escala.member_id == member.id
         ).distinct().all()
@@ -825,7 +825,7 @@ def get_minhas_escalas():
         
         print(f"Total de escalas (incluindo equipe): {len(escalas)}")
         
-        # 3. Montar lista com marcação do usuário atual
+        # 3. Montar lista com marcaeeo do Usuario atual
         escalas_list = []
         for escala, culto, membro in escalas:
             date_time_str = f"{culto.date.strftime('%Y-%m-%d')}T{culto.time.strftime('%H:%M')}"
@@ -839,7 +839,7 @@ def get_minhas_escalas():
                 'member_name': membro.name,
                 'role': escala.role,
                 'instrument': membro.instrument,
-                'is_me': membro.id == member.id  # Marca se é o usuário logado
+                'is_me': membro.id == member.id  # Marca se e o Usuario logado
             })
         
         print(f"OK - Retornando {len(escalas_list)} escalas")
@@ -857,11 +857,11 @@ def get_cultos():
     """Carrega a lista de cultos, ordenada por data."""
     with db.session.no_autoflush:
         cultos = Culto.query.order_by(Culto.date.asc(), Culto.time.asc()).all()
-    print(f"Retornando {len(cultos)} cultos: {[(c.id, c.date, c.time, c.description) for c in cultos]}")  # Depuração
+    print(f"Retornando {len(cultos)} cultos: {[(c.id, c.date, c.time, c.description) for c in cultos]}")  # Depuraeeo
     
     cultos_list = []
     for culto in cultos:
-        # Combinar data e hora em um único datetime string
+        # Combinar data e hora em um enico datetime string
         date_time_str = f"{culto.date.strftime('%Y-%m-%d')}T{culto.time.strftime('%H:%M')}"
         cultos_list.append({
             'id': culto.id,
@@ -878,11 +878,11 @@ def get_cultos():
 @login_required
 @admin_required
 def get_culto(culto_id):
-    """Carrega os dados de um culto específico (apenas para admins)."""
+    """Carrega os dados de um culto especefico (apenas para admins)."""
     with db.session.no_autoflush:
         culto = db.session.get(Culto, culto_id)
         if not culto:
-            return jsonify({'error': 'Culto não encontrado'}), 404
+            return jsonify({'error': 'Culto nao encontrado'}), 404
     return jsonify({
         'id': culto.id,
         'date': culto.date.strftime('%Y-%m-%d'),
@@ -896,14 +896,14 @@ def get_culto(culto_id):
 def add_culto():
     """Adiciona um novo culto (apenas para admins)."""
     data = request.json
-    print(f"Dados recebidos para add_culto: {data}")  # Depuração
+    print(f"Dados recebidos para add_culto: {data}")  # Depuraeeo
     
     name = data.get('name')
     date_time_str = data.get('date_time')
     description = data.get('description', '')
     
     if not all([name, date_time_str]):
-        return jsonify({'success': False, 'message': 'Nome e data/hora são obrigatórios.'}), 400
+        return jsonify({'success': False, 'message': 'Nome e data/hora seo obrigaterios.'}), 400
     
     try:
         # Parse date_time no formato ISO: "2026-03-15T19:30"
@@ -914,20 +914,20 @@ def add_culto():
         with db.session.no_autoflush:
             existing_culto = Culto.query.filter_by(date=date_obj, time=time_obj, description=name).first()
             if existing_culto:
-                print(f"Culto já existe no banco: ID {existing_culto.id}, Data {existing_culto.date}, Horário {existing_culto.time}, Descrição {existing_culto.description}")  # Depuração
-                return jsonify({'success': False, 'message': 'Este culto já existe.'}), 400
+                print(f"Culto je existe no banco: ID {existing_culto.id}, Data {existing_culto.date}, Horerio {existing_culto.time}, Descrieeo {existing_culto.description}")  # Depuraeeo
+                return jsonify({'success': False, 'message': 'Este culto je existe.'}), 400
         
         novo_culto = Culto(date=date_obj, time=time_obj, description=name)
         db.session.add(novo_culto)
         db.session.commit()
-        print(f"Culto cadastrado com sucesso: {novo_culto.id}, {novo_culto.date}, {novo_culto.time}, {novo_culto.description}")  # Depuração
+        print(f"Culto cadastrado com sucesso: {novo_culto.id}, {novo_culto.date}, {novo_culto.time}, {novo_culto.description}")  # Depuraeeo
         return jsonify({'success': True, 'message': 'Culto adicionado com sucesso!'}), 200
     except ValueError as ve:
-        print(f"Erro de formato nos dados: {str(ve)}")  # Depuração
-        return jsonify({'success': False, 'message': f'Data ou horário em formato inválido: {str(ve)}'}), 400
+        print(f"Erro de formato nos dados: {str(ve)}")  # Depuraeeo
+        return jsonify({'success': False, 'message': f'Data ou horerio em formato invelido: {str(ve)}'}), 400
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao salvar culto: {str(e)}")  # Depuração
+        print(f"Erro ao salvar culto: {str(e)}")  # Depuraeeo
         return jsonify({'success': False, 'message': f'Erro interno ao cadastrar culto: {str(e)}'}), 500
 
 @app.route('/edit_culto', methods=['PUT'])
@@ -942,12 +942,12 @@ def edit_culto():
     description = data.get('description', '')
     
     if not all([culto_id, name, date_time_str]):
-        return jsonify({'success': False, 'message': 'ID, nome e data/hora são obrigatórios.'}), 400
+        return jsonify({'success': False, 'message': 'ID, nome e data/hora seo obrigaterios.'}), 400
     
     with db.session.no_autoflush:
         culto = db.session.get(Culto, culto_id)
         if not culto:
-            return jsonify({'success': False, 'message': 'Culto não encontrado'}), 404
+            return jsonify({'success': False, 'message': 'Culto nao encontrado'}), 404
     
     try:
         # Parse date_time no formato ISO: "2026-03-15T19:30"
@@ -956,7 +956,7 @@ def edit_culto():
         time_obj = date_time_obj.time()
         
         with db.session.no_autoflush:
-            # Verificar se outro culto com mesmas data/hora/nome já existe
+            # Verificar se outro culto com mesmas data/hora/nome je existe
             existing = Culto.query.filter(
                 Culto.id != culto_id, 
                 Culto.date == date_obj, 
@@ -964,7 +964,7 @@ def edit_culto():
                 Culto.description == name
             ).first()
             if existing:
-                return jsonify({'success': False, 'message': 'Outro culto com esses dados já existe.'}), 400
+                return jsonify({'success': False, 'message': 'Outro culto com esses dados je existe.'}), 400
         
         culto.date = date_obj
         culto.time = time_obj
@@ -972,7 +972,7 @@ def edit_culto():
         db.session.commit()
         return jsonify({'success': True, 'message': 'Culto atualizado com sucesso!'}), 200
     except ValueError as ve:
-        return jsonify({'success': False, 'message': f'Data ou horário em formato inválido: {str(ve)}'}), 400
+        return jsonify({'success': False, 'message': f'Data ou horerio em formato invelido: {str(ve)}'}), 400
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': f'Erro ao atualizar culto: {str(e)}'}), 500
@@ -985,7 +985,7 @@ def delete_culto(culto_id):
     with db.session.no_autoflush:
         culto = db.session.get(Culto, culto_id)
         if not culto:
-            return jsonify({'success': False, 'message': 'Culto não encontrado'}), 404
+            return jsonify({'success': False, 'message': 'Culto nao encontrado'}), 404
     db.session.delete(culto)
     db.session.commit()
     return jsonify({'success': True, 'message': 'Culto removido com sucesso!'}), 200
@@ -997,21 +997,21 @@ def delete_culto(culto_id):
 def add_member():
     """Adiciona um novo membro (apenas para admins)."""
     data = request.json
-    print(f"Dados recebidos para add_member: {data}")  # Depuração
+    print(f"Dados recebidos para add_member: {data}")  # Depuraeeo
     name = data.get('name')
     instrument = data.get('instrument')
     email = data.get('email')
     phone = data.get('phone')
-    password = data.get('password', '123456')  # Senha padrão, caso não fornecida
-    if not all([name, email]):  # Nome e email são obrigatórios
-        return jsonify({'success': False, 'message': 'Nome e email são obrigatórios.'}), 400
+    password = data.get('password', '123456')  # Senha padrao, caso nao fornecida
+    if not all([name, email]):  # Nome e email seo obrigaterios
+        return jsonify({'success': False, 'message': 'Nome e email seo obrigaterios.'}), 400
     try:
         with db.session.no_autoflush:
             existing_member = Member.query.filter_by(email=email).first()
             if existing_member:
-                return jsonify({'success': False, 'message': 'Este email já está cadastrado.'}), 400
+                return jsonify({'success': False, 'message': 'Este email je esta cadastrado.'}), 400
         
-        # Definir role padrão como membro
+        # Definir role padrao como membro
         role = data.get('role', ROLE_MEMBRO)
         if role not in [ROLE_ADMIN, ROLE_PASTOR, ROLE_LIDER_BANDA, ROLE_LIDER_MINISTERIO, ROLE_MINISTRO, ROLE_MEMBRO]:
             role = ROLE_MEMBRO
@@ -1021,23 +1021,23 @@ def add_member():
         novo_membro.set_password(password)  # Define a senha hashada
         db.session.add(novo_membro)
         db.session.commit()
-        print(f"Membro cadastrado com sucesso: {novo_membro.id}, {novo_membro.name}, {novo_membro.email}")  # Depuração
-        return jsonify({'success': True, 'message': 'Membro cadastrado com sucesso! A senha padrão é 123456, e o membro pode alterá-la no perfil.'}), 200
+        print(f"Membro cadastrado com sucesso: {novo_membro.id}, {novo_membro.name}, {novo_membro.email}")  # Depuraeeo
+        return jsonify({'success': True, 'message': 'Membro cadastrado com sucesso! A senha padrao e 123456, e o membro pode altere-la no perfil.'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao salvar membro: {str(e)}")  # Depuração
+        print(f"Erro ao salvar membro: {str(e)}")  # Depuraeeo
         return jsonify({'success': False, 'message': f'Erro interno ao cadastrar membro: {str(e)}'}), 500
 
 @app.route('/get_member/<int:member_id>', methods=['GET'])
 @login_required
 @admin_required
 def get_member(member_id):
-    """Carrega os dados de um membro específico (apenas para admins)."""
+    """Carrega os dados de um membro especefico (apenas para admins)."""
     with db.session.no_autoflush:
         member = db.session.get(Member, member_id)
         if not member:
-            return jsonify({'error': 'Membro não encontrado'}), 404
-    print(f"Retornando dados do membro {member_id}: {member.name}, suspended: {member.suspended}")  # Depuração
+            return jsonify({'error': 'Membro nao encontrado'}), 404
+    print(f"Retornando dados do membro {member_id}: {member.name}, suspended: {member.suspended}")  # Depuraeeo
     return jsonify({
         'id': member.id,
         'name': member.name,
@@ -1054,21 +1054,21 @@ def get_member(member_id):
 def update_member():
     """Edita um membro existente (apenas para admins)."""
     data = request.get_json()
-    print(f"Recebendo atualização para membro ID {data.get('id')}: {data}")  # Depuração
+    print(f"Recebendo atualizaeeo para membro ID {data.get('id')}: {data}")  # Depuraeeo
     if not data or 'id' not in data:
-        return jsonify({'success': False, 'message': 'Dados inválidos ou ID ausente'}), 400
+        return jsonify({'success': False, 'message': 'Dados invelidos ou ID ausente'}), 400
     try:
         with db.session.no_autoflush:
             member = db.session.get(Member, data['id'])
             if not member:
-                return jsonify({'success': False, 'message': 'Membro não encontrado'}), 404
+                return jsonify({'success': False, 'message': 'Membro nao encontrado'}), 404
         
         member.name = data.get('name', member.name)
         member.instrument = data.get('instrument', member.instrument)
         member.email = data.get('email', member.email)
         member.phone = data.get('phone', member.phone)
         
-        # Atualizar role (nível de permissão)
+        # Atualizar role (Nivel de permissao)
         if 'role' in data:
             new_role = data['role']
             if new_role in [ROLE_ADMIN, ROLE_PASTOR, ROLE_LIDER_BANDA, ROLE_LIDER_MINISTERIO, ROLE_MINISTRO, ROLE_MEMBRO]:
@@ -1084,7 +1084,7 @@ def update_member():
         return jsonify({'success': True, 'message': 'Membro atualizado com sucesso!'})
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao atualizar membro: {str(e)}")  # Depuração
+        print(f"Erro ao atualizar membro: {str(e)}")  # Depuraeeo
         return jsonify({'success': False, 'message': f'Erro interno ao atualizar membro: {str(e)}'}), 500
 
 @app.route('/toggle_suspend_member/<int:member_id>', methods=['POST'])
@@ -1096,14 +1096,14 @@ def toggle_suspend_member(member_id):
         with db.session.no_autoflush:
             member = db.session.get(Member, member_id)
             if not member:
-                return jsonify({'success': False, 'message': 'Membro não encontrado'}), 404
-        print(f"Alterando status de suspensão do membro {member_id}: {member.suspended} -> {not member.suspended}")  # Depuração
+                return jsonify({'success': False, 'message': 'Membro nao encontrado'}), 404
+        print(f"Alterando status de Suspensao do membro {member_id}: {member.suspended} -> {not member.suspended}")  # Depuraeeo
         member.suspended = not member.suspended  # Alterna o estado
         db.session.commit()
         return jsonify({'success': True, 'message': f'Membro {member.suspended and "suspenso" or "reativado"} com sucesso!'})
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao suspender/reativar membro: {str(e)}")  # Depuração
+        print(f"Erro ao suspender/reativar membro: {str(e)}")  # Depuraeeo
         return jsonify({'success': False, 'message': f'Erro interno ao suspender/reativar membro: {str(e)}'}), 500
 
 @app.route('/delete_member/<int:member_id>', methods=['POST'])
@@ -1115,30 +1115,30 @@ def delete_member(member_id):
         with db.session.no_autoflush:
             member = db.session.get(Member, member_id)
             if not member:
-                return jsonify({'success': False, 'message': 'Membro não encontrado'}), 404
+                return jsonify({'success': False, 'message': 'Membro nao encontrado'}), 404
         
-        print(f"Excluindo membro {member_id}: {member.name}")  # Depuração
+        print(f"Excluindo membro {member_id}: {member.name}")  # Depuraeeo
         
         # Deletar registros relacionados primeiro (se as tabelas existirem)
         try:
             # Deletar indisponibilidades relacionadas
             Indisponibilidade.query.filter_by(member_id=member_id).delete()
         except Exception as e:
-            print(f"Aviso: Não foi possível deletar indisponibilidades (tabela pode não existir): {e}")
+            print(f"Aviso: nao foi possevel deletar indisponibilidades (tabela pode nao existir): {e}")
         
         try:
             # Deletar escalas relacionadas
             Escala.query.filter_by(member_id=member_id).delete()
         except Exception as e:
-            print(f"Aviso: Não foi possível deletar escalas: {e}")
+            print(f"Aviso: nao foi possevel deletar escalas: {e}")
         
         # Deletar o membro
         db.session.delete(member)
         db.session.commit()
-        return jsonify({'success': True, 'message': 'Membro excluído com sucesso!'})
+        return jsonify({'success': True, 'message': 'Membro excluedo com sucesso!'})
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao excluir membro: {str(e)}")  # Depuração
+        print(f"Erro ao excluir membro: {str(e)}")  # Depuraeeo
         return jsonify({'success': False, 'message': f'Erro ao excluir membro'}), 500
 
 # Rotas para gerenciar escalas (apenas para admins)
@@ -1157,14 +1157,14 @@ def add_escala():
     culto_id = data.get('culto_id')
     role = data.get('role')
     if not all([member_id, culto_id, role]):
-        return jsonify({'success': False, 'message': 'Dados inválidos.'}), 400
+        return jsonify({'success': False, 'message': 'Dados invelidos.'}), 400
     try:
         with db.session.no_autoflush:
-            # Verificar se o membro já está escalado
+            # Verificar se o membro je esta escalado
             if Escala.query.filter_by(member_id=member_id, culto_id=culto_id).first():
-                return jsonify({'success': False, 'message': 'Este membro já está escalado para este culto.'}), 400
+                return jsonify({'success': False, 'message': 'Este membro je esta escalado para este culto.'}), 400
             
-            # NOVA VERIFICAÇÃO: Verificar se o membro está indisponível para este culto
+            # NOVA verificacao: Verificar se o membro esta indispoNivel para este culto
             indisponibilidade = Indisponibilidade.query.filter_by(
                 member_id=member_id,
                 culto_id=culto_id,
@@ -1176,7 +1176,7 @@ def add_escala():
                 member_name = member.name if member else 'Membro'
                 return jsonify({
                     'success': False, 
-                    'message': f'{member_name} está INDISPONÍVEL para este culto. Motivo: {indisponibilidade.reason}'
+                    'message': f'{member_name} esta INDISPONivel para este culto. Motivo: {indisponibilidade.reason}'
                 }), 400
         
         nova_escala = Escala(member_id=member_id, culto_id=culto_id, role=role)
@@ -1185,7 +1185,7 @@ def add_escala():
         return jsonify({'success': True, 'message': 'Escala adicionada com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao salvar escala: {str(e)}")  # Depuração
+        print(f"Erro ao salvar escala: {str(e)}")  # Depuraeeo
         return jsonify({'success': False, 'message': f'Erro interno ao cadastrar escala: {str(e)}'}), 500
 
 @app.route('/edit_escala/<int:escala_id>', methods=['POST'])
@@ -1198,13 +1198,13 @@ def edit_escala(escala_id):
     role = data.get('role')
     
     if not member_id and not role:
-        return jsonify({'success': False, 'message': 'Dados inválidos.'}), 400
+        return jsonify({'success': False, 'message': 'Dados invelidos.'}), 400
     
     try:
         with db.session.no_autoflush:
             escala = db.session.get(Escala, escala_id)
             if not escala:
-                return jsonify({'success': False, 'message': 'Escala não encontrada'}), 404
+                return jsonify({'success': False, 'message': 'Escala nao encontrada'}), 404
             
             # Atualizar campos fornecidos
             if member_id:
@@ -1216,9 +1216,9 @@ def edit_escala(escala_id):
         return jsonify({'success': True, 'message': 'Escala atualizada com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao editar escala: {str(e)}")  # Depuração
+        print(f"Erro ao editar escala: {str(e)}")  # Depuraeeo
         return jsonify({'success': False, 'message': f'Erro interno ao atualizar escala: {str(e)}'}), 500
-        print(f"Erro ao editar escala: {str(e)}")  # Depuração
+        print(f"Erro ao editar escala: {str(e)}")  # Depuraeeo
         return jsonify({'success': False, 'message': f'Erro interno ao atualizar escala: {str(e)}'}), 500
 
 @app.route('/delete_escala/<int:escala_id>', methods=['POST'])
@@ -1230,20 +1230,20 @@ def delete_escala(escala_id):
         with db.session.no_autoflush:
             escala = db.session.get(Escala, escala_id)
             if not escala:
-                return jsonify({'success': False, 'message': 'Escala não encontrada'}), 404
+                return jsonify({'success': False, 'message': 'Escala nao encontrada'}), 404
         db.session.delete(escala)
         db.session.commit()
         return jsonify({'success': True, 'message': 'Escala removida com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao excluir escala: {str(e)}")  # Depuração
+        print(f"Erro ao excluir escala: {str(e)}")  # Depuraeeo
         return jsonify({'success': False, 'message': f'Erro interno ao excluir escala: {str(e)}'}), 500
 
 @app.route('/delete_escalas_culto/<int:culto_id>', methods=['POST'])
 @login_required
 @admin_required
 def delete_escalas_culto(culto_id):
-    """Remove todas as escalas de um culto específico e limpa o repertório (apenas para admins)."""
+    """Remove todas as escalas de um culto especefico e limpa o repertorio (apenas para admins)."""
     try:
         escalas = Escala.query.filter_by(culto_id=culto_id).all()
         if not escalas:
@@ -1253,13 +1253,13 @@ def delete_escalas_culto(culto_id):
         for escala in escalas:
             db.session.delete(escala)
         
-        # Limpar também o repertório do culto
+        # Limpar tambem o repertorio do culto
         db.session.execute(
             culto_repertorio.delete().where(culto_repertorio.c.culto_id == culto_id)
         )
         
         db.session.commit()
-        return jsonify({'success': True, 'message': f'{count} escala(s) removida(s) e repertório limpo com sucesso!'}), 200
+        return jsonify({'success': True, 'message': f'{count} escala(s) removida(s) e repertorio limpo com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
         print(f"Erro ao excluir escalas: {str(e)}")
@@ -1269,22 +1269,22 @@ def delete_escalas_culto(culto_id):
 @login_required
 @admin_required
 def delete_all_escalas():
-    """Remove TODAS as escalas do sistema e limpa todos os repertórios (apenas para admins)."""
+    """Remove TODAS as escalas do sistema e limpa todos os repertorios (apenas para admins)."""
     try:
         count = Escala.query.count()
         
         if count == 0:
-            return jsonify({'success': False, 'message': 'Não há escalas para excluir'}), 404
+            return jsonify({'success': False, 'message': 'nao he escalas para excluir'}), 404
         
         # Remover todas as escalas
         Escala.query.delete()
         
-        # Limpar também TODOS os repertórios de cultos
+        # Limpar tambem TODOS os repertorios de cultos
         db.session.execute(culto_repertorio.delete())
         
         db.session.commit()
         
-        return jsonify({'success': True, 'message': f'{count} escala(s) removida(s) e repertórios limpos com sucesso!'}), 200
+        return jsonify({'success': True, 'message': f'{count} escala(s) removida(s) e repertorios limpos com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
         print(f"Erro ao excluir todas as escalas: {str(e)}")
@@ -1293,7 +1293,7 @@ def delete_all_escalas():
 @app.route('/get_escala/<int:escala_id>', methods=['GET'])
 @login_required
 def get_escala(escala_id):
-    """Retorna dados de uma escala específica para edição."""
+    """Retorna dados de uma escala especefica para edieeo."""
     try:
         escala = db.session.query(Escala, Culto, Member).join(
             Culto, Escala.culto_id == Culto.id
@@ -1302,7 +1302,7 @@ def get_escala(escala_id):
         ).filter(Escala.id == escala_id).first()
         
         if not escala:
-            return jsonify({'error': 'Escala não encontrada'}), 404
+            return jsonify({'error': 'Escala nao encontrada'}), 404
         
         e, culto, membro = escala
         return jsonify({
@@ -1319,19 +1319,19 @@ def get_escala(escala_id):
         return jsonify({'error': 'Erro ao buscar escala'}), 500
 
 # ========================================
-# ROTAS PARA MÚSICAS DO CULTO (REPERTÓRIO)
+# ROTAS PARA musicas DO CULTO (repertorio)
 # ========================================
 
 @app.route('/get_culto_musicas/<int:culto_id>', methods=['GET'])
 @login_required
 def get_culto_musicas(culto_id):
-    """Retorna as músicas selecionadas para um culto específico."""
+    """Retorna as musicas selecionadas para um culto especefico."""
     try:
         culto = db.session.get(Culto, culto_id)
         if not culto:
-            return jsonify({'error': 'Culto não encontrado'}), 404
+            return jsonify({'error': 'Culto nao encontrado'}), 404
         
-        # Buscar músicas do culto com ordem
+        # Buscar musicas do culto com ordem
         musicas_query = db.session.query(Repertorio, culto_repertorio.c.order).join(
             culto_repertorio, Repertorio.id == culto_repertorio.c.repertorio_id
         ).filter(culto_repertorio.c.culto_id == culto_id).order_by(culto_repertorio.c.order)
@@ -1351,46 +1351,46 @@ def get_culto_musicas(culto_id):
         
         return jsonify({'musicas': musicas}), 200
     except Exception as e:
-        print(f"Erro ao buscar músicas do culto: {str(e)}")
-        return jsonify({'error': 'Erro ao buscar músicas'}), 500
+        print(f"Erro ao buscar musicas do culto: {str(e)}")
+        return jsonify({'error': 'Erro ao buscar musicas'}), 500
 
 @app.route('/add_musica_culto', methods=['POST'])
 @login_required
 def add_musica_culto():
-    """Adiciona uma música ao culto. Permitido para Admin/Pastor/Líder e Ministros escalados."""
+    """Adiciona uma musica ao culto. Permitido para Admin/Pastor/Lider e Ministros escalados."""
     data = request.json
     culto_id = data.get('culto_id')
     repertorio_id = data.get('repertorio_id')
     
     if not culto_id or not repertorio_id:
-        return jsonify({'success': False, 'message': 'Dados inválidos'}), 400
+        return jsonify({'success': False, 'message': 'Dados invelidos'}), 400
     
-    # Verificar permissão
+    # Verificar permissao
     if not can_manage_escala_musicas(culto_id, current_user):
-        return jsonify({'success': False, 'message': 'Você não tem permissão para gerenciar músicas desta escala'}), 403
+        return jsonify({'success': False, 'message': 'Voce nao tem permissao para gerenciar musicas desta escala'}), 403
     
     try:
         culto = db.session.get(Culto, culto_id)
         musica = db.session.get(Repertorio, repertorio_id)
         
         if not culto or not musica:
-            return jsonify({'success': False, 'message': 'Culto ou música não encontrado'}), 404
+            return jsonify({'success': False, 'message': 'Culto ou musica nao encontrado'}), 404
         
-        # Verificar se já existe
+        # Verificar se je existe
         existe = db.session.query(culto_repertorio).filter_by(
             culto_id=culto_id, 
             repertorio_id=repertorio_id
         ).first()
         
         if existe:
-            return jsonify({'success': False, 'message': 'Música já adicionada a este culto'}), 400
+            return jsonify({'success': False, 'message': 'musica je adicionada a este culto'}), 400
         
-        # Obter próxima ordem
+        # Obter prexima ordem
         max_order = db.session.query(db.func.max(culto_repertorio.c.order)).filter(
             culto_repertorio.c.culto_id == culto_id
         ).scalar() or 0
         
-        # Adicionar música
+        # Adicionar musica
         stmt = culto_repertorio.insert().values(
             culto_id=culto_id,
             repertorio_id=repertorio_id,
@@ -1399,26 +1399,26 @@ def add_musica_culto():
         db.session.execute(stmt)
         db.session.commit()
         
-        return jsonify({'success': True, 'message': 'Música adicionada ao culto!'}), 200
+        return jsonify({'success': True, 'message': 'musica adicionada ao culto!'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao adicionar música ao culto: {str(e)}")
+        print(f"Erro ao adicionar musica ao culto: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
 @app.route('/remove_musica_culto', methods=['POST'])
 @login_required
 def remove_musica_culto():
-    """Remove uma música do culto. Permitido para Admin/Pastor/Líder e Ministros escalados."""
+    """Remove uma musica do culto. Permitido para Admin/Pastor/Lider e Ministros escalados."""
     data = request.json
     culto_id = data.get('culto_id')
     repertorio_id = data.get('repertorio_id')
     
     if not culto_id or not repertorio_id:
-        return jsonify({'success': False, 'message': 'Dados inválidos'}), 400
+        return jsonify({'success': False, 'message': 'Dados invelidos'}), 400
     
-    # Verificar permissão
+    # Verificar permissao
     if not can_manage_escala_musicas(culto_id, current_user):
-        return jsonify({'success': False, 'message': 'Você não tem permissão para gerenciar músicas desta escala'}), 403
+        return jsonify({'success': False, 'message': 'Voce nao tem permissao para gerenciar musicas desta escala'}), 403
     
     try:
         stmt = culto_repertorio.delete().where(
@@ -1430,17 +1430,17 @@ def remove_musica_culto():
         db.session.execute(stmt)
         db.session.commit()
         
-        return jsonify({'success': True, 'message': 'Música removida do culto!'}), 200
+        return jsonify({'success': True, 'message': 'musica removida do culto!'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao remover música do culto: {str(e)}")
+        print(f"Erro ao remover musica do culto: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
 @app.route('/get_estatisticas_musicas', methods=['GET'])
 @login_required
 @admin_required
 def get_estatisticas_musicas():
-    """Retorna estatísticas de músicas mais cantadas."""
+    """Retorna estatesticas de musicas mais cantadas."""
     try:
         mes = request.args.get('mes', type=int)
         ano = request.args.get('ano', type=int)
@@ -1485,10 +1485,10 @@ def get_estatisticas_musicas():
         
         top_10 = ranking_completo[:10]
         
-        # Estatísticas gerais
+        # Estatesticas gerais
         total_musicas_diferentes = len(ranking_completo)
         
-        # Contar cultos no período
+        # Contar cultos no pereodo
         cultos_query = db.session.query(db.func.count(db.distinct(Culto.id)))
         if mes and ano:
             cultos_query = cultos_query.filter(
@@ -1511,20 +1511,20 @@ def get_estatisticas_musicas():
             'musica_mais_popular': musica_mais_popular
         }), 200
     except Exception as e:
-        print(f"Erro ao buscar estatísticas: {str(e)}")
+        print(f"Erro ao buscar estatesticas: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
 @app.route('/reorder_musicas_culto', methods=['POST'])
 @login_required
 @admin_required
 def reorder_musicas_culto():
-    """Reordena as músicas de um culto."""
+    """Reordena as musicas de um culto."""
     data = request.json
     culto_id = data.get('culto_id')
     musicas_order = data.get('musicas_order')  # Lista de IDs na nova ordem
     
     if not culto_id or not musicas_order:
-        return jsonify({'success': False, 'message': 'Dados inválidos'}), 400
+        return jsonify({'success': False, 'message': 'Dados invelidos'}), 400
     
     try:
         for index, musica_id in enumerate(musicas_order, 1):
@@ -1537,18 +1537,18 @@ def reorder_musicas_culto():
             db.session.execute(stmt)
         
         db.session.commit()
-        return jsonify({'success': True, 'message': 'Ordem das músicas atualizada!'}), 200
+        return jsonify({'success': True, 'message': 'Ordem das musicas atualizada!'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao reordenar músicas: {str(e)}")
+        print(f"Erro ao reordenar musicas: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
-# Rotas para carregar dados dinâmicos
+# Rotas para carregar dados dinemicos
 @app.route('/get_user_data', methods=['GET'])
 @login_required
 def get_user_data():
-    """Carrega dados do usuário logado (User ou Member), priorizando o nome do membro."""
-    # Usa current_user do Flask-Login, que já interpreta os prefixos corretamente
+    """Carrega dados do Usuario logado (User ou Member), priorizando o nome do membro."""
+    # Usa current_user do Flask-Login, que je interpreta os prefixos corretamente
     user = current_user
     
     if not user or not user.is_authenticated:
@@ -1564,7 +1564,7 @@ def get_user_data():
         name = user.name
         role = user.role if hasattr(user, 'role') else ROLE_MEMBRO
     
-    print(f"User data: {name}, role: {role}, is_admin: {isinstance(user, User)}")  # Depuração
+    print(f"User data: {name}, role: {role}, is_admin: {isinstance(user, User)}")  # Depuraeeo
     return jsonify({
         'logged_in': True,
         'name': name,
@@ -1578,7 +1578,7 @@ def get_user_data():
 @app.route('/get_announcements', methods=['GET'])
 @login_required
 def get_announcements():
-    """Carrega avisos ativos para a página inicial."""
+    """Carrega avisos ativos para a pegina inicial."""
     try:
         announcements = Aviso.query.filter_by(active=True).order_by(Aviso.created_at.desc()).limit(5).all()
         return jsonify([{
@@ -1591,14 +1591,14 @@ def get_announcements():
     except:
         # Fallback para avisos simulados se houver erro
         return jsonify([
-            {"title": "Bem-vindo!", "text": "Ensaio geral marcado para sexta-feira às 19h."},
-            {"title": "Novo Recurso", "text": "Novo repertório disponível no app!"}
+            {"title": "Bem-vindo!", "text": "Ensaio geral marcado para sexta-feira es 19h."},
+            {"title": "Novo Recurso", "text": "Novo repertorio dispoNivel no app!"}
         ])
 
 @app.route('/get_user_scales', methods=['GET'])
 @login_required
 def get_user_scales():
-    """Carrega as escalas do usuário logado (User ou Member)."""
+    """Carrega as escalas do Usuario logado (User ou Member)."""
     with db.session.no_autoflush:
         user = current_user
         member = Member.query.filter_by(email=user.email).first() if isinstance(user, User) else user
@@ -1617,7 +1617,7 @@ def get_user_scales():
 @app.route('/get_cult_calendar', methods=['GET'])
 @login_required
 def get_cult_calendar():
-    """Carrega o calendário de cultos, ordenado por data."""
+    """Carrega o calenderio de cultos, ordenado por data."""
     with db.session.no_autoflush:
         cultos = Culto.query.order_by(Culto.date.asc()).all()
     return jsonify([{
@@ -1633,7 +1633,7 @@ def get_membros():
     """Carrega a lista de membros."""
     with db.session.no_autoflush:
         membros = Member.query.all()
-    print(f"Retornando {len(membros)} membros")  # Depuração
+    print(f"Retornando {len(membros)} membros")  # Depuraeeo
     return jsonify([{
         'id': member.id,
         'name': member.name,
@@ -1646,7 +1646,7 @@ def get_membros():
 @app.route('/submit_feedback', methods=['POST'])
 @login_required
 def submit_feedback():
-    """Processa feedback enviado pelo usuário."""
+    """Processa feedback enviado pelo Usuario."""
     data = request.json
     feedback_text = data.get('feedback')
     feedback_type = data.get('type', 'feedback')
@@ -1689,9 +1689,9 @@ def get_feedbacks():
         feedbacks_list = []
         
         for fb in feedbacks:
-            # Buscar informações do membro pelo email
+            # Buscar informaeees do membro pelo email
             member = Member.query.filter_by(email=fb.email).first()
-            member_name = member.name if member else 'Usuário não encontrado'
+            member_name = member.name if member else 'Usuario nao encontrado'
             member_role = member.instrument if (member and member.instrument) else 'Membro'
             
             feedbacks_list.append({
@@ -1715,12 +1715,12 @@ def get_feedbacks():
 @app.route('/get_my_feedbacks', methods=['GET'])
 @login_required
 def get_my_feedbacks():
-    """Retorna os feedbacks do usuário logado."""
+    """Retorna os feedbacks do Usuario logado."""
     with db.session.no_autoflush:
         user = current_user
     
     try:
-        # Buscar feedbacks do usuário pelo email
+        # Buscar feedbacks do Usuario pelo email
         feedbacks = Feedback.query.filter_by(email=user.email).order_by(Feedback.created_at.desc()).all()
         feedbacks_list = []
         
@@ -1755,12 +1755,12 @@ def respond_feedback(feedback_id):
     new_status = data.get('status', 'reviewed')
     
     if not response_text:
-        return jsonify({'success': False, 'message': 'Resposta é obrigatória'}), 400
+        return jsonify({'success': False, 'message': 'Resposta e obrigateria'}), 400
     
     try:
         feedback = db.session.get(Feedback, feedback_id)
         if not feedback:
-            return jsonify({'success': False, 'message': 'Feedback não encontrado'}), 404
+            return jsonify({'success': False, 'message': 'Feedback nao encontrado'}), 404
         
         feedback.response = response_text
         feedback.responded_at = datetime.utcnow()
@@ -1769,7 +1769,7 @@ def respond_feedback(feedback_id):
         
         db.session.commit()
         
-        # TODO: Enviar email para o usuário com a resposta
+        # TODO: Enviar email para o Usuario com a resposta
         
         return jsonify({'success': True, 'message': 'Resposta enviada com sucesso!'}), 200
     except Exception as e:
@@ -1791,12 +1791,12 @@ def update_feedback_status(feedback_id):
     new_status = data.get('status')
     
     if not new_status:
-        return jsonify({'success': False, 'message': 'Status é obrigatório'}), 400
+        return jsonify({'success': False, 'message': 'Status e obrigaterio'}), 400
     
     try:
         feedback = db.session.get(Feedback, feedback_id)
         if not feedback:
-            return jsonify({'success': False, 'message': 'Feedback não encontrado'}), 404
+            return jsonify({'success': False, 'message': 'Feedback nao encontrado'}), 404
         
         feedback.status = new_status
         db.session.commit()
@@ -1823,12 +1823,12 @@ def edit_feedback(feedback_id):
     new_status = data.get('status')
     
     if not new_response:
-        return jsonify({'success': False, 'message': 'Resposta é obrigatória'}), 400
+        return jsonify({'success': False, 'message': 'Resposta e obrigateria'}), 400
     
     try:
         feedback = db.session.get(Feedback, feedback_id)
         if not feedback:
-            return jsonify({'success': False, 'message': 'Feedback não encontrado'}), 404
+            return jsonify({'success': False, 'message': 'Feedback nao encontrado'}), 404
         
         feedback.response = new_response
         if new_status:
@@ -1858,7 +1858,7 @@ def delete_feedback(feedback_id):
     try:
         feedback = db.session.get(Feedback, feedback_id)
         if not feedback:
-            return jsonify({'success': False, 'message': 'Feedback não encontrado'}), 404
+            return jsonify({'success': False, 'message': 'Feedback nao encontrado'}), 404
         
         db.session.delete(feedback)
         db.session.commit()
@@ -1871,18 +1871,18 @@ def delete_feedback(feedback_id):
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
 # ========================================
-# ROTAS PARA SUBSTITUIÇÃO DE ESCALAS
+# ROTAS PARA substituicao DE ESCALAS
 # ========================================
 @app.route('/substituicoes')
 @login_required
 def substituicoes():
-    """Página de substituições de escalas."""
+    """Pegina de substituieees de escalas."""
     return render_template('substituicoes.html')
 
 @app.route('/get_minhas_escalas_substituiveis', methods=['GET'])
 @login_required
 def get_minhas_escalas_substituiveis():
-    """Retorna as escalas do membro logado que podem ser substituídas."""
+    """Retorna as escalas do membro logado que podem ser substituedas."""
     try:
         member_id = current_user.id
         
@@ -1896,7 +1896,7 @@ def get_minhas_escalas_substituiveis():
         
         escalas_list = []
         for escala, culto in escalas:
-            # Verificar se já tem substituição pendente ou aceita
+            # Verificar se je tem substituicao pendente ou aceita
             sub_existente = Substituicao.query.filter_by(
                 escala_id=escala.id,
                 status='pendente'
@@ -1918,17 +1918,17 @@ def get_minhas_escalas_substituiveis():
         
         return jsonify(escalas_list), 200
     except Exception as e:
-        print(f"? Erro ao buscar escalas substituíveis: {str(e)}")
+        print(f"? Erro ao buscar escalas substitueveis: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/get_membros_mesma_funcao/<int:escala_id>', methods=['GET'])
 @login_required
 def get_membros_mesma_funcao(escala_id):
-    """Retorna membros do mesmo instrumento/função que podem substituir."""
+    """Retorna membros do mesmo instrumento/funcao que podem substituir."""
     try:
         escala = db.session.get(Escala, escala_id)
         if not escala:
-            return jsonify({'error': 'Escala não encontrada'}), 404
+            return jsonify({'error': 'Escala nao encontrada'}), 404
         
         # Buscar membros com o mesmo instrumento, exceto o solicitante
         funcao = escala.role
@@ -1957,22 +1957,22 @@ def get_membros_mesma_funcao(escala_id):
 @app.route('/solicitar_substituicao', methods=['POST'])
 @login_required
 def solicitar_substituicao():
-    """Cria uma solicitação de substituição."""
+    """Cria uma solicitaeeo de substituicao."""
     try:
         data = request.get_json()
         escala_id = data.get('escala_id')
         membro_substituto_id = data.get('membro_substituto_id')
         mensagem = data.get('mensagem', '')
         
-        # Validações
+        # Validaeees
         escala = db.session.get(Escala, escala_id)
         if not escala:
-            return jsonify({'success': False, 'message': 'Escala não encontrada'}), 404
+            return jsonify({'success': False, 'message': 'Escala nao encontrada'}), 404
         
         if escala.member_id != current_user.id:
-            return jsonify({'success': False, 'message': 'Você não está nesta escala'}), 403
+            return jsonify({'success': False, 'message': 'Voce nao esta nesta escala'}), 403
         
-        # Verificar se já existe substituição pendente ou aceita
+        # Verificar se je existe substituicao pendente ou aceita
         sub_existente = Substituicao.query.filter_by(
             escala_id=escala_id
         ).filter(
@@ -1980,9 +1980,9 @@ def solicitar_substituicao():
         ).first()
         
         if sub_existente:
-            return jsonify({'success': False, 'message': 'Já existe uma substituição para esta escala'}), 400
+            return jsonify({'success': False, 'message': 'Je existe uma substituicao para esta escala'}), 400
         
-        # Criar substituição
+        # Criar substituicao
         substituicao = Substituicao(
             escala_id=escala_id,
             membro_solicitante_id=current_user.id,
@@ -1994,17 +1994,17 @@ def solicitar_substituicao():
         db.session.add(substituicao)
         db.session.commit()
         
-        print(f"? Substituição solicitada: Escala {escala_id}, Substituto {membro_substituto_id}")
-        return jsonify({'success': True, 'message': 'Solicitação enviada com sucesso!'}), 200
+        print(f"? substituicao solicitada: Escala {escala_id}, Substituto {membro_substituto_id}")
+        return jsonify({'success': True, 'message': 'Solicitaeeo enviada com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"? Erro ao solicitar substituição: {str(e)}")
+        print(f"? Erro ao solicitar substituicao: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
 @app.route('/get_substituicoes_pendentes', methods=['GET'])
 @login_required
 def get_substituicoes_pendentes():
-    """Retorna substituições pendentes para o membro logado."""
+    """Retorna substituieees pendentes para o membro logado."""
     try:
         member_id = current_user.id
         
@@ -2034,13 +2034,13 @@ def get_substituicoes_pendentes():
         
         return jsonify(subs_list), 200
     except Exception as e:
-        print(f"? Erro ao buscar substituições pendentes: {str(e)}")
+        print(f"? Erro ao buscar substituieees pendentes: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/responder_substituicao/<int:sub_id>', methods=['POST'])
 @login_required
 def responder_substituicao(sub_id):
-    """Aceita ou recusa uma solicitação de substituição."""
+    """Aceita ou recusa uma solicitaeeo de substituicao."""
     try:
         data = request.get_json()
         acao = data.get('acao')  # 'aceitar' ou 'recusar'
@@ -2048,13 +2048,13 @@ def responder_substituicao(sub_id):
         
         substituicao = db.session.get(Substituicao, sub_id)
         if not substituicao:
-            return jsonify({'success': False, 'message': 'Substituição não encontrada'}), 404
+            return jsonify({'success': False, 'message': 'substituicao nao encontrada'}), 404
         
         if substituicao.membro_substituto_id != current_user.id:
-            return jsonify({'success': False, 'message': 'Você não pode responder esta solicitação'}), 403
+            return jsonify({'success': False, 'message': 'Voce nao pode responder esta solicitaeeo'}), 403
         
         if substituicao.status != 'pendente':
-            return jsonify({'success': False, 'message': 'Esta solicitação já foi respondida'}), 400
+            return jsonify({'success': False, 'message': 'Esta solicitaeeo je foi respondida'}), 400
         
         # Atualizar status
         if acao == 'aceitar':
@@ -2070,18 +2070,18 @@ def responder_substituicao(sub_id):
         
         db.session.commit()
         
-        print(f"? Substituição {sub_id} {acao}(a) por {current_user.name}")
-        return jsonify({'success': True, 'message': f'Substituição {acao}(a) com sucesso!'}), 200
+        print(f"? substituicao {sub_id} {acao}(a) por {current_user.name}")
+        return jsonify({'success': True, 'message': f'substituicao {acao}(a) com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"? Erro ao responder substituição: {str(e)}")
+        print(f"? Erro ao responder substituicao: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
 @app.route('/get_todas_substituicoes_admin', methods=['GET'])
 @login_required
 @admin_required
 def get_todas_substituicoes_admin():
-    """Retorna todas as substituições para o painel admin."""
+    """Retorna todas as substituieees para o painel admin."""
     try:
         substituicoes = db.session.query(Substituicao, Escala, Culto, Member, Member).join(
             Escala, Substituicao.escala_id == Escala.id
@@ -2113,41 +2113,41 @@ def get_todas_substituicoes_admin():
         
         return jsonify(subs_list), 200
     except Exception as e:
-        print(f"? Erro ao buscar substituições admin: {str(e)}")
+        print(f"? Erro ao buscar substituieees admin: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/cancelar_substituicao/<int:sub_id>', methods=['POST'])
 @login_required
 def cancelar_substituicao(sub_id):
-    """Cancela uma substituição pendente (apenas o solicitante pode cancelar)."""
+    """Cancela uma substituicao pendente (apenas o solicitante pode cancelar)."""
     try:
         substituicao = db.session.get(Substituicao, sub_id)
         if not substituicao:
-            return jsonify({'success': False, 'message': 'Substituição não encontrada'}), 404
+            return jsonify({'success': False, 'message': 'substituicao nao encontrada'}), 404
         
         if substituicao.membro_solicitante_id != current_user.id:
-            return jsonify({'success': False, 'message': 'Você não pode cancelar esta solicitação'}), 403
+            return jsonify({'success': False, 'message': 'Voce nao pode cancelar esta solicitaeeo'}), 403
         
         if substituicao.status != 'pendente':
-            return jsonify({'success': False, 'message': 'Apenas substituições pendentes podem ser canceladas'}), 400
+            return jsonify({'success': False, 'message': 'Apenas substituieees pendentes podem ser canceladas'}), 400
         
         substituicao.status = 'cancelado'
         db.session.commit()
         
-        print(f"? Substituição {sub_id} cancelada por {current_user.name}")
-        return jsonify({'success': True, 'message': 'Substituição cancelada com sucesso!'}), 200
+        print(f"? substituicao {sub_id} cancelada por {current_user.name}")
+        return jsonify({'success': True, 'message': 'substituicao cancelada com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"? Erro ao cancelar substituição: {str(e)}")
+        print(f"? Erro ao cancelar substituicao: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
 # ========================================
-# ROTAS PARA AVISOS/NOTIFICAÇÕES
+# ROTAS PARA AVISOS/notificacoes
 # ========================================
 @app.route('/avisos')
 @login_required
 def avisos():
-    """Página de avisos."""
+    """Pegina de avisos."""
     return render_template('avisos.html')
 
 @app.route('/get_avisos', methods=['GET'])
@@ -2177,7 +2177,7 @@ def add_aviso():
     priority = data.get('priority', 'normal')
     
     if not all([title, message]):
-        return jsonify({'success': False, 'message': 'Título e mensagem são obrigatórios.'}), 400
+        return jsonify({'success': False, 'message': 'Tetulo e mensagem seo obrigaterios.'}), 400
     
     try:
         novo_aviso = Aviso(
@@ -2204,12 +2204,12 @@ def edit_aviso(aviso_id):
     priority = data.get('priority')
     
     if not all([title, message, priority]):
-        return jsonify({'success': False, 'message': 'Título, mensagem e prioridade são obrigatórios.'}), 400
+        return jsonify({'success': False, 'message': 'Tetulo, mensagem e prioridade seo obrigaterios.'}), 400
     
     try:
         aviso = db.session.get(Aviso, aviso_id)
         if not aviso:
-            return jsonify({'success': False, 'message': 'Aviso não encontrado'}), 404
+            return jsonify({'success': False, 'message': 'Aviso nao encontrado'}), 404
         
         aviso.title = title
         aviso.message = message
@@ -2228,8 +2228,8 @@ def delete_aviso(aviso_id):
     try:
         aviso = db.session.get(Aviso, aviso_id)
         if not aviso:
-            return jsonify({'success': False, 'message': 'Aviso não encontrado'}), 404
-        aviso.active = False  # Desativa ao invés de deletar
+            return jsonify({'success': False, 'message': 'Aviso nao encontrado'}), 404
+        aviso.active = False  # Desativa ao inves de deletar
         db.session.commit()
         return jsonify({'success': True, 'message': 'Aviso removido com sucesso!'}), 200
     except Exception as e:
@@ -2237,18 +2237,18 @@ def delete_aviso(aviso_id):
         return jsonify({'success': False, 'message': f'Erro ao remover aviso: {str(e)}'}), 500
 
 # ========================================
-# ROTAS PARA REPERTÓRIO MUSICAL
+# ROTAS PARA repertorio MUSICAL
 # ========================================
 @app.route('/repertorio')
 @login_required
 def repertorio():
-    """Página de repertório musical."""
+    """Pegina de repertorio musical."""
     return render_template('repertorio.html')
 
 @app.route('/get_repertorio', methods=['GET'])
 @login_required
 def get_repertorio():
-    """Carrega todo o repertório musical."""
+    """Carrega todo o repertorio musical."""
     try:
         musicas = Repertorio.query.order_by(Repertorio.title.asc()).all()
         return jsonify({
@@ -2260,7 +2260,7 @@ def get_repertorio():
                 'tempo': musica.tempo,
                 'link_video': musica.link_video,
                 'link_audio': musica.link_audio,
-                'audio_file': musica.audio_file,  # Arquivo local de áudio
+                'audio_file': musica.audio_file,  # Arquivo local de audio
                 'lyrics': musica.lyrics,
                 'notes': musica.notes,
                 'category': musica.category
@@ -2273,7 +2273,7 @@ def get_repertorio():
 @login_required
 @admin_required
 def add_musica():
-    """Adiciona uma nova música ao repertório (apenas admins)."""
+    """Adiciona uma nova musica ao repertorio (apenas admins)."""
     # Suporta tanto JSON quanto multipart/form-data (com arquivos)
     if request.is_json:
         data = request.json
@@ -2291,14 +2291,14 @@ def add_musica():
     category = data.get('category')
     
     if not title:
-        return jsonify({'success': False, 'message': 'Título é obrigatório.'}), 400
+        return jsonify({'success': False, 'message': 'Tetulo e obrigaterio.'}), 400
     
-    # Processar arquivo de áudio se houver
+    # Processar arquivo de audio se houver
     audio_filename = None
     if 'audio_file' in request.files:
         file = request.files['audio_file']
         if file and file.filename and allowed_audio_file(file.filename):
-            # Gerar nome único para o arquivo
+            # Gerar nome enico para o arquivo
             original_ext = file.filename.rsplit('.', 1)[1].lower()
             audio_filename = f"{secrets.token_hex(8)}_{secure_filename(file.filename)}"
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], audio_filename)
@@ -2320,7 +2320,7 @@ def add_musica():
         )
         db.session.add(nova_musica)
         db.session.commit()
-        return jsonify({'success': True, 'message': 'Música adicionada com sucesso!'}), 200
+        return jsonify({'success': True, 'message': 'musica adicionada com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
         # Se houve erro, remover o arquivo salvo
@@ -2328,13 +2328,13 @@ def add_musica():
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], audio_filename)
             if os.path.exists(filepath):
                 os.remove(filepath)
-        return jsonify({'success': False, 'message': f'Erro ao adicionar música: {str(e)}'}), 500
+        return jsonify({'success': False, 'message': f'Erro ao adicionar musica: {str(e)}'}), 500
 
 @app.route('/update_musica/<int:musica_id>', methods=['POST', 'PUT'])
 @login_required
 @admin_required
 def update_musica(musica_id):
-    """Atualiza uma música do repertório (apenas admins)."""
+    """Atualiza uma musica do repertorio (apenas admins)."""
     # Aceitar tanto JSON quanto FormData
     if request.is_json:
         data = request.json
@@ -2344,7 +2344,7 @@ def update_musica(musica_id):
     try:
         musica = db.session.get(Repertorio, musica_id)
         if not musica:
-            return jsonify({'success': False, 'message': 'Música não encontrada'}), 404
+            return jsonify({'success': False, 'message': 'musica nao encontrada'}), 404
         
         # Atualizar campos
         if 'title' in data:
@@ -2366,7 +2366,7 @@ def update_musica(musica_id):
         if 'category' in data:
             musica.category = data.get('category')
         
-        # Processar arquivo de áudio se houver
+        # Processar arquivo de audio se houver
         if 'audio_file' in request.files:
             file = request.files['audio_file']
             if file and file.filename and allowed_audio_file(file.filename):
@@ -2384,22 +2384,22 @@ def update_musica(musica_id):
                 musica.audio_file = audio_filename
         
         db.session.commit()
-        return jsonify({'success': True, 'message': 'Música atualizada com sucesso!'}), 200
+        return jsonify({'success': True, 'message': 'musica atualizada com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'message': f'Erro ao atualizar música: {str(e)}'}), 500
+        return jsonify({'success': False, 'message': f'Erro ao atualizar musica: {str(e)}'}), 500
 
 @app.route('/delete_musica/<int:musica_id>', methods=['DELETE'])
 @login_required
 @admin_required
 def delete_musica(musica_id):
-    """Remove uma música do repertório (apenas admins)."""
+    """Remove uma musica do repertorio (apenas admins)."""
     try:
         musica = db.session.get(Repertorio, musica_id)
         if not musica:
-            return jsonify({'success': False, 'message': 'Música não encontrada'}), 404
+            return jsonify({'success': False, 'message': 'musica nao encontrada'}), 404
         
-        # Remover arquivo de áudio se existir
+        # Remover arquivo de audio se existir
         if musica.audio_file:
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], musica.audio_file)
             if os.path.exists(filepath):
@@ -2407,15 +2407,15 @@ def delete_musica(musica_id):
         
         db.session.delete(musica)
         db.session.commit()
-        return jsonify({'success': True, 'message': 'Música removida com sucesso!'}), 200
+        return jsonify({'success': True, 'message': 'musica removida com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'message': f'Erro ao remover música: {str(e)}'}), 500
+        return jsonify({'success': False, 'message': f'Erro ao remover musica: {str(e)}'}), 500
 
 @app.route('/uploads/<filename>')
 @login_required
 def uploaded_file(filename):
-    """Serve arquivos de áudio do diretório de uploads."""
+    """Serve arquivos de audio do direterio de uploads."""
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 # ========================================
@@ -2424,19 +2424,19 @@ def uploaded_file(filename):
 @app.route('/indisponibilidade')
 @login_required
 def indisponibilidade():
-    """Página de indisponibilidade."""
+    """Pegina de indisponibilidade."""
     return render_template('indisponibilidade.html')
 
 @app.route('/get_periodo_indisponibilidade', methods=['GET'])
 @login_required
 def get_periodo_indisponibilidade():
-    """Verifica se o período de indisponibilidade está aberto (controlado pelo admin)."""
+    """Verifica se o pereodo de indisponibilidade esta aberto (controlado pelo admin)."""
     try:
-        # Buscar configuração
+        # Buscar configuracao
         config = Configuracao.query.filter_by(chave='indisponibilidade_aberta').first()
         
         if not config:
-            # Criar configuração padrão (fechado)
+            # Criar configuracao padrao (fechado)
             config = Configuracao(
                 chave='indisponibilidade_aberta',
                 valor='false',
@@ -2448,9 +2448,9 @@ def get_periodo_indisponibilidade():
         periodo_aberto = config.valor.lower() == 'true'
         
         if periodo_aberto:
-            mensagem = "Período ABERTO! Você pode registrar suas indisponibilidades."
+            mensagem = "Pereodo ABERTO! Voce pode registrar suas indisponibilidades."
         else:
-            mensagem = "Período FECHADO. Aguarde o administrador abrir o período de registro."
+            mensagem = "Pereodo FECHADO. Aguarde o administrador abrir o pereodo de registro."
         
         return jsonify({
             'periodo_aberto': periodo_aberto,
@@ -2458,22 +2458,22 @@ def get_periodo_indisponibilidade():
             'atualizado_em': config.atualizado_em.strftime('%d/%m/%Y %H:%M') if config.atualizado_em else None
         }), 200
     except Exception as e:
-        print(f"Erro ao verificar período de indisponibilidade: {str(e)}")
+        print(f"Erro ao verificar pereodo de indisponibilidade: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/toggle_periodo_indisponibilidade', methods=['POST'])
 @login_required
 @admin_required
 def toggle_periodo_indisponibilidade():
-    """Abre ou fecha o período de registro de indisponibilidades (apenas admin)."""
-    print("[DEBUG] Função toggle_periodo_indisponibilidade chamada!")
+    """Abre ou fecha o pereodo de registro de indisponibilidades (apenas admin)."""
+    print("[DEBUG] funcao toggle_periodo_indisponibilidade chamada!")
     try:
-        # Buscar ou criar configuração
+        # Buscar ou criar configuracao
         config = Configuracao.query.filter_by(chave='indisponibilidade_aberta').first()
         print(f"[DEBUG] Config encontrada: {config}")
         
         if not config:
-            print("[DEBUG] Config não existe, criando nova...")
+            print("[DEBUG] Config nao existe, criando nova...")
             config = Configuracao(
                 chave='indisponibilidade_aberta',
                 valor='false',
@@ -2498,14 +2498,14 @@ def toggle_periodo_indisponibilidade():
             'success': True,
             'periodo_aberto': novo_valor == 'true',
             'status': status,
-            'mensagem': f'Período de indisponibilidade agora está {status}.'
+            'mensagem': f'Pereodo de indisponibilidade agora esta {status}.'
         }
         print(f"[DEBUG] Retornando: {resultado}")
         
         return jsonify(resultado), 200
     except Exception as e:
         db.session.rollback()
-        print(f"[ERROR] Erro ao alternar período: {str(e)}")
+        print(f"[ERROR] Erro ao alternar pereodo: {str(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -2538,7 +2538,7 @@ def get_todas_indisponibilidades_admin():
                     if culto:
                         culto_description = culto.description
                 
-                # Formatar período de data
+                # Formatar pereodo de data
                 if ind.date_end and ind.date_end != ind.date_start:
                     date_formatted = f"{ind.date_start.strftime('%d/%m/%Y')} a {ind.date_end.strftime('%d/%m/%Y')}"
                 else:
@@ -2580,18 +2580,18 @@ def delete_indisponibilidade_admin(indisp_id):
     try:
         indisponibilidade = Indisponibilidade.query.get_or_404(indisp_id)
         
-        # Guardar informações para log
+        # Guardar informaeees para log
         member_name = indisponibilidade.member.name if indisponibilidade.member else 'Desconhecido'
         date_str = indisponibilidade.date_start.strftime('%d/%m/%Y')
         
         db.session.delete(indisponibilidade)
         db.session.commit()
         
-        print(f"[ADMIN] Indisponibilidade excluída: {member_name} - {date_str}")
+        print(f"[ADMIN] Indisponibilidade exclueda: {member_name} - {date_str}")
         
         return jsonify({
             'success': True,
-            'message': f'Indisponibilidade de {member_name} excluída com sucesso!'
+            'message': f'Indisponibilidade de {member_name} exclueda com sucesso!'
         }), 200
     except Exception as e:
         db.session.rollback()
@@ -2601,7 +2601,7 @@ def delete_indisponibilidade_admin(indisp_id):
 @app.route('/get_cultos_disponiveis', methods=['GET'])
 @login_required
 def get_cultos_disponiveis():
-    """Retorna cultos futuros para seleção de indisponibilidade."""
+    """Retorna cultos futuros para seleeeo de indisponibilidade."""
     try:
         # Buscar cultos a partir de hoje
         cultos_futuros = Culto.query.filter(
@@ -2623,7 +2623,7 @@ def get_cultos_disponiveis():
 @app.route('/get_indisponibilidades', methods=['GET'])
 @login_required
 def get_indisponibilidades():
-    """Carrega indisponibilidades do usuário logado."""
+    """Carrega indisponibilidades do Usuario logado."""
     try:
         user = current_user
         member = Member.query.filter_by(email=user.email).first() if isinstance(user, User) else user
@@ -2645,7 +2645,7 @@ def get_indisponibilidades():
                     'culto_id': ind.culto_id
                 }
                 
-                # Se for indisponibilidade para culto específico, buscar info do culto
+                # Se for indisponibilidade para culto especefico, buscar info do culto
                 if ind.culto_id:
                     culto = Culto.query.get(ind.culto_id)
                     if culto:
@@ -2665,12 +2665,12 @@ def get_indisponibilidades():
 def add_indisponibilidade():
     """Adiciona uma nova indisponibilidade."""
     try:
-        # Verificar se o período de registro está aberto (controle do admin)
+        # Verificar se o pereodo de registro esta aberto (controle do admin)
         config = Configuracao.query.filter_by(chave='indisponibilidade_aberta').first()
         if not config or config.valor.lower() != 'true':
             return jsonify({
                 'success': False, 
-                'message': 'Período fechado! O administrador não liberou o registro de indisponibilidades no momento.'
+                'message': 'Pereodo fechado! O administrador nao liberou o registro de indisponibilidades no momento.'
             }), 403
         
         data = request.json
@@ -2681,13 +2681,13 @@ def add_indisponibilidade():
             return jsonify({'success': False, 'message': 'Selecione pelo menos um culto.'}), 400
         
         if not reason or reason.strip() == '':
-            return jsonify({'success': False, 'message': 'Motivo é obrigatório.'}), 400
+            return jsonify({'success': False, 'message': 'Motivo e obrigaterio.'}), 400
         
         user = current_user
         member = Member.query.filter_by(email=user.email).first() if isinstance(user, User) else user
         
         if not member:
-            return jsonify({'success': False, 'message': 'Membro não encontrado.'}), 404
+            return jsonify({'success': False, 'message': 'Membro nao encontrado.'}), 404
         
         # Criar uma indisponibilidade para cada culto selecionado
         indisponibilidades_criadas = 0
@@ -2697,14 +2697,14 @@ def add_indisponibilidade():
             if not culto:
                 continue
             
-            # Verificar se já existe indisponibilidade para este culto
+            # Verificar se je existe indisponibilidade para este culto
             existe = Indisponibilidade.query.filter_by(
                 member_id=member.id,
                 culto_id=culto_id
             ).first()
             
             if existe:
-                continue  # Pular se já existe
+                continue  # Pular se je existe
             
             # Criar indisponibilidade
             nova_indisponibilidade = Indisponibilidade(
@@ -2713,7 +2713,7 @@ def add_indisponibilidade():
                 date_start=culto.date,
                 date_end=culto.date,
                 reason=reason,
-                status='approved'  # Auto-aprovado pois foi feito no período correto
+                status='approved'  # Auto-aprovado pois foi feito no pereodo correto
             )
             db.session.add(nova_indisponibilidade)
             indisponibilidades_criadas += 1
@@ -2723,7 +2723,7 @@ def add_indisponibilidade():
         if indisponibilidades_criadas == 0:
             return jsonify({
                 'success': False, 
-                'message': 'Nenhuma indisponibilidade foi criada. Talvez você já tenha registrado para esses cultos.'
+                'message': 'Nenhuma indisponibilidade foi criada. Talvez voce je tenha registrado para esses cultos.'
             }), 400
         
         return jsonify({
@@ -2742,14 +2742,14 @@ def delete_indisponibilidade(ind_id):
     try:
         ind = db.session.get(Indisponibilidade, ind_id)
         if not ind:
-            return jsonify({'success': False, 'message': 'Indisponibilidade não encontrada'}), 404
+            return jsonify({'success': False, 'message': 'Indisponibilidade nao encontrada'}), 404
         
-        # Verifica se o usuário pode deletar (próprio ou admin)
+        # Verifica se o Usuario pode deletar (preprio ou admin)
         user = current_user
         member = Member.query.filter_by(email=user.email).first() if isinstance(user, User) else user
         
         if ind.member_id != member.id and not getattr(user, 'is_admin', False):
-            return jsonify({'success': False, 'message': 'Sem permissão para deletar esta indisponibilidade'}), 403
+            return jsonify({'success': False, 'message': 'Sem permissao para deletar esta indisponibilidade'}), 403
         
         db.session.delete(ind)
         db.session.commit()
@@ -2808,23 +2808,23 @@ def get_indisponibilidades_admin():
 @login_required
 @admin_required
 def dashboard():
-    """Dashboard administrativo com estatísticas."""
+    """Dashboard administrativo com estatesticas."""
     return render_template('dashboard.html')
 
 @app.route('/estatisticas')
 @login_required
 @admin_required
 def estatisticas():
-    """Página de estatísticas de músicas."""
+    """Pegina de estatesticas de musicas."""
     return render_template('estatisticas.html')
 
 @app.route('/get_dashboard_stats', methods=['GET'])
 @login_required
 @admin_required
 def get_dashboard_stats():
-    """Retorna estatísticas para o dashboard administrativo."""
+    """Retorna estatesticas para o dashboard administrativo."""
     try:
-        # Estatísticas gerais - todas exibindo totais cadastrados
+        # Estatesticas gerais - todas exibindo totais cadastrados
         total_membros = Member.query.count()
         membros_ativos = Member.query.filter_by(suspended=False).count()
         total_cultos = Culto.query.count()
@@ -2839,7 +2839,7 @@ def get_dashboard_stats():
             db.func.count(Member.id)
         ).group_by(Member.instrument).all()
         
-        # Próximos cultos
+        # Preximos cultos
         proximos_cultos = Culto.query.filter(
             Culto.date >= date.today()
         ).order_by(Culto.date.asc()).limit(5).all()
@@ -2849,7 +2849,7 @@ def get_dashboard_stats():
             Aviso.created_at.desc()
         ).limit(5).all()
         
-        print(f"[DEBUG] Dashboard Stats: Membros={total_membros}, Cultos={total_cultos}, Escalas={total_escalas}, Músicas={total_musicas}")
+        print(f"[DEBUG] Dashboard Stats: Membros={total_membros}, Cultos={total_cultos}, Escalas={total_escalas}, musicas={total_musicas}")
         
         return jsonify({
             'total_membros': total_membros,
@@ -2860,7 +2860,7 @@ def get_dashboard_stats():
             'total_avisos': total_avisos,
             'feedbacks_pendentes': feedbacks_pendentes,
             'membros_por_instrumento': [{
-                'instrumento': inst or 'Não definido',
+                'instrumento': inst or 'nao definido',
                 'quantidade': qtd
             } for inst, qtd in membros_por_instrumento],
             'proximos_cultos': [{
@@ -2883,18 +2883,18 @@ def get_dashboard_stats():
 @login_required
 @admin_required
 def get_ranking_escalas():
-    """Retorna ranking de membros por participação em escalas (mês e ano)."""
+    """Retorna ranking de membros por participaeeo em escalas (mes e ano)."""
     try:
         hoje = date.today()
         periodo = request.args.get('periodo', 'mes')  # 'mes' ou 'ano'
         
-        # Definir data de início
+        # Definir data de inecio
         if periodo == 'mes':
             data_inicio = date(hoje.year, hoje.month, 1)
         else:  # ano
             data_inicio = date(hoje.year, 1, 1)
         
-        # Buscar escalas do período
+        # Buscar escalas do pereodo
         escalas_periodo = db.session.query(
             Member.id,
             Member.name,
@@ -3048,21 +3048,21 @@ def manifest():
     return send_from_directory('static', 'manifest.json', mimetype='application/manifest+json')
 
 # ========================================
-# INICIALIZAÇÃO DO BANCO DE DADOS
+# INICIALIZAeeO DO BANCO DE DADOS
 # ========================================
-# Este código roda tanto em desenvolvimento quanto em produção (Gunicorn)
+# Este cedigo roda tanto em desenvolvimento quanto em producao (Gunicorn)
 try:
     ensure_database_exists()
     with app.app_context():
-        create_admin()  # Adiciona o administrador padrão
-    print("? Aplicação inicializada com sucesso!")
+        create_admin()  # Adiciona o administrador padrao
+    print("? Aplicaeeo inicializada com sucesso!")
 except Exception as e:
-    print(f"? ERRO na inicialização: {e}")
+    print(f"? ERRO na inicializaeeo: {e}")
     import traceback
     traceback.print_exc()
 
 if __name__ == '__main__':
-    # Configuração de ambiente para execução local
+    # configuracao de ambiente para execucao local
     port = int(os.environ.get('PORT', 5000))
     debug_mode = os.environ.get('FLASK_ENV', 'development') == 'development'
     
