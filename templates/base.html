@@ -253,14 +253,14 @@
 
     <!-- Modal de Confirmação Global -->
     <div id="globalConfirmModal" class="global-modal" style="display: none;">
-        <div class="modal-overlay" onclick="window.GlobalModals.closeConfirm()"></div>
+        <div class="modal-overlay" onclick="window.GlobalModals.closeConfirm(false)"></div>
         <div class="modal-content" style="max-width: 450px;">
             <div class="modal-header">
                 <h3 id="globalConfirmTitle" style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
                     <i class="fas fa-question-circle" style="color: #f59e0b;"></i>
                     Confirmação
                 </h3>
-                <button class="modal-close" onclick="window.GlobalModals.closeConfirm()">
+                <button class="modal-close" onclick="window.GlobalModals.closeConfirm(false)">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -268,7 +268,7 @@
                 <p id="globalConfirmMessage" style="margin: 0; font-size: 1rem; line-height: 1.6;"></p>
             </div>
             <div class="modal-footer" style="display: flex; gap: 0.75rem; justify-content: flex-end;">
-                <button class="btn btn-outline" onclick="window.GlobalModals.closeConfirm()">
+                <button class="btn btn-outline" onclick="window.GlobalModals.closeConfirm(false)">
                     <i class="fas fa-times"></i> Cancelar
                 </button>
                 <button id="globalConfirmButton" class="btn btn-primary">
@@ -434,22 +434,58 @@
     <script>
         // Sistema Global de Modais
         window.GlobalModals = {
-            // Modal de Confirmação
-            confirm: function(message, onConfirm, title = 'Confirmação') {
-                document.getElementById('globalConfirmTitle').innerHTML = `<i class="fas fa-question-circle" style="color: #f59e0b;"></i> ${title}`;
-                document.getElementById('globalConfirmMessage').textContent = message;
-                
-                const confirmButton = document.getElementById('globalConfirmButton');
-                confirmButton.onclick = () => {
-                    this.closeConfirm();
-                    if (onConfirm) onConfirm();
-                };
-                
-                document.getElementById('globalConfirmModal').style.display = 'flex';
+            _confirmResolver: null, // Armazena o resolver da Promise atual
+            
+            // Modal de Confirmação (retorna Promise)
+            confirm: function(message, titleOrCallback = 'Confirmação') {
+                return new Promise((resolve) => {
+                    this._confirmResolver = resolve; // Armazenar para usar no X e overlay
+                    
+                    // Verificar se é callback (função) ou título (string)
+                    let title = 'Confirmação';
+                    let legacyCallback = null;
+                    
+                    if (typeof titleOrCallback === 'function') {
+                        // Modo legacy: confirm(message, callback)
+                        legacyCallback = titleOrCallback;
+                    } else if (typeof titleOrCallback === 'string') {
+                        // Modo novo: confirm(message, title)
+                        title = titleOrCallback;
+                    }
+                    
+                    document.getElementById('globalConfirmTitle').innerHTML = `<i class="fas fa-question-circle" style="color: #f59e0b;"></i> ${title}`;
+                    document.getElementById('globalConfirmMessage').textContent = message;
+                    
+                    const confirmButton = document.getElementById('globalConfirmButton');
+                    const cancelButton = document.querySelector('#globalConfirmModal .btn-outline');
+                    
+                    // Remover listeners anteriores
+                    const newConfirmButton = confirmButton.cloneNode(true);
+                    const newCancelButton = cancelButton.cloneNode(true);
+                    confirmButton.parentNode.replaceChild(newConfirmButton, confirmButton);
+                    cancelButton.parentNode.replaceChild(newCancelButton, cancelButton);
+                    
+                    // Confirmar
+                    newConfirmButton.onclick = () => {
+                        this.closeConfirm(true);
+                        if (legacyCallback) legacyCallback(); // Compatibilidade
+                    };
+                    
+                    // Cancelar
+                    newCancelButton.onclick = () => {
+                        this.closeConfirm(false);
+                    };
+                    
+                    document.getElementById('globalConfirmModal').style.display = 'flex';
+                });
             },
 
-            closeConfirm: function() {
+            closeConfirm: function(confirmed = false) {
                 document.getElementById('globalConfirmModal').style.display = 'none';
+                if (this._confirmResolver) {
+                    this._confirmResolver(confirmed);
+                    this._confirmResolver = null;
+                }
             },
 
             // Modal de Alerta

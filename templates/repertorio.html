@@ -565,23 +565,13 @@ async function saveSong() {
 }
 
 async function deleteSong(songId) {
-    // Criar modal de confirmação customizado
-    if (typeof GlobalModals !== 'undefined' && GlobalModals.confirm) {
-        GlobalModals.confirm(
-            'Deseja realmente remover esta música? Esta ação não pode ser desfeita.',
-            async () => {
-                await executeDelete(songId);
-            },
-            'Confirmar Exclusão'
-        );
-    } else {
-        const confirmado = await window.GlobalModals.confirm(
-            'Deseja realmente remover esta música? Esta ação não pode ser desfeita.',
-            'Confirmar Exclusão'
-        );
-        if (confirmado) {
-            await executeDelete(songId);
-        }
+    const confirmado = await window.GlobalModals.confirm(
+        'Deseja realmente remover esta música? Esta ação não pode ser desfeita.',
+        'Confirmar Exclusão'
+    );
+    
+    if (confirmado) {
+        await executeDelete(songId);
     }
 }
 
