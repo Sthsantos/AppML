@@ -2479,7 +2479,7 @@ select.form-control {
     /* Card de controle de indisponibilidade */
     #tab-configuracoes .card-body > div[style*="display: flex"] {
         flex-direction: column !important;
-        gap: 1rem !important;
+        gap: 0.75rem !important;
     }
     
     #tab-configuracoes .card-body > div > div {
@@ -2487,40 +2487,47 @@ select.form-control {
         width: 100% !important;
     }
     
-    /* Reduzir tamanho do botão de período */
+    /* Reduzir MUITO o tamanho do botão de período */
     #btnTogglePeriodo {
         width: 100% !important;
         min-width: auto !important;
-        padding: 0.75rem 1rem !important;
-        font-size: 0.9rem !important;
+        max-width: 100% !important;
+        padding: 0.5rem 0.75rem !important;
+        font-size: 0.75rem !important;
+        white-space: normal !important;
+        height: auto !important;
+        line-height: 1.3 !important;
     }
     
     #btnTogglePeriodo i {
-        font-size: 0.85rem;
+        font-size: 0.7rem !important;
+        margin-right: 0.3rem !important;
     }
     
     #btnTogglePeriodo #btnText {
-        font-size: 0.9rem;
+        font-size: 0.75rem !important;
     }
     
     /* Títulos menores */
     #tab-configuracoes h3 {
-        font-size: 1rem !important;
+        font-size: 0.95rem !important;
     }
     
     #tab-configuracoes p {
-        font-size: 0.85rem !important;
+        font-size: 0.8rem !important;
     }
     
     /* Lista de indisponibilidades - cabeçalho */
     #tab-configuracoes .card-body > div[style*="justify-content: space-between"] {
         flex-direction: column !important;
         align-items: flex-start !important;
-        gap: 1rem !important;
+        gap: 0.75rem !important;
     }
     
     #tab-configuracoes .card-body > div button {
         width: 100%;
+        font-size: 0.8rem !important;
+        padding: 0.5rem 0.75rem !important;
     }
 }
 
@@ -2529,43 +2536,49 @@ select.form-control {
     /* Card header com botões */
     .card-header > div[style*="display: flex"] {
         flex-direction: column !important;
-        gap: 0.5rem !important;
-        width: 100%;
+        gap: 0.4rem !important;
+        width: 100% !important;
     }
     
     .card-header > div[style*="display: flex"] .btn {
         width: 100% !important;
-        justify-content: center;
-        font-size: 0.85rem !important;
-        padding: 0.65rem 0.75rem !important;
+        max-width: 100% !important;
+        justify-content: center !important;
+        font-size: 0.75rem !important;
+        padding: 0.5rem 0.6rem !important;
+        white-space: nowrap !important;
     }
     
     .card-header > div[style*="display: flex"] .btn i {
-        font-size: 0.8rem;
-        margin-right: 0.35rem;
+        font-size: 0.7rem !important;
+        margin-right: 0.3rem !important;
     }
 }
 
 @media (max-width: 480px) {
     /* Botão período ainda menor em telas muito pequenas */
     #btnTogglePeriodo {
-        padding: 0.6rem 0.8rem !important;
-        font-size: 0.8rem !important;
+        padding: 0.45rem 0.6rem !important;
+        font-size: 0.7rem !important;
+    }
+    
+    #btnTogglePeriodo i {
+        font-size: 0.65rem !important;
     }
     
     #btnTogglePeriodo #btnText {
-        font-size: 0.8rem;
+        font-size: 0.7rem !important;
     }
     
     /* Reduzir ainda mais os botões de escalas */
     .card-header .btn {
-        font-size: 0.75rem !important;
-        padding: 0.5rem 0.65rem !important;
+        font-size: 0.7rem !important;
+        padding: 0.4rem 0.5rem !important;
     }
     
     .card-header .btn i {
-        font-size: 0.7rem !important;
-        margin-right: 0.25rem;
+        font-size: 0.65rem !important;
+        margin-right: 0.25rem !important;
     }
 }
 
