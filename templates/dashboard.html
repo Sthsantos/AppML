@@ -1403,6 +1403,7 @@ function atualizarTabelaRankingMusicas(ranking) {
     }
     
     let html = `
+        <div style="overflow-x: auto;">
         <table style="width: 100%; border-collapse: collapse;">
             <thead>
                 <tr style="background: rgba(59, 130, 246, 0.1); border-bottom: 2px solid var(--primary-color);">
@@ -1440,6 +1441,7 @@ function atualizarTabelaRankingMusicas(ranking) {
     html += `
             </tbody>
         </table>
+        </div>
     `;
     
     container.innerHTML = html;

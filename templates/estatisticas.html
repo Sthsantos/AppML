@@ -234,6 +234,7 @@ function atualizarTabelaRanking(ranking) {
     }
     
     let html = `
+        <div style="overflow-x: auto;">
         <table class="table">
             <thead>
                 <tr>
@@ -269,6 +270,7 @@ function atualizarTabelaRanking(ranking) {
     html += `
             </tbody>
         </table>
+        </div>
     `;
     
     container.innerHTML = html;
