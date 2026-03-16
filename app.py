@@ -840,8 +840,6 @@ def get_minhas_escalas():
             culto_datetime = datetime.combine(culto.date, culto.time)
             ja_passou = culto_datetime < datetime.now()
             
-            print(f"DEBUG: Culto {culto.description} - Data: {culto_datetime}, Agora: {datetime.now()}, ja_passou: {ja_passou}")
-            
             escalas_list.append({
                 'escala_id': escala.id,
                 'id': escala.id,
