@@ -454,17 +454,6 @@ async function carregarEscalasSubstituiveis() {
                     ${statusHtml}
                 </div>
             `;
-                    <div class="escala-header">
-                        <div>
-                            <div class="escala-date">${e.culto_data}</div>
-                            <div class="escala-time">${e.culto_hora}</div>
-                        </div>
-                        <div class="escala-funcao">${e.funcao}</div>
-                    </div>
-                    <div class="escala-descricao">${e.culto_descricao}</div>
-                    ${statusHtml}
-                </div>
-            `;
         }).join('');
     } catch (error) {
         console.error('Erro ao carregar escalas:', error);
