@@ -232,12 +232,30 @@ class Indisponibilidade(db.Model):
     date_start = db.Column(db.Date, nullable=False)
     date_end = db.Column(db.Date, nullable=True)
     reason = db.Column(db.Text, nullable=True)
-    status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
+    status = db.Column(db.String(20), default='approved')  # pending, approved, rejected
     admin_response = db.Column(db.Text, nullable=True)  # Resposta do administrador
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     member = db.relationship('Member', backref=db.backref('indisponibilidades', lazy=True))
     culto = db.relationship('Culto', backref=db.backref('indisponibilidades', lazy=True), foreign_keys=[culto_id])
+
+class SolicitacaoExcecao(db.Model):
+    """Modelo para solicitacoes de excecao quando admin precisa escalar membro indisponivel."""
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    member_id = db.Column(db.Integer, db.ForeignKey('member.id'), nullable=False)
+    culto_id = db.Column(db.Integer, db.ForeignKey('culto.id'), nullable=False)
+    indisponibilidade_id = db.Column(db.Integer, db.ForeignKey('indisponibilidade.id'), nullable=True)
+    motivo_solicitacao = db.Column(db.Text, nullable=False)  # Por que o admin precisa escalar
+    status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
+    resposta_membro = db.Column(db.Text, nullable=True)  # Resposta do membro
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    respondido_em = db.Column(db.DateTime, nullable=True)
+    
+    admin = db.relationship('User', backref=db.backref('solicitacoes_excecao', lazy=True))
+    member = db.relationship('Member', backref=db.backref('solicitacoes_excecao_recebidas', lazy=True))
+    culto = db.relationship('Culto', backref=db.backref('solicitacoes_excecao', lazy=True))
+    indisponibilidade = db.relationship('Indisponibilidade', backref=db.backref('solicitacoes_excecao', lazy=True))
 
 class Feedback(db.Model):
     """Modelo para armazenar feedback dos Usuarios."""
@@ -1187,18 +1205,25 @@ def add_escala():
             if Escala.query.filter_by(member_id=member_id, culto_id=culto_id).first():
                 return jsonify({'success': False, 'message': 'Este membro je esta escalado para este culto.'}), 400
             
-            # NOVA verificacao: Verificar se o membro esta indispoNivel para este culto
+            # VERIFICACAO MELHORADA: Verificar se o membro esta indispoNivel para este culto
             indisponibilidade = Indisponibilidade.query.filter_by(
                 member_id=member_id,
-                culto_id=culto_id,
-                status='approved'
-            ).first()
+                culto_id=culto_id
+            ).filter(Indisponibilidade.status.in_(['approved', 'pending'])).first()
             
             if indisponibilidade:
                 member = Member.query.get(member_id)
                 member_name = member.name if member else 'Membro'
+                
+                # Retornar informacao de que o membro esta indisponivel
+                # com opcao de solicitar excecao
                 return jsonify({
                     'success': False, 
+                    'indisponivel': True,
+                    'indisponibilidade_id': indisponibilidade.id,
+                    'member_id': member_id,
+                    'member_name': member_name,
+                    'motivo_indisponibilidade': indisponibilidade.reason,
                     'message': f'{member_name} esta INDISPONivel para este culto. Motivo: {indisponibilidade.reason}'
                 }), 400
         
@@ -2863,11 +2888,10 @@ def add_indisponibilidade():
             }), 403
         
         data = request.json
-        cultos_ids = data.get('cultos_ids', [])  # Lista de IDs de cultos
+        cultos_ids = data.get('cultos_ids', [])  # Lista de IDs de cultos (modo cultos específicos)
+        data_inicio = data.get('data_inicio')  # Data início (modo período)
+        data_fim = data.get('data_fim')  # Data fim (modo período)
         reason = data.get('motivo')
-        
-        if not cultos_ids or len(cultos_ids) == 0:
-            return jsonify({'success': False, 'message': 'Selecione pelo menos um culto.'}), 400
         
         if not reason or reason.strip() == '':
             return jsonify({'success': False, 'message': 'Motivo e obrigaterio.'}), 400
@@ -2878,34 +2902,87 @@ def add_indisponibilidade():
         if not member:
             return jsonify({'success': False, 'message': 'Membro nao encontrado.'}), 404
         
-        # Criar uma indisponibilidade para cada culto selecionado
         indisponibilidades_criadas = 0
-        for culto_id in cultos_ids:
-            # Verificar se o culto existe
-            culto = Culto.query.get(culto_id)
-            if not culto:
-                continue
+        
+        # MODO 1: Cultos específicos
+        if cultos_ids and len(cultos_ids) > 0:
+            # Criar uma indisponibilidade para cada culto selecionado
+            for culto_id in cultos_ids:
+                # Verificar se o culto existe
+                culto = Culto.query.get(culto_id)
+                if not culto:
+                    continue
+                
+                # Verificar se je existe indisponibilidade para este culto
+                existe = Indisponibilidade.query.filter_by(
+                    member_id=member.id,
+                    culto_id=culto_id
+                ).first()
+                
+                if existe:
+                    continue  # Pular se je existe
+                
+                # Criar indisponibilidade
+                nova_indisponibilidade = Indisponibilidade(
+                    member_id=member.id,
+                    culto_id=culto_id,
+                    date_start=culto.date,
+                    date_end=culto.date,
+                    reason=reason,
+                    status='approved'  # Auto-aprovado pois foi feito no pereodo correto
+                )
+                db.session.add(nova_indisponibilidade)
+                indisponibilidades_criadas += 1
+        
+        # MODO 2: Período de datas
+        elif data_inicio and data_fim:
+            from datetime import datetime
+            try:
+                dt_inicio = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+                dt_fim = datetime.strptime(data_fim, '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({'success': False, 'message': 'Formato de data invalido.'}), 400
             
-            # Verificar se je existe indisponibilidade para este culto
-            existe = Indisponibilidade.query.filter_by(
-                member_id=member.id,
-                culto_id=culto_id
-            ).first()
+            if dt_fim < dt_inicio:
+                return jsonify({'success': False, 'message': 'Data fim deve ser maior ou igual à data início.'}), 400
             
-            if existe:
-                continue  # Pular se je existe
+            # Buscar todos os cultos neste período
+            cultos_no_periodo = Culto.query.filter(
+                Culto.date >= dt_inicio,
+                Culto.date <= dt_fim
+            ).all()
             
-            # Criar indisponibilidade
-            nova_indisponibilidade = Indisponibilidade(
-                member_id=member.id,
-                culto_id=culto_id,
-                date_start=culto.date,
-                date_end=culto.date,
-                reason=reason,
-                status='approved'  # Auto-aprovado pois foi feito no pereodo correto
-            )
-            db.session.add(nova_indisponibilidade)
-            indisponibilidades_criadas += 1
+            if len(cultos_no_periodo) == 0:
+                return jsonify({
+                    'success': False, 
+                    'message': f'Nenhum culto encontrado no período de {dt_inicio.strftime("%d/%m/%Y")} a {dt_fim.strftime("%d/%m/%Y")}.'
+                }), 400
+            
+            # Criar indisponibilidade para cada culto no período
+            for culto in cultos_no_periodo:
+                # Verificar se je existe indisponibilidade para este culto
+                existe = Indisponibilidade.query.filter_by(
+                    member_id=member.id,
+                    culto_id=culto.id
+                ).first()
+                
+                if existe:
+                    continue  # Pular se je existe
+                
+                # Criar indisponibilidade
+                nova_indisponibilidade = Indisponibilidade(
+                    member_id=member.id,
+                    culto_id=culto.id,
+                    date_start=culto.date,
+                    date_end=culto.date,
+                    reason=reason,
+                    status='approved'
+                )
+                db.session.add(nova_indisponibilidade)
+                indisponibilidades_criadas += 1
+        
+        else:
+            return jsonify({'success': False, 'message': 'Selecione cultos ou informe um período de datas.'}), 400
         
         db.session.commit()
         
@@ -2946,6 +3023,195 @@ def delete_indisponibilidade(ind_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': f'Erro ao remover indisponibilidade: {str(e)}'}), 500
+
+# ROTAS PARA SOLICITACOES DE EXCECAO
+# ========================================
+@app.route('/solicitar_excecao', methods=['POST'])
+@login_required
+@admin_required
+def solicitar_excecao():
+    """Admin solicita excecao para escalar membro indisponivel."""
+    try:
+        data = request.json
+        member_id = data.get('member_id')
+        culto_id = data.get('culto_id')
+        indisponibilidade_id = data.get('indisponibilidade_id')
+        motivo_solicitacao = data.get('motivo_solicitacao', '').strip()
+        
+        if not all([member_id, culto_id, motivo_solicitacao]):
+            return jsonify({'success': False, 'message': 'Dados invalidos.'}), 400
+        
+        # Verificar se je existe solicitacao pendente
+        solicitacao_existente = SolicitacaoExcecao.query.filter_by(
+            member_id=member_id,
+            culto_id=culto_id,
+            status='pending'
+        ).first()
+        
+        if solicitacao_existente:
+            return jsonify({
+                'success': False, 
+                'message': 'Je existe uma solicitacao pendente para este membro neste culto.'
+            }), 400
+        
+        # Criar nova solicitacao
+        nova_solicitacao = SolicitacaoExcecao(
+            admin_id=current_user.id,
+            member_id=member_id,
+            culto_id=culto_id,
+            indisponibilidade_id=indisponibilidade_id,
+            motivo_solicitacao=motivo_solicitacao,
+            status='pending'
+        )
+        
+        db.session.add(nova_solicitacao)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Solicitacao enviada! O membro receberá a notificacao.'
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro ao solicitar excecao: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/get_minhas_solicitacoes_excecao', methods=['GET'])
+@login_required
+def get_minhas_solicitacoes_excecao():
+    """Retorna solicitacoes de excecao recebidas pelo membro."""
+    try:
+        user = current_user
+        member = Member.query.filter_by(email=user.email).first() if isinstance(user, User) else user
+        
+        if not member:
+            return jsonify([]), 200
+        
+        solicitacoes = SolicitacaoExcecao.query.filter_by(
+            member_id=member.id
+        ).order_by(SolicitacaoExcecao.created_at.desc()).all()
+        
+        result = []
+        for sol in solicitacoes:
+            admin = User.query.get(sol.admin_id)
+            culto = Culto.query.get(sol.culto_id)
+            
+            result.append({
+                'id': sol.id,
+                'admin_name': admin.username if admin else 'Administrador',
+                'culto_description': culto.description if culto else '',
+                'culto_date': culto.date.strftime('%d/%m/%Y') if culto else '',
+                'culto_time': culto.time.strftime('%H:%M') if culto else '',
+                'motivo_solicitacao': sol.motivo_solicitacao,
+                'status': sol.status,
+                'resposta_membro': sol.resposta_membro,
+                'created_at': sol.created_at.strftime('%d/%m/%Y %H:%M'),
+                'respondido_em': sol.respondido_em.strftime('%d/%m/%Y %H:%M') if sol.respondido_em else None
+            })
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        print(f"Erro ao buscar solicitacoes: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/responder_solicitacao_excecao/<int:sol_id>', methods=['POST'])
+@login_required
+def responder_solicitacao_excecao(sol_id):
+    """Membro responde (aprova/rejeita) solicitacao de excecao."""
+    try:
+        data = request.json
+        resposta = data.get('resposta')  # 'approved' ou 'rejected'
+        resposta_texto = data.get('resposta_texto', '').strip()
+        role = data.get('role', 'Ministro')  # Funcao para a escala (se aprovado)
+        
+        if resposta not in ['approved', 'rejected']:
+            return jsonify({'success': False, 'message': 'Resposta invalida.'}), 400
+        
+        solicitacao = db.session.get(SolicitacaoExcecao, sol_id)
+        if not solicitacao:
+            return jsonify({'success': False, 'message': 'Solicitacao nao encontrada.'}), 404
+        
+        # Verificar se o usuario e o membro da solicitacao
+        user = current_user
+        member = Member.query.filter_by(email=user.email).first() if isinstance(user, User) else user
+        
+        if not member or solicitacao.member_id != member.id:
+            return jsonify({'success': False, 'message': 'Sem permissao.'}), 403
+        
+        if solicitacao.status != 'pending':
+            return jsonify({'success': False, 'message': 'Esta solicitacao je foi respondida.'}), 400
+        
+        # Atualizar solicitacao
+        solicitacao.status = resposta
+        solicitacao.resposta_membro = resposta_texto
+        solicitacao.respondido_em = datetime.utcnow()
+        
+        # Se aprovado, criar a escala automaticamente
+        if resposta == 'approved':
+            # Verificar se je nao foi escalado
+            escala_existente = Escala.query.filter_by(
+                member_id=solicitacao.member_id,
+                culto_id=solicitacao.culto_id
+            ).first()
+            
+            if not escala_existente:
+                nova_escala = Escala(
+                    member_id=solicitacao.member_id,
+                    culto_id=solicitacao.culto_id,
+                    role=role
+                )
+                db.session.add(nova_escala)
+        
+        db.session.commit()
+        
+        mensagem = 'Solicitacao aprovada! Voce foi escalado(a).' if resposta == 'approved' else 'Solicitacao recusada.'
+        
+        return jsonify({'success': True, 'message': mensagem}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro ao responder solicitacao: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/get_solicitacoes_excecao_admin', methods=['GET'])
+@login_required
+@admin_required
+def get_solicitacoes_excecao_admin():
+    """Admin visualiza todas as solicitacoes de excecao."""
+    try:
+        solicitacoes = SolicitacaoExcecao.query.order_by(
+            SolicitacaoExcecao.created_at.desc()
+        ).all()
+        
+        result = []
+        for sol in solicitacoes:
+            admin = User.query.get(sol.admin_id)
+            member = Member.query.get(sol.member_id)
+            culto = Culto.query.get(sol.culto_id)
+            
+            result.append({
+                'id': sol.id,
+                'admin_name': admin.username if admin else 'Admin',
+                'member_name': member.name if member else 'Membro',
+                'culto_description': culto.description if culto else '',
+                'culto_date': culto.date.strftime('%d/%m/%Y') if culto else '',
+                'culto_time': culto.time.strftime('%H:%M') if culto else '',
+                'motivo_solicitacao': sol.motivo_solicitacao,
+                'status': sol.status,
+                'resposta_membro': sol.resposta_membro,
+                'created_at': sol.created_at.strftime('%d/%m/%Y %H:%M'),
+                'respondido_em': sol.respondido_em.strftime('%d/%m/%Y %H:%M') if sol.respondido_em else None
+            })
+       
+        return jsonify(result), 200
+        
+    except Exception as e:
+        print(f"Erro ao buscar solicitacoes admin: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# ========================================
 
 @app.route('/get_indisponibilidades_admin', methods=['GET'])
 @login_required

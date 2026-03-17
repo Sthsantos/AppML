@@ -1404,7 +1404,52 @@ async function saveEscala() {
             document.getElementById('selectInstrument').value = '';
             loadEscalas();
         } else {
-            showToast(result.message || 'Erro ao criar escala', 'error');
+            // Verificar se o membro está indisponível
+            if (result.indisponivel) {
+                // Oferecer opção de solicitar exceção
+                const solicitarExcecao = await window.GlobalModals.confirm(
+                    `${result.member_name} está INDISPONÍVEL para este culto.\n\nMotivo: ${result.motivo_indisponibilidade}\n\nDeseja solicitar uma EXCEÇÃO? O membro receberá sua solicitação e poderá autorizar ou recusar.`,
+                    'Membro Indisponível'
+                );
+                
+                if (solicitarExcecao) {
+                    const motivo = prompt('Informe o MOTIVO da solicitação especial:');
+                    if (!motivo || motivo.trim() === '') {
+                        showToast('Motivo é obrigatório para solicitar exceção', 'error');
+                        return;
+                    }
+                    
+                    // Solicitar exceção
+                    try {
+                        const excecaoResponse = await fetch('/solicitar_excecao', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                member_id: result.member_id,
+                                culto_id: cultoId,
+                                indisponibilidade_id: result.indisponibilidade_id,
+                                motivo_solicitacao: motivo
+                            })
+                        });
+                        
+                        const excecaoResult = await excecaoResponse.json();
+                        
+                        if (excecaoResponse.ok && excecaoResult.success) {
+                            showToast(excecaoResult.message, 'success');
+                            closeModal('addEscalaModal');
+                            document.getElementById('addEscalaForm').reset();
+                            document.getElementById('selectInstrument').value = '';
+                        } else {
+                            showToast(excecaoResult.message || 'Erro ao solicitar exceção', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Erro ao solicitar exceção:', error);
+                        showToast('Erro ao processar solicitação de exceção', 'error');
+                    }
+                }
+            } else {
+                showToast(result.message || 'Erro ao criar escala', 'error');
+            }
         }
     } catch (error) {
         console.error('Erro:', error);

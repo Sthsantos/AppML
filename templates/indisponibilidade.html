@@ -22,7 +22,26 @@
     <i class="fas fa-spinner fa-spin"></i> Verificando período...
 </div>
 
+<!-- Solicitações de Exceção Pendentes -->
+<div id="solicitacoesSection" style="display: none; margin-bottom: 2rem;">
+    <div class="page-header" style="margin-bottom: 1rem;">
+        <h2 style="font-size: 1.25rem; color: var(--gray-900); display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-user-clock"></i>
+            Solicitações Especiais
+        </h2>
+    </div>
+    <div id="solicitacoesGrid" class="grid grid-auto">
+        <!-- Solicitações serão carregadas aqui -->
+    </div>
+</div>
+
 <!-- Indisponibilidades List -->
+<div class="page-header" style="margin-bottom: 1rem;">
+    <h2 style="font-size: 1.25rem; color: var(--gray-900); display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fas fa-calendar-times"></i>
+        Minhas Indisponibilidades
+    </h2>
+</div>
 <div class="grid grid-auto" id="indisponibilidadesGrid">
     <div class="empty-state">
         <i class="fas fa-spinner fa-spin"></i>
@@ -40,7 +59,26 @@
             </button>
         </div>
         <form id="addIndisponibilidadeForm" class="modal-body">
+            <!-- Tipo de Indisponibilidade -->
             <div class="form-group">
+                <label class="form-label" style="font-weight: 600; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-calendar-alt"></i>
+                    Tipo de Indisponibilidade
+                </label>
+                <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.75rem 1rem; border: 2px solid var(--gray-300); border-radius: var(--radius-md); flex: 1; transition: all 0.2s;">
+                        <input type="radio" name="tipo_indisponibilidade" value="cultos" checked onchange="toggleTipoIndisponibilidade()" style="width: 18px; height: 18px;">
+                        <span style="font-weight: 500;">Cultos Específicos</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.75rem 1rem; border: 2px solid var(--gray-300); border-radius: var(--radius-md); flex: 1; transition: all 0.2s;">
+                        <input type="radio" name="tipo_indisponibilidade" value="periodo" onchange="toggleTipoIndisponibilidade()" style="width: 18px; height: 18px;">
+                        <span style="font-weight: 500;">Período de Datas</span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Seleção de Cultos Específicos -->
+            <div class="form-group" id="cultosSection">
                 <label class="form-label" style="font-weight: 600; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
                     <i class="fas fa-church"></i>
                     Selecione os Cultos que você NÃO poderá participar
@@ -50,6 +88,28 @@
                         <i class="fas fa-spinner fa-spin"></i>
                         <p style="margin-top: 0.5rem;">Carregando cultos...</p>
                     </div>
+                </div>
+            </div>
+            
+            <!-- Seleção de Período -->
+            <div class="form-group" id="periodoSection" style="display: none;">
+                <label class="form-label" style="font-weight: 600; margin-bottom: 0.5rem;">
+                    <i class="fas fa-calendar-week"></i>
+                    Período de Indisponibilidade
+                </label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label class="form-label" style="font-size: 0.875rem; color: var(--gray-600);">Data Início *</label>
+                        <input type="date" id="dataInicioPeriodo" class="form-control" min="{{ date.today().isoformat() }}">
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size: 0.875rem; color: var(--gray-600);">Data Fim *</label>
+                        <input type="date" id="dataFimPeriodo" class="form-control" min="{{ date.today().isoformat() }}">
+                    </div>
+                </div>
+                <div class="alert alert-info" style="margin-top: 1rem; font-size: 0.875rem;">
+                    <i class="fas fa-info-circle"></i>
+                    O sistema identificará automaticamente os cultos neste período
                 </div>
             </div>
             
@@ -87,6 +147,26 @@
 // Variável global para armazenar status do período
 let periodoAberto = false;
 const isAdmin = {{ 'true' if current_user.is_admin else 'false' }};
+
+// Alternar entre tipo de indisponibilidade
+function toggleTipoIndisponibilidade() {
+    const tipo = document.querySelector('input[name="tipo_indisponibilidade"]:checked').value;
+    const cultosSection = document.getElementById('cultosSection');
+    const periodoSection = document.getElementById('periodoSection');
+    
+    if (tipo === 'cultos') {
+        cultosSection.style.display = 'block';
+        periodoSection.style.display = 'none';
+        // Limpar campos de período
+        document.getElementById('dataInicioPeriodo').value = '';
+        document.getElementById('dataFimPeriodo').value = '';
+    } else {
+        cultosSection.style.display = 'none';
+        periodoSection.style.display = 'block';
+        // Desmarcar todos os checkboxes
+        document.querySelectorAll('input[name="culto_checkbox"]:checked').forEach(cb => cb.checked = false);
+    }
+}
 
 // Carregar status do período
 async function loadPeriodoStatus() {
@@ -378,17 +458,8 @@ async function loadIndisponibilidades() {
 
 // Salvar indisponibilidade
 async function saveIndisponibilidade() {
-    const checkboxes = document.querySelectorAll('input[name="culto_checkbox"]:checked');
+    const tipo = document.querySelector('input[name="tipo_indisponibilidade"]:checked').value;
     const motivo = document.getElementById('motivoIndisponibilidade').value.trim();
-    
-    if (checkboxes.length === 0) {
-        if (typeof App !== 'undefined' && App.toast) {
-            App.toast.error('Selecione pelo menos um culto');
-        } else {
-            window.GlobalModals.alert('Selecione pelo menos um culto', 'error');
-        }
-        return;
-    }
     
     if (!motivo) {
         if (typeof App !== 'undefined' && App.toast) {
@@ -399,7 +470,49 @@ async function saveIndisponibilidade() {
         return;
     }
     
-    const cultosIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+    let dados = { motivo: motivo };
+    
+    if (tipo === 'cultos') {
+        // Modo: Cultos específicos
+        const checkboxes = document.querySelectorAll('input[name="culto_checkbox"]:checked');
+        
+        if (checkboxes.length === 0) {
+            if (typeof App !== 'undefined' && App.toast) {
+                App.toast.error('Selecione pelo menos um culto');
+            } else {
+                window.GlobalModals.alert('Selecione pelo menos um culto', 'error');
+            }
+            return;
+        }
+        
+        dados.cultos_ids = Array.from(checkboxes).map(cb => parseInt(cb.value));
+        
+    } else {
+        // Modo: Período de datas
+        const dataInicio = document.getElementById('dataInicioPeriodo').value;
+        const dataFim = document.getElementById('dataFimPeriodo').value;
+        
+        if (!dataInicio || !dataFim) {
+            if (typeof App !== 'undefined' && App.toast) {
+                App.toast.error('Informe o período completo (data início e fim)');
+            } else {
+                window.GlobalModals.alert('Informe o período completo (data início e fim)', 'error');
+            }
+            return;
+        }
+        
+        if (new Date(dataFim) < new Date(dataInicio)) {
+            if (typeof App !== 'undefined' && App.toast) {
+                App.toast.error('Data fim deve ser maior ou igual à data início');
+            } else {
+                window.GlobalModals.alert('Data fim deve ser maior ou igual à data início', 'error');
+            }
+            return;
+        }
+        
+        dados.data_inicio = dataInicio;
+        dados.data_fim = dataFim;
+    }
     
     try {
         const response = await fetch('/add_indisponibilidade', {
@@ -407,10 +520,7 @@ async function saveIndisponibilidade() {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                cultos_ids: cultosIds,
-                motivo: motivo
-            })
+            body: JSON.stringify(dados)
         });
         
         const data = await response.json();
@@ -486,6 +596,136 @@ document.addEventListener('DOMContentLoaded', function() {
     // Inicializar status e indisponibilidades
     loadPeriodoStatus();
     loadIndisponibilidades();
+    loadSolicitacoesExcecao();
 });
+
+// Carregar solicitações de exceção
+async function loadSolicitacoesExcecao() {
+    try {
+        const response = await fetch('/get_minhas_solicitacoes_excecao');
+        const solicitacoes = await response.json();
+        
+        const section = document.getElementById('solicitacoesSection');
+        const grid = document.getElementById('solicitacoesGrid');
+        
+        // Filtrar apenas pendentes
+        const pendentes = solicitacoes.filter(s => s.status === 'pending');
+        
+        if (pendentes.length === 0) {
+            section.style.display = 'none';
+            return;
+        }
+        
+        section.style.display = 'block';
+        
+        grid.innerHTML = pendentes.map(sol => `
+            <div class="card fade-in" style="border-left: 4px solid var(--warning-500);">
+                <div class="card-header" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <i class="fas fa-exclamation-circle" style="color: var(--warning-600); font-size: 1.5rem;"></i>
+                            <div>
+                                <div style="font-weight: 600; color: var(--gray-900);">
+                                    ${sol.culto_description}
+                                </div>
+                                <div style="font-size: 0.875rem; color: var(--gray-600);">
+                                    ${sol.culto_date} às ${sol.culto_time}
+                                </div>
+                            </div>
+                        </div>
+                        <span class="badge badge-warning">AGUARDANDO SUA RESPOSTA</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div style="padding: 1rem; background: var(--gray-50); border-radius: var(--radius-md); margin-bottom: 1rem;">
+                        <div style="font-size: 0.75rem; color: var(--gray-600); margin-bottom: 0.5rem; font-weight: 600; text-transform: uppercase;">
+                            Solicitação do Administrador
+                        </div>
+                        <div style="font-size: 0.875rem; color: var(--gray-700); margin-bottom: 0.5rem;">
+                            <strong>${sol.admin_name}</strong> precisa escalá-lo(a) para este culto.
+                        </div>
+                        <div style="font-size: 0.875rem; color: var(--gray-700); font-style: italic;">
+                            "${sol.motivo_solicitacao}"
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 0.75rem;">
+                        <button class="btn btn-success" onclick="responderSolicitacao(${sol.id}, 'approved')" style="flex: 1;">
+                            <i class="fas fa-check"></i>
+                            Autorizar
+                        </button>
+                        <button class="btn btn-outline" onclick="responderSolicitacao(${sol.id}, 'rejected')" style="flex: 1;">
+                            <i class="fas fa-times"></i>
+                            Recusar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+    } catch (error) {
+        console.error('Erro ao carregar solicitações:', error);
+    }
+}
+
+// Responder solicitação de exceção
+async function responderSolicitacao(solId, resposta) {
+    const isApproved = resposta === 'approved';
+    const titulo = isApproved ? 'Autorizar Escalação' : 'Recusar Escalação';
+    const mensagem = isApproved 
+        ? 'Você confirma que pode participar deste culto? Você será escalado automaticamente.'
+        : 'Você tem certeza que não pode participar deste culto?';
+    
+    const confirmado = await window.GlobalModals.confirm(mensagem, titulo);
+    if (!confirmado) return;
+    
+    let respostaTexto = '';
+    
+    // Se recusar, pedir motivo
+    if (!isApproved) {
+        respostaTexto = prompt('Informe o motivo da recusa (opcional):') || '';
+    }
+    
+    try {
+        const response = await fetch(`/responder_solicitacao_excecao/${solId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                resposta: resposta,
+                resposta_texto: respostaTexto,
+                role: 'Ministro'  // Padrão
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            if (typeof App !== 'undefined' && App.toast) {
+                App.toast.success(data.message);
+            } else {
+                window.GlobalModals.alert(data.message, 'success');
+            }
+            // Recarregar listas
+            loadSolicitacoesExcecao();
+            loadIndisponibilidades();
+        } else {
+            if (typeof App !== 'undefined' && App.toast) {
+                App.toast.error(data.message || 'Erro ao processar resposta');
+            } else {
+                window.GlobalModals.alert(data.message || 'Erro ao processar resposta', 'error');
+            }
+        }
+    } catch (error) {
+        console.error('Erro ao responder solicitação:', error);
+        if (typeof App !== 'undefined' && App.toast) {
+            App.toast.error('Erro ao processar requisição');
+        } else {
+            window.GlobalModals.alert('Erro ao processar requisição', 'error');
+        }
+    }
+}
+
 </script>
 {% endblock %}
