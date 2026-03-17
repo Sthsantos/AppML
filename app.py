@@ -1313,6 +1313,45 @@ def delete_all_escalas():
         print(f"Erro ao excluir todas as escalas: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro interno ao excluir escalas: {str(e)}'}), 500
 
+@app.route('/limpar_escalas_orfas', methods=['POST'])
+@login_required
+@admin_required
+def limpar_escalas_orfas():
+    """Remove escalas que referenciam cultos ou membros que não existem mais."""
+    try:
+        # Buscar IDs de cultos e membros válidos
+        cultos_validos = {c.id for c in Culto.query.all()}
+        membros_validos = {m.id for m in Member.query.all()}
+        
+        # Buscar todas as escalas
+        todas_escalas = Escala.query.all()
+        escalas_removidas = 0
+        
+        for escala in todas_escalas:
+            if escala.culto_id not in cultos_validos or escala.member_id not in membros_validos:
+                print(f"[INFO] Removendo escala órfã ID {escala.id}: culto_id={escala.culto_id}, member_id={escala.member_id}")
+                db.session.delete(escala)
+                escalas_removidas += 1
+        
+        db.session.commit()
+        
+        if escalas_removidas > 0:
+            return jsonify({
+                'success': True, 
+                'message': f'{escalas_removidas} escala(s) órfã(s) removida(s) com sucesso!'
+            }), 200
+        else:
+            return jsonify({
+                'success': True, 
+                'message': 'Nenhuma escala órfã encontrada.'
+            }), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERROR] Erro ao limpar escalas órfãs: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
+
 @app.route('/get_escala/<int:escala_id>', methods=['GET'])
 @login_required
 def get_escala(escala_id):
@@ -2982,14 +3021,26 @@ def get_dashboard_stats():
         # Contagem de escalas com tratamento robusto
         # Contar apenas escalas com culto e membro válidos (mesma lógica de /get_escalas)
         try:
+            # Primeiro, contar todas as escalas no banco
+            total_escalas_raw = Escala.query.count()
+            
+            # Depois, contar apenas as válidas (com JOIN)
             total_escalas = db.session.query(Escala).join(
                 Culto, Escala.culto_id == Culto.id
             ).join(
                 Member, Escala.member_id == Member.id
             ).count()
-            print(f"[DEBUG] Total de escalas válidas encontradas: {total_escalas}")
+            
+            print(f"[DEBUG] Escalas no banco (total): {total_escalas_raw}")
+            print(f"[DEBUG] Escalas válidas (com JOIN): {total_escalas}")
+            
+            # Se houver diferença, há escalas órfãs
+            if total_escalas_raw > total_escalas:
+                print(f"[WARNING] Há {total_escalas_raw - total_escalas} escala(s) órfã(s) no banco!")
         except Exception as escala_error:
             print(f"[ERROR] Erro ao contar escalas: {str(escala_error)}")
+            import traceback
+            traceback.print_exc()
             total_escalas = 0
         
         total_musicas = Repertorio.query.count()
