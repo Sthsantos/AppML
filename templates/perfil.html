@@ -455,8 +455,6 @@ function openAvatarEditor(file) {
     const reader = new FileReader();
     reader.onload = (e) => {
         currentImageData = e.target.result;
-        const container = document.getElementById('avatarContainer');
-        containerSize = container.offsetWidth;
         
         imageElement = document.getElementById('avatarEditorImage');
         imageElement.src = currentImageData;
@@ -466,6 +464,14 @@ function openAvatarEditor(file) {
         imageElement.onload = () => {
             console.log('Imagem onload disparado');
             console.log('Dimensões naturais:', imageElement.naturalWidth, 'x', imageElement.naturalHeight);
+            
+            // IMPORTANTE: Mostrar modal PRIMEIRO para que container tenha dimensões
+            document.getElementById('avatarEditorModal').style.display = 'flex';
+            
+            // Agora pegar dimensões do container (que está visível)
+            const container = document.getElementById('avatarContainer');
+            containerSize = container.offsetWidth;
+            
             console.log('Container size:', containerSize);
             
             // Calcular escala mínima para cobrir o container
@@ -490,9 +496,6 @@ function openAvatarEditor(file) {
             
             // Posicionar e escalar imagem
             positionImage();
-            
-            // Mostrar modal
-            document.getElementById('avatarEditorModal').style.display = 'flex';
             
             // Configurar eventos
             setupDragAndZoom();
