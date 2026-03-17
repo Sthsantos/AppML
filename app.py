@@ -4,6 +4,7 @@ from flask_login import LoginManager, UserMixin, login_required, login_user, log
 from datetime import datetime, date
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
+from sqlalchemy.orm import aliased  # Para criar aliases nas queries
 import secrets
 import os
 from functools import wraps  # Importando wraps para decoradores
@@ -2185,16 +2186,19 @@ def get_historico_substituicoes():
     try:
         member_id = current_user.id
         
+        # Criar aliases para os dois Members (solicitante e substituto)
+        Solicitante = aliased(Member)
+        Substituto = aliased(Member)
+        
         # Buscar substituieees onde o usuario foi solicitante OU substituto
-        substituicoes = db.session.query(Substituicao, Escala, Culto, Member, Member).join(
+        substituicoes = db.session.query(Substituicao, Escala, Culto, Solicitante, Substituto).join(
             Escala, Substituicao.escala_id == Escala.id
         ).join(
             Culto, Escala.culto_id == Culto.id
         ).join(
-            Member, Substituicao.membro_solicitante_id == Member.id
+            Solicitante, Substituicao.membro_solicitante_id == Solicitante.id
         ).outerjoin(
-            Member, Substituicao.membro_substituto_id == Member.id,
-            aliased=True
+            Substituto, Substituicao.membro_substituto_id == Substituto.id
         ).filter(
             db.or_(
                 Substituicao.membro_solicitante_id == member_id,
