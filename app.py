@@ -3009,7 +3009,7 @@ def get_dashboard_stats():
         
         print(f"[DEBUG] Dashboard Stats: Membros={total_membros}, Cultos={total_cultos}, Escalas={total_escalas}, musicas={total_musicas}")
         
-        return jsonify({
+        response_data = {
             'total_membros': total_membros,
             'membros_ativos': total_membros,  # Mostrar total cadastrado na home
             'total_cultos': total_cultos,
@@ -3032,7 +3032,14 @@ def get_dashboard_stats():
                 'priority': aviso.priority,
                 'created_at': aviso.created_at.strftime('%Y-%m-%d %H:%M')
             } for aviso in avisos_recentes]
-        }), 200
+        }
+        
+        response = jsonify(response_data)
+        # Garantir que não seja cacheado
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response, 200
     except Exception as e:
         print(f"[ERROR] Dashboard stats error: {str(e)}")
         import traceback

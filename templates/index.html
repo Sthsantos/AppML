@@ -643,7 +643,14 @@ async function loadStats() {
     
     try {
         console.log('[DEBUG] Carregando estatísticas...');
-        const response = await fetch('/get_dashboard_stats');
+        // Adicionar timestamp para evitar cache
+        const timestamp = new Date().getTime();
+        const response = await fetch(`/get_dashboard_stats?t=${timestamp}`, {
+            cache: 'no-store',
+            headers: {
+                'Cache-Control': 'no-cache'
+            }
+        });
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -666,10 +673,42 @@ async function loadStats() {
             stats_raw: stats
         });
         
-        document.getElementById('totalMembros').textContent = totalMembros;
-        document.getElementById('totalCultos').textContent = totalCultos;
-        document.getElementById('totalEscalas').textContent = totalEscalas;
-        document.getElementById('totalMusicas').textContent = totalMusicas;
+        // Atualizar com verificações explícitas
+        const elemMembros = document.getElementById('totalMembros');
+        const elemCultos = document.getElementById('totalCultos');
+        const elemEscalas = document.getElementById('totalEscalas');
+        const elemMusicas = document.getElementById('totalMusicas');
+        
+        console.log('[DEBUG] Elementos encontrados:', {
+            membros: !!elemMembros,
+            cultos: !!elemCultos,
+            escalas: !!elemEscalas,
+            musicas: !!elemMusicas
+        });
+        
+        if (elemMembros) {
+            elemMembros.textContent = totalMembros;
+            elemMembros.style.opacity = '1'; // Forçar visibilidade
+        }
+        if (elemCultos) {
+            elemCultos.textContent = totalCultos;
+            elemCultos.style.opacity = '1';
+        }
+        if (elemEscalas) {
+            elemEscalas.textContent = String(totalEscalas); // Forçar string
+            elemEscalas.style.opacity = '1';
+            // Forçar re-render
+            elemEscalas.style.display = 'none';
+            elemEscalas.offsetHeight; // Trigger reflow
+            elemEscalas.style.display = '';
+            console.log('[DEBUG] Escalas atualizado para:', elemEscalas.textContent);
+        } else {
+            console.error('[ERROR] Elemento totalEscalas não encontrado!');
+        }
+        if (elemMusicas) {
+            elemMusicas.textContent = totalMusicas;
+            elemMusicas.style.opacity = '1';
+        }
         
         console.log('[DEBUG] Stats atualizadas: Membros=' + totalMembros + ', Cultos=' + totalCultos + ', Escalas=' + totalEscalas + ', Músicas=' + totalMusicas);
     } catch (error) {
@@ -681,7 +720,10 @@ async function loadStats() {
 // Inicializar ao carregar
 document.addEventListener('DOMContentLoaded', () => {
     loadAnnouncements();
-    loadStats();
+    // Aguardar DOM completamente renderizado antes de carregar stats
+    setTimeout(() => {
+        loadStats();
+    }, 100);
 });
 </script>
 {% endblock %}
