@@ -333,10 +333,14 @@ def inject_user_permissions():
 # Configurar headers de cache para PWA e arquivos estaticos
 @app.after_request
 def add_cache_headers(response):
-    """Adiciona headers de cache para arquivos estaticos e econes PWA."""
+    """Adiciona headers de cache para arquivos estaticos e icones PWA."""
     if request.path.startswith('/static/'):
-        # Cache de 1 ano para econes e assets estaticos
-        if any(request.path.endswith(ext) for ext in ['.svg', '.png', '.jpg', '.jpeg', '.gif', '.ico', '.woff', '.woff2', '.ttf', '.eot']):
+        # Para ícones PWA: cache curto para forçar verificação de novas versões
+        if 'icon' in request.path and any(request.path.endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.ico']):
+            response.headers['Cache-Control'] = 'public, max-age=3600, must-revalidate'
+            response.headers['ETag'] = 'v5.0-20260316'
+        # Cache de 1 ano para outros assets estáticos (fontes, etc)
+        elif any(request.path.endswith(ext) for ext in ['.svg', '.gif', '.woff', '.woff2', '.ttf', '.eot']):
             response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
         # Cache de 1 dia para CSS e JS
         elif any(request.path.endswith(ext) for ext in ['.css', '.js']):

@@ -1,19 +1,25 @@
-const CACHE_NAME = 'ministry-v2.2.0';
+const CACHE_NAME = 'ministry-v5.0.0-20260316';
 const CACHE_ASSETS = [
     '/',
     '/static/styles.css',
     '/static/manifest.json',
     '/static/js/script.js',
     '/static/icon.png',
+    '/static/icon-72x72.png',
+    '/static/icon-96x96.png',
+    '/static/icon-128x128.png',
+    '/static/icon-144x144.png',
+    '/static/icon-152x152.png',
     '/static/icon-180x180.png',
     '/static/icon-192x192.png',
+    '/static/icon-384x384.png',
     '/static/icon-512x512.png',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css'
 ];
 
 // Install Service Worker
 self.addEventListener('install', event => {
-    console.log('[SW] Instalando Service Worker v2.2.0...');
+    console.log('[SW] Instalando Service Worker v5.0.0...');
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
@@ -32,7 +38,7 @@ self.addEventListener('install', event => {
 
 // Activate Service Worker
 self.addEventListener('activate', event => {
-    console.log('[SW] Ativando Service Worker v2.2.0...');
+    console.log('[SW] Ativando Service Worker v5.0.0...');
     event.waitUntil(
         caches.keys().then(cacheNames => {
             return Promise.all(
