@@ -655,8 +655,16 @@ async function loadStats() {
         // Atualizar elementos com os valores
         const totalMembros = stats.membros_ativos || stats.total_membros || 0;
         const totalCultos = stats.total_cultos || 0;
-        const totalEscalas = stats.total_escalas || 0;
+        const totalEscalas = stats.total_escalas !== undefined ? stats.total_escalas : 0;
         const totalMusicas = stats.total_musicas || 0;
+        
+        console.log('[DEBUG] Valores individuais:', {
+            membros: totalMembros,
+            cultos: totalCultos,
+            escalas: totalEscalas,
+            musicas: totalMusicas,
+            stats_raw: stats
+        });
         
         document.getElementById('totalMembros').textContent = totalMembros;
         document.getElementById('totalCultos').textContent = totalCultos;

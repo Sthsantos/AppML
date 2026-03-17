@@ -2978,7 +2978,15 @@ def get_dashboard_stats():
         total_membros = Member.query.count()
         membros_ativos = Member.query.filter_by(suspended=False).count()
         total_cultos = Culto.query.count()
-        total_escalas = Escala.query.count()
+        
+        # Contagem de escalas com tratamento robusto
+        try:
+            total_escalas = db.session.query(Escala).count()
+            print(f"[DEBUG] Total de escalas encontradas: {total_escalas}")
+        except Exception as escala_error:
+            print(f"[ERROR] Erro ao contar escalas: {str(escala_error)}")
+            total_escalas = 0
+        
         total_musicas = Repertorio.query.count()
         total_avisos = Aviso.query.filter_by(active=True).count()
         feedbacks_pendentes = Feedback.query.filter_by(status='pending').count()
@@ -3027,7 +3035,21 @@ def get_dashboard_stats():
         }), 200
     except Exception as e:
         print(f"[ERROR] Dashboard stats error: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        traceback.print_exc()
+        # Retornar valores padrão em caso de erro
+        return jsonify({
+            'total_membros': 0,
+            'membros_ativos': 0,
+            'total_cultos': 0,
+            'total_escalas': 0,
+            'total_musicas': 0,
+            'total_avisos': 0,
+            'feedbacks_pendentes': 0,
+            'membros_por_instrumento': [],
+            'proximos_cultos': [],
+            'avisos_recentes': []
+        }), 200
 
 @app.route('/get_ranking_escalas', methods=['GET'])
 @login_required
