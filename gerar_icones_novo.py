@@ -26,7 +26,7 @@ try:
         print("🔄 Convertido para RGBA")
     
     # Tamanhos necessários para PWA
-    sizes = [192, 512, 180]
+    sizes = [72, 96, 128, 144, 152, 180, 192, 384, 512]
     
     for size in sizes:
         # Redimensionar mantendo qualidade
