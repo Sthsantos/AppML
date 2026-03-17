@@ -2980,9 +2980,14 @@ def get_dashboard_stats():
         total_cultos = Culto.query.count()
         
         # Contagem de escalas com tratamento robusto
+        # Contar apenas escalas com culto e membro válidos (mesma lógica de /get_escalas)
         try:
-            total_escalas = db.session.query(Escala).count()
-            print(f"[DEBUG] Total de escalas encontradas: {total_escalas}")
+            total_escalas = db.session.query(Escala).join(
+                Culto, Escala.culto_id == Culto.id
+            ).join(
+                Member, Escala.member_id == Member.id
+            ).count()
+            print(f"[DEBUG] Total de escalas válidas encontradas: {total_escalas}")
         except Exception as escala_error:
             print(f"[ERROR] Erro ao contar escalas: {str(escala_error)}")
             total_escalas = 0
