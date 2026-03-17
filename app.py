@@ -1912,7 +1912,15 @@ def substituicoes():
 def get_minhas_escalas_substituiveis():
     """Retorna as escalas do membro logado que podem ser substituedas."""
     try:
-        member_id = current_user.id
+        # Obter member_id correto (User ou Member)
+        user = current_user
+        if isinstance(user, User):
+            member = Member.query.filter_by(email=user.email).first()
+            if not member:
+                return jsonify([]), 200
+            member_id = member.id
+        else:
+            member_id = user.id
         
         # Buscar escalas futuras do membro
         escalas = db.session.query(Escala, Culto).join(
@@ -1997,12 +2005,22 @@ def solicitar_substituicao():
         membro_substituto_id = data.get('membro_substituto_id')
         mensagem = data.get('mensagem', '')
         
+        # Obter member_id correto (User ou Member)
+        user = current_user
+        if isinstance(user, User):
+            member = Member.query.filter_by(email=user.email).first()
+            if not member:
+                return jsonify({'success': False, 'message': 'Membro nao encontrado'}), 404
+            member_id = member.id
+        else:
+            member_id = user.id
+        
         # Validaeees
         escala = db.session.get(Escala, escala_id)
         if not escala:
             return jsonify({'success': False, 'message': 'Escala nao encontrada'}), 404
         
-        if escala.member_id != current_user.id:
+        if escala.member_id != member_id:
             return jsonify({'success': False, 'message': 'Voce nao esta nesta escala'}), 403
         
         # Verificar se je existe substituicao pendente ou aceita
@@ -2018,7 +2036,7 @@ def solicitar_substituicao():
         # Criar substituicao
         substituicao = Substituicao(
             escala_id=escala_id,
-            membro_solicitante_id=current_user.id,
+            membro_solicitante_id=member_id,
             membro_substituto_id=membro_substituto_id,
             mensagem=mensagem,
             status='pendente'
@@ -2028,7 +2046,7 @@ def solicitar_substituicao():
         db.session.commit()
         
         print(f"? substituicao solicitada: Escala {escala_id}, Substituto {membro_substituto_id}")
-        return jsonify({'success': True, 'message': 'Solicitaeeo enviada com sucesso!'}), 200
+        return jsonify({'success': True, 'message': 'Solicitacao enviada com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
         print(f"? Erro ao solicitar substituicao: {str(e)}")
@@ -2039,7 +2057,15 @@ def solicitar_substituicao():
 def get_substituicoes_pendentes():
     """Retorna substituieees pendentes para o membro logado."""
     try:
-        member_id = current_user.id
+        # Obter member_id correto (User ou Member)
+        user = current_user
+        if isinstance(user, User):
+            member = Member.query.filter_by(email=user.email).first()
+            if not member:
+                return jsonify([]), 200
+            member_id = member.id
+        else:
+            member_id = user.id
         
         substituicoes = db.session.query(Substituicao, Escala, Culto, Member).join(
             Escala, Substituicao.escala_id == Escala.id
@@ -2080,6 +2106,16 @@ def get_substituicoes_pendentes():
 def responder_substituicao(sub_id):
     """Aceita ou recusa uma solicitaeeo de substituicao."""
     try:
+        # Obter member_id correto (User ou Member)
+        user = current_user
+        if isinstance(user, User):
+            member = Member.query.filter_by(email=user.email).first()
+            if not member:
+                return jsonify({'success': False, 'message': 'Membro nao encontrado'}), 404
+            member_id = member.id
+        else:
+            member_id = user.id
+        
         data = request.get_json()
         acao = data.get('acao')  # 'aceitar' ou 'recusar'
         resposta_msg = data.get('resposta', '')
@@ -2088,7 +2124,7 @@ def responder_substituicao(sub_id):
         if not substituicao:
             return jsonify({'success': False, 'message': 'substituicao nao encontrada'}), 404
         
-        if substituicao.membro_substituto_id != current_user.id:
+        if substituicao.membro_substituto_id != member_id:
             return jsonify({'success': False, 'message': 'Voce nao pode responder esta solicitaeeo'}), 403
         
         if substituicao.status != 'pendente':
@@ -2108,8 +2144,9 @@ def responder_substituicao(sub_id):
         
         db.session.commit()
         
-        print(f"? substituicao {sub_id} {acao}(a) por {current_user.name}")
-        return jsonify({'success': True, 'message': f'substituicao {acao}(a) com sucesso!'}), 200
+        member_name = member.name if isinstance(user, User) else user.name
+        print(f"? substituicao {sub_id} {acao}(a) por {member_name}")
+        return jsonify({'success': True, 'message': f'Substituicao {acao}(a) com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
         print(f"? Erro ao responder substituicao: {str(e)}")
@@ -2159,11 +2196,21 @@ def get_todas_substituicoes_admin():
 def cancelar_substituicao(sub_id):
     """Cancela uma substituicao pendente (apenas o solicitante pode cancelar)."""
     try:
+        # Obter member_id correto (User ou Member)
+        user = current_user
+        if isinstance(user, User):
+            member = Member.query.filter_by(email=user.email).first()
+            if not member:
+                return jsonify({'success': False, 'message': 'Membro nao encontrado'}), 404
+            member_id = member.id
+        else:
+            member_id = user.id
+        
         substituicao = db.session.get(Substituicao, sub_id)
         if not substituicao:
             return jsonify({'success': False, 'message': 'substituicao nao encontrada'}), 404
         
-        if substituicao.membro_solicitante_id != current_user.id:
+        if substituicao.membro_solicitante_id != member_id:
             return jsonify({'success': False, 'message': 'Voce nao pode cancelar esta solicitaeeo'}), 403
         
         if substituicao.status != 'pendente':
@@ -2172,8 +2219,9 @@ def cancelar_substituicao(sub_id):
         substituicao.status = 'cancelado'
         db.session.commit()
         
-        print(f"? substituicao {sub_id} cancelada por {current_user.name}")
-        return jsonify({'success': True, 'message': 'substituicao cancelada com sucesso!'}), 200
+        member_name = member.name if isinstance(user, User) else user.name
+        print(f"? substituicao {sub_id} cancelada por {member_name}")
+        return jsonify({'success': True, 'message': 'Substituicao cancelada com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
         print(f"? Erro ao cancelar substituicao: {str(e)}")
@@ -2184,7 +2232,15 @@ def cancelar_substituicao(sub_id):
 def get_historico_substituicoes():
     """Retorna o historico de substituieees do membro atual (solicitadas e recebidas)."""
     try:
-        member_id = current_user.id
+        # Obter member_id correto (User ou Member)
+        user = current_user
+        if isinstance(user, User):
+            member = Member.query.filter_by(email=user.email).first()
+            if not member:
+                return jsonify([]), 200
+            member_id = member.id
+        else:
+            member_id = user.id
         
         # Criar aliases para os dois Members (solicitante e substituto)
         Solicitante = aliased(Member)
