@@ -30,6 +30,41 @@
     </div>
 </div>
 
+<!-- Modal: Solicitar Substituição -->
+<div id="modalSolicitarSub" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="fas fa-exchange-alt"></i> Solicitar Substituição</h2>
+            <button class="modal-close" onclick="closeModalSolicitar()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div id="infoEscala" style="background: var(--bg-secondary); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;"></div>
+            
+            <div class="form-group">
+                <label for="selectSubstituto"><i class="fas fa-user"></i> Quem pode substituir você?</label>
+                <select id="selectSubstituto" class="form-control" required>
+                    <option value="">Carregando membros...</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="mensagemSub"><i class="fas fa-comment"></i> Mensagem (opcional)</label>
+                <textarea id="mensagemSub" class="form-control" rows="3" placeholder="Explique o motivo da substituição..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModalSolicitar()">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+            <button class="btn btn-primary" onclick="enviarSolicitacao()">
+                <i class="fas fa-paper-plane"></i> Enviar Solicitação
+            </button>
+        </div>
+    </div>
+</div>
+
 <style>
 /* Reaproveitando estilos do escalas.html */
 .empty-state {
@@ -131,6 +166,126 @@
     
     .escala-funcao-container button span {
         display: inline !important;
+    }
+}
+
+/* Estilos do Modal */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 10000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s;
+}
+
+.modal.show {
+    display: flex;
+}
+
+.modal-content {
+    background: var(--card-bg);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    animation: slideUp 0.3s;
+}
+
+.modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.modal-close:hover {
+    background: var(--hover-bg);
+    color: var(--text-color);
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    padding: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--text-color);
+    font-size: 0.9rem;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-primary);
+    color: var(--text-color);
+    font-size: 0.95rem;
+    transition: all 0.2s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
     }
 }
 </style>
@@ -500,18 +655,114 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// Funcao para solicitar substituicao
-function solicitarSubstituicao(escalaId, cultoNome, cultoData, funcao) {
-    // Armazena informacoes da escala no localStorage para a pagina de substituicoes
-    localStorage.setItem('substituicao_escala', JSON.stringify({
-        escala_id: escalaId,
-        culto_nome: cultoNome,
-        culto_data: cultoData,
-        funcao: funcao
-    }));
-    
-    // Redireciona para a pagina de substituicoes
-    window.location.href = '/substituicoes';
+// Variaveis globais para substituicao
+let escalaAtualSub = null;
+
+// Função auxiliar para toast
+function showToast(type, message) {
+    if (window.GlobalModals && window.GlobalModals.toast) {
+        window.GlobalModals.toast(message, type, 3000);
+    } else {
+        // Fallback se GlobalModals não estiver carregado
+        console.log(`[${type.toUpperCase()}] ${message}`);
+        alert(message);
+    }
 }
+
+// Funcao para solicitar substituicao
+async function solicitarSubstituicao(escalaId, cultoNome, cultoData, funcao) {
+    escalaAtualSub = escalaId;
+    
+    // Preencher info da escala
+    document.getElementById('infoEscala').innerHTML = `
+        <div style="margin-bottom: 0.5rem;">
+            <strong style="color: var(--text-color);">Culto:</strong>
+            <span style="color: var(--text-secondary);">${cultoNome}</span>
+        </div>
+        <div style="margin-bottom: 0.5rem;">
+            <strong style="color: var(--text-color);">Data:</strong>
+            <span style="color: var(--text-secondary);">${cultoData}</span>
+        </div>
+        <div>
+            <strong style="color: var(--text-color);">Sua função:</strong>
+            <span style="color: var(--text-secondary);">${funcao}</span>
+        </div>
+    `;
+    
+    try {
+        // Buscar membros da mesma função
+        const response = await fetch(`/get_membros_mesma_funcao/${escalaId}`);
+        const membros = await response.json();
+        
+        const select = document.getElementById('selectSubstituto');
+        if (membros.length === 0) {
+            select.innerHTML = '<option value="">Nenhum membro disponível</option>';
+            showToast('info', 'Não há outros membros com a mesma função disponíveis');
+        } else {
+            select.innerHTML = '<option value="">Selecione um membro...</option>' +
+                membros.map(m => `<option value="${m.id}">${m.name} - ${m.instrument}</option>`).join('');
+        }
+        
+        // Mostrar modal
+        document.getElementById('modalSolicitarSub').classList.add('show');
+        document.getElementById('modalSolicitarSub').style.display = 'flex';
+    } catch (error) {
+        console.error('Erro ao carregar membros:', error);
+        showToast('error', 'Erro ao carregar membros disponíveis');
+    }
+}
+
+// Fechar modal de solicitação
+function closeModalSolicitar() {
+    document.getElementById('modalSolicitarSub').classList.remove('show');
+    document.getElementById('modalSolicitarSub').style.display = 'none';
+    document.getElementById('mensagemSub').value = '';
+    escalaAtualSub = null;
+}
+
+// Enviar solicitação
+async function enviarSolicitacao() {
+    const substitutoId = document.getElementById('selectSubstituto').value;
+    const mensagem = document.getElementById('mensagemSub').value;
+    
+    if (!substitutoId) {
+        showToast('error', 'Selecione um membro para substituir');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/solicitar_substituicao', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                escala_id: escalaAtualSub,
+                membro_substituto_id: parseInt(substitutoId),
+                mensagem: mensagem
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast('success', result.message || 'Solicitação enviada com sucesso!');
+            closeModalSolicitar();
+            // Recarregar escalas para atualizar status
+            carregarEscalas();
+        } else {
+            showToast('error', result.message || 'Erro ao enviar solicitação');
+        }
+    } catch (error) {
+        console.error('Erro ao enviar solicitação:', error);
+        showToast('error', 'Erro ao enviar solicitação');
+    }
+}
+
+// Fechar modal ao clicar fora
+document.addEventListener('click', (e) => {
+    const modal = document.getElementById('modalSolicitarSub');
+    if (modal && e.target === modal) {
+        closeModalSolicitar();
+    }
+});
 </script>
 {% endblock %}

@@ -10,14 +10,14 @@
 
     <!-- Tabs de Navegação -->
     <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('solicitar')">
+        <button class="tab-btn active" onclick="switchTab('solicitar', event)">
             <i class="fas fa-hand-paper"></i> Solicitar Substituição
         </button>
-        <button class="tab-btn" onclick="switchTab('pendentes')">
+        <button class="tab-btn" onclick="switchTab('pendentes', event)">
             <i class="fas fa-clock"></i> Solicitações Recebidas
             <span id="badgePendentes" class="badge"></span>
         </button>
-        <button class="tab-btn" onclick="switchTab('historico')">
+        <button class="tab-btn" onclick="switchTab('historico', event)">
             <i class="fas fa-history"></i> Histórico
         </button>
     </div>
@@ -359,10 +359,23 @@ let escalaAtual = null;
 let substituicaoAtual = null;
 
 // Alternar entre tabs
-function switchTab(tabName) {
+function switchTab(tabName, eventOrElement) {
     // Atualizar botões
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    event.target.closest('.tab-btn').classList.add('active');
+    
+    // Se foi passado um evento ou elemento, ativa ele. Senão, busca pelo atributo
+    if (eventOrElement) {
+        const target = eventOrElement.target ? eventOrElement.target : eventOrElement;
+        target.closest('.tab-btn').classList.add('active');
+    } else {
+        // Busca o botão correspondente pela aba
+        const botoes = document.querySelectorAll('.tab-btn');
+        botoes.forEach(btn => {
+            if (btn.getAttribute('onclick').includes(tabName)) {
+                btn.classList.add('active');
+            }
+        });
+    }
     
     // Atualizar conteúdo
     document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
