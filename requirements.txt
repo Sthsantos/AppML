@@ -16,7 +16,7 @@ Flask-Session==0.5.0
 
 # Push Notifications (Web Push API)
 pywebpush==1.14.0
-py-vapid==1.9.4
+py-vapid==1.9.0
 cryptography==42.0.0
 http_ece==1.2.1
 
