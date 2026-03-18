@@ -2768,7 +2768,41 @@ def solicitar_substituicao():
         db.session.add(substituicao)
         db.session.commit()
         
-        print(f"? substituicao solicitada: Escala {escala_id}, Substituto {membro_substituto_id}")
+        print(f"✅ substituicao solicitada: Escala {escala_id}, Substituto {membro_substituto_id}")
+        
+        # Enviar notificação push para o membro substituto
+        try:
+            substituto = db.session.get(Member, membro_substituto_id)
+            culto = db.session.get(Culto, escala.culto_id)
+            solicitante = db.session.get(Member, member_id)
+            
+            if substituto and culto and solicitante:
+                subscriptions = PushSubscription.query.filter_by(
+                    member_id=membro_substituto_id,
+                    is_active=True
+                ).all()
+                
+                if subscriptions:
+                    from datetime import datetime as dt
+                    culto_datetime = dt.combine(culto.date, culto.time)
+                    culto_data = culto_datetime.strftime("%d/%m/%Y")
+                    culto_hora = culto_datetime.strftime("%H:%M").replace(":", "h") + "min"
+                    
+                    for sub in subscriptions:
+                        send_push_notification(
+                            sub,
+                            '🔄 Solicitação de Substituição',
+                            f'{solicitante.name} solicitou que você o substitua como {escala.role} no culto do dia {culto_data}, às {culto_hora}.',
+                            {
+                                'type': 'substituicao_solicitada',
+                                'url': '/substituicoes',
+                                'substituicao_id': substituicao.id,
+                                'requireInteraction': True
+                            }
+                        )
+        except Exception as e:
+            print(f"⚠️ Erro ao enviar notificação de substituição: {e}")
+        
         return jsonify({'success': True, 'message': 'Solicitacao enviada com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
@@ -2868,7 +2902,50 @@ def responder_substituicao(sub_id):
         db.session.commit()
         
         member_name = member.name if isinstance(user, User) else user.name
-        print(f"? substituicao {sub_id} {acao}(a) por {member_name}")
+        print(f"✅ substituicao {sub_id} {acao}(a) por {member_name}")
+        
+        # Enviar notificação push para o solicitante
+        try:
+            solicitante_id = substituicao.membro_solicitante_id
+            escala = db.session.get(Escala, substituicao.escala_id)
+            culto = db.session.get(Culto, escala.culto_id)
+            substituto = db.session.get(Member, member_id)
+            
+            if solicitante_id and culto and substituto:
+                subscriptions = PushSubscription.query.filter_by(
+                    member_id=solicitante_id,
+                    is_active=True
+                ).all()
+                
+                if subscriptions:
+                    from datetime import datetime as dt
+                    culto_datetime = dt.combine(culto.date, culto.time)
+                    culto_data = culto_datetime.strftime("%d/%m/%Y")
+                    culto_hora = culto_datetime.strftime("%H:%M").replace(":", "h") + "min"
+                    
+                    if acao == 'aceitar':
+                        titulo = '✅ Substituição Aceita'
+                        mensagem = f'{substituto.name} aceitou substituir você como {escala.role} no culto do dia {culto_data}, às {culto_hora}.'
+                    else:
+                        titulo = '❌ Substituição Recusada'
+                        mensagem = f'{substituto.name} recusou substituir você como {escala.role} no culto do dia {culto_data}, às {culto_hora}.'
+                    
+                    for sub in subscriptions:
+                        send_push_notification(
+                            sub,
+                            titulo,
+                            mensagem,
+                            {
+                                'type': 'substituicao_respondida',
+                                'url': '/minhas_escalas',
+                                'substituicao_id': substituicao.id,
+                                'status': acao,
+                                'requireInteraction': True
+                            }
+                        )
+        except Exception as e:
+            print(f"⚠️ Erro ao enviar notificação de resposta: {e}")
+        
         return jsonify({'success': True, 'message': f'Substituicao {acao}(a) com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
