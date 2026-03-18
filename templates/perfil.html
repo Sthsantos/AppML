@@ -945,15 +945,16 @@ async function togglePushNotifications() {
         // Mensagem mais útil baseada no contexto
         const currentUrl = window.location.href;
         const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const isHttps = window.location.protocol === 'https:';
         
         let mensagem = '❌ Sistema de notificações não carregou.\n\n';
         
-        if (!isLocalhost) {
-            mensagem += '⚠️ PROBLEMA: Você está acessando via IP (não localhost)\n\n';
+        if (!isLocalhost && !isHttps) {
+            mensagem += '⚠️ PROBLEMA: Você está acessando via HTTP (não seguro)\n\n';
             mensagem += '💡 SOLUÇÃO: Acesse via:\n';
-            mensagem += '   http://localhost:5000/perfil\n';
+            mensagem += '   http://localhost:5000/perfil (local)\n';
             mensagem += '   OU\n';
-            mensagem += '   http://127.0.0.1:5000/perfil\n\n';
+            mensagem += '   https://appml-tbcw.onrender.com/perfil (produção)\n\n';
             mensagem += 'Push Notifications requerem HTTPS ou localhost!';
         } else {
             mensagem += '💡 Possíveis soluções:\n\n';
