@@ -1,17 +1,91 @@
 ﻿from flask import Flask, render_template, jsonify, request, redirect, url_for, session, flash, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_required, login_user, logout_user, current_user
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from sqlalchemy.orm import aliased  # Para criar aliases nas queries
 import secrets
 import os
+import json
 from functools import wraps  # Importando wraps para decoradores
 from dotenv import load_dotenv
+from pywebpush import webpush, WebPushException
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.backends import default_backend
+from py_vapid import Vapid
 
 # Carrega variaveis de ambiente do arquivo .env
 load_dotenv()
+
+# Configurações VAPID para Push Notifications  
+VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY')
+VAPID_PRIVATE_KEY_FILE = 'vapid_private.pem'  # Usar arquivo PEM direto que já existe
+
+# Verificar se arquivo existe e usar
+if os.path.exists(VAPID_PRIVATE_KEY_FILE):
+    VAPID_PRIVATE_KEY = VAPID_PRIVATE_KEY_FILE
+    print(f"✅ Usando VAPID key file: {VAPID_PRIVATE_KEY_FILE}")
+else:
+    # Fallback: tentar criar do .env
+    VAPID_PRIVATE_KEY_RAW = os.environ.get('VAPID_PRIVATE_KEY')
+    if VAPID_PRIVATE_KEY_RAW:
+        if '\\n' in VAPID_PRIVATE_KEY_RAW:
+            VAPID_PRIVATE_KEY_RAW = VAPID_PRIVATE_KEY_RAW.replace('\\n', '\n')
+        VAPID_PRIVATE_KEY_RAW = VAPID_PRIVATE_KEY_RAW.strip()
+        
+        # Salvar em arquivo
+        key_file = 'instance/vapid_private.pem'
+        try:
+            os.makedirs('instance', exist_ok=True)
+            with open(key_file, 'w') as f:
+                f.write(VAPID_PRIVATE_KEY_RAW)
+            VAPID_PRIVATE_KEY = key_file
+            print(f"✅ VAPID key salva em: {key_file}")
+        except Exception as e:
+            print(f"⚠️ Erro ao salvar VAPID key: {e}")
+            VAPID_PRIVATE_KEY = VAPID_PRIVATE_KEY_RAW
+    else:
+        print("⚠️ VAPID_PRIVATE_KEY não encontrada!")
+        VAPID_PRIVATE_KEY = None
+    
+VAPID_CLAIMS_EMAIL = os.environ.get('VAPID_CLAIMS_EMAIL', 'mailto:admin@ministry.com')
+
+def convert_pem_to_der(pem_key_str):
+    """
+    Converte chave privada PEM para DER (necessário porque py_vapid não reconhece PEM)
+    
+    Args:
+        pem_key_str: String com chave PEM (com \\n ou newlines reais)
+    
+    Returns:
+        bytes: Chave privada em formato DER
+    """
+    try:
+        # Se for string, converter para bytes
+        if isinstance(pem_key_str, str):
+            pem_bytes = pem_key_str.encode('utf-8')
+        else:
+            pem_bytes = pem_key_str
+            
+        # Carregar chave PEM
+        private_key = serialization.load_pem_private_key(
+            pem_bytes,
+            password=None,
+            backend=default_backend()
+        )
+        
+        # Converter para DER
+        der_data = private_key.private_bytes(
+            encoding=serialization.Encoding.DER,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption()
+        )
+        
+        return der_data
+    except Exception as e:
+        print(f"❌ Erro ao converter PEM para DER: {e}")
+        raise
 
 # ========================================
 # CONSTANTES DE NIVEIS DE PERMISSAO
@@ -194,6 +268,11 @@ class Escala(db.Model):
     member_id = db.Column(db.Integer, db.ForeignKey('member.id'), nullable=False)
     culto_id = db.Column(db.Integer, db.ForeignKey('culto.id'), nullable=False)
     role = db.Column(db.String(120), nullable=False)  # Ex.: "Guitarrista Principal"
+    
+    # NOVOS CAMPOS - Sistema de Confirmacao de Presenca
+    status_confirmacao = db.Column(db.String(20), default='pendente')  # 'pendente', 'confirmado', 'negado'
+    data_confirmacao = db.Column(db.DateTime, nullable=True)  # Quando confirmou/negou
+    observacao_confirmacao = db.Column(db.Text, nullable=True)  # Mensagem opcional do membro
 
     member = db.relationship('Member', backref=db.backref('escalas', lazy=True))
     culto = db.relationship('Culto', backref=db.backref('escalas', lazy=True))
@@ -269,6 +348,22 @@ class Feedback(db.Model):
     response = db.Column(db.Text, nullable=True)  # Resposta do admin
     responded_at = db.Column(db.DateTime, nullable=True)  # Data da resposta
     responded_by = db.Column(db.Integer, nullable=True)  # ID do admin que respondeu
+
+class PushSubscription(db.Model):
+    """Modelo para armazenar inscricoes de push notifications."""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    member_id = db.Column(db.Integer, db.ForeignKey('member.id'), nullable=True)
+    endpoint = db.Column(db.Text, nullable=False, unique=True)
+    p256dh_key = db.Column(db.Text, nullable=False)  # Chave pública para criptografia
+    auth_key = db.Column(db.Text, nullable=False)  # Chave de autenticação
+    device_info = db.Column(db.String(500), nullable=True)  # User agent / info do dispositivo
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_used = db.Column(db.DateTime, default=datetime.utcnow)
+    is_active = db.Column(db.Boolean, default=True)
+    
+    user = db.relationship('User', backref=db.backref('push_subscriptions', lazy=True))
+    member = db.relationship('Member', backref=db.backref('push_subscriptions', lazy=True))
 
 class Configuracao(db.Model):
     """Modelo para configuracoes do sistema."""
@@ -795,7 +890,10 @@ def get_escalas():
                 'member_name': membro.name,
                 'role': escala.role,
                 'instrument': membro.instrument,
-                'ja_passou': ja_passou
+                'ja_passou': ja_passou,
+                'status_confirmacao': escala.status_confirmacao,
+                'data_confirmacao': escala.data_confirmacao.strftime('%Y-%m-%d %H:%M:%S') if escala.data_confirmacao else None,
+                'observacao_confirmacao': escala.observacao_confirmacao
             })
         
         return jsonify({'escalas': escalas_list}), 200
@@ -874,7 +972,10 @@ def get_minhas_escalas():
                 'role': escala.role,
                 'instrument': membro.instrument,
                 'is_me': membro.id == member.id,  # Marca se e o Usuario logado
-                'ja_passou': ja_passou
+                'ja_passou': ja_passou,
+                'status_confirmacao': escala.status_confirmacao,
+                'data_confirmacao': escala.data_confirmacao.strftime('%Y-%m-%d %H:%M:%S') if escala.data_confirmacao else None,
+                'observacao_confirmacao': escala.observacao_confirmacao
             })
         
         print(f"OK - Retornando {len(escalas_list)} escalas")
@@ -1230,6 +1331,45 @@ def add_escala():
         nova_escala = Escala(member_id=member_id, culto_id=culto_id, role=role)
         db.session.add(nova_escala)
         db.session.commit()
+        
+        # PUSH NOTIFICATION: Notificar membro sobre nova escala
+        try:
+            member = db.session.get(Member, member_id)
+            culto = db.session.get(Culto, culto_id)
+            
+            if member and culto:
+                # Buscar todas as subscricoes ativas do membro
+                subscriptions = PushSubscription.query.filter_by(
+                    member_id=member_id, 
+                    is_active=True
+                ).all()
+                
+                if subscriptions:
+                    # Formatar data e hora do culto
+                    from datetime import datetime as dt
+                    if culto.date and culto.time:
+                        culto_datetime = dt.combine(culto.date, culto.time)
+                        culto_data_str = culto_datetime.strftime("%d/%m/%Y às %H:%M")
+                    else:
+                        culto_data_str = "data não definida"
+                    
+                    for sub in subscriptions:
+                        send_push_notification(
+                            sub,
+                            f'📋 Nova Escala: {culto.description}',
+                            f'Você foi escalado(a) como {role} em {culto_data_str}. Por favor, confirme sua presença!',
+                            {
+                                'type': 'nova_escala',
+                                'url': '/minhas_escalas',
+                                'escala_id': nova_escala.id,
+                                'culto_id': culto_id,
+                                'requireInteraction': True
+                            }
+                        )
+        except Exception as e:
+            # Não falhar a criação da escala se a notificação falhar
+            print(f"Erro ao enviar notificação push: {e}")
+        
         return jsonify({'success': True, 'message': 'Escala adicionada com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
@@ -1404,6 +1544,523 @@ def get_escala(escala_id):
     except Exception as e:
         print(f"Erro ao buscar escala: {str(e)}")
         return jsonify({'error': 'Erro ao buscar escala'}), 500
+
+# ========================================
+# ROTAS PARA CONFIRMACAO DE PRESENCA
+# ========================================
+
+@app.route('/confirmar_presenca/<int:escala_id>', methods=['POST'])
+@login_required
+def confirmar_presenca(escala_id):
+    """Membro confirma que comparecer a escala."""
+    try:
+        data = request.json
+        observacao = data.get('observacao', '') if data else ''
+        
+        escala = db.session.get(Escala, escala_id)
+        if not escala:
+            return jsonify({'success': False, 'message': 'Escala não encontrada'}), 404
+        
+        # Verificar se é o membro da escala
+        user = current_user
+        if isinstance(user, User):
+            member = Member.query.filter_by(email=user.email).first()
+        else:
+            member = user
+        
+        if not member or escala.member_id != member.id:
+            return jsonify({'success': False, 'message': 'Sem permissão para confirmar esta escala'}), 403
+        
+        # Atualizar status
+        escala.status_confirmacao = 'confirmado'
+        escala.data_confirmacao = datetime.utcnow()
+        escala.observacao_confirmacao = observacao
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Presença confirmada com sucesso!',
+            'status': 'confirmado'
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro ao confirmar presença: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Erro ao confirmar presença: {str(e)}'}), 500
+
+@app.route('/negar_presenca/<int:escala_id>', methods=['POST'])
+@login_required
+def negar_presenca(escala_id):
+    """Membro informa que não poderá comparecer."""
+    try:
+        data = request.json
+        motivo = data.get('motivo', '') if data else ''
+        
+        if not motivo or not motivo.strip():
+            return jsonify({'success': False, 'message': 'Motivo é obrigatório'}), 400
+        
+        escala = db.session.get(Escala, escala_id)
+        if not escala:
+            return jsonify({'success': False, 'message': 'Escala não encontrada'}), 404
+        
+        # Verificar se é o membro da escala
+        user = current_user
+        if isinstance(user, User):
+            member = Member.query.filter_by(email=user.email).first()
+        else:
+            member = user
+        
+        if not member or escala.member_id != member.id:
+            return jsonify({'success': False, 'message': 'Sem permissão para modificar esta escala'}), 403
+        
+        # Atualizar status
+        escala.status_confirmacao = 'negado'
+        escala.data_confirmacao = datetime.utcnow()
+        escala.observacao_confirmacao = motivo
+        
+        # Criar aviso para notificar admins
+        try:
+            culto = db.session.get(Culto, escala.culto_id)
+            culto_info = f"{culto.description} - {culto.date.strftime('%d/%m/%Y')}" if culto else "Culto"
+            
+            aviso = Aviso(
+                title=f"⚠️ Ausência Confirmada - {member.name}",
+                message=f"{member.name} informou que não poderá estar presente no {culto_info} como {escala.role}.\n\nMotivo: {motivo}",
+                priority='high',
+                created_by=None,  # Sistema
+                active=True
+            )
+            db.session.add(aviso)
+        except Exception as notif_error:
+            # Não falhar a operação se a notificação falhar
+            print(f"Aviso: Não foi possível criar notificação: {notif_error}")
+        
+        db.session.commit()
+        
+        # PUSH NOTIFICATION: Notificar administradores sobre ausência
+        try:
+            culto = db.session.get(Culto, escala.culto_id)
+            culto_info = f"{culto.description} em {culto.date.strftime('%d/%m/%Y')}" if culto else "Culto"
+            
+            # Buscar todos os admins e lideres
+            admin_users = User.query.filter(
+                (User.role == 'admin') | (User.role.like('%lider%'))
+            ).all()
+            
+            for admin in admin_users:
+                # Buscar subscricoes do admin
+                subscriptions = PushSubscription.query.filter_by(
+                    user_id=admin.id,
+                    is_active=True
+                ).all()
+                
+                for sub in subscriptions:
+                    send_push_notification(
+                        sub,
+                        f'⚠️ Ausência Confirmada - {member.name}',
+                        f'{member.name} não poderá comparecer ao {culto_info} como {escala.role}',
+                        {
+                            'type': 'ausencia_confirmada',
+                            'url': '/escalas',
+                            'escala_id': escala_id,
+                            'culto_id': escala.culto_id,
+                            'requireInteraction': True
+                        }
+                    )
+        except Exception as e:
+            # Não falhar a operação se a notificação falhar
+            print(f"Erro ao enviar notificações push aos admins: {e}")
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Ausência registrada. O administrador foi notificado.',
+            'status': 'negado'
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro ao negar presença: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Erro ao registrar ausência: {str(e)}'}), 500
+
+@app.route('/get_status_confirmacoes/<int:culto_id>', methods=['GET'])
+@login_required
+@admin_required
+def get_status_confirmacoes(culto_id):
+    """Admin vê status de confirmações de um culto."""
+    try:
+        escalas = Escala.query.filter_by(culto_id=culto_id).all()
+        
+        confirmados = 0
+        pendentes = 0
+        negados = 0
+        
+        result = []
+        for escala in escalas:
+            member = Member.query.get(escala.member_id)
+            
+            result.append({
+                'escala_id': escala.id,
+                'member_name': member.name if member else 'Desconhecido',
+                'role': escala.role,
+                'status_confirmacao': escala.status_confirmacao,
+                'data_confirmacao': escala.data_confirmacao.strftime('%d/%m/%Y %H:%M') if escala.data_confirmacao else None,
+                'observacao': escala.observacao_confirmacao
+            })
+            
+            if escala.status_confirmacao == 'confirmado':
+                confirmados += 1
+            elif escala.status_confirmacao == 'negado':
+                negados += 1
+            else:
+                pendentes += 1
+        
+        total = len(escalas)
+        percentual_confirmacao = (confirmados / total * 100) if total > 0 else 0
+        
+        return jsonify({
+            'escalas': result,
+            'resumo': {
+                'total': total,
+                'confirmados': confirmados,
+                'pendentes': pendentes,
+                'negados': negados,
+                'percentual_confirmacao': round(percentual_confirmacao, 1)
+            }
+        }), 200
+    except Exception as e:
+        print(f"Erro ao buscar status de confirmações: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'escalas': [], 'resumo': {}}), 500
+
+@app.route('/resetar_confirmacoes/<int:culto_id>', methods=['POST'])
+@login_required
+@admin_required
+def resetar_confirmacoes(culto_id):
+    """Admin reseta confirmações após o culto (opcional)."""
+    try:
+        escalas = Escala.query.filter_by(culto_id=culto_id).all()
+        
+        for escala in escalas:
+            escala.status_confirmacao = 'pendente'
+            escala.data_confirmacao = None
+            escala.observacao_confirmacao = None
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Confirmações resetadas com sucesso.'
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro ao resetar confirmações: {str(e)}")
+        return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
+
+# ========================================
+# PUSH NOTIFICATIONS
+# ========================================
+
+def send_push_notification(subscription_info, title, body, data=None, icon='/static/icon-192x192.png', badge='/static/icon-72x72.png'):
+    """
+    Envia uma notificação push para um dispositivo inscrito.
+    
+    Args:
+        subscription_info: Objeto PushSubscription do banco ou dict com endpoint, keys
+        title: Título da notificação
+        body: Corpo da notificação
+        data: Dados adicionais (dict)
+        icon: Caminho do ícone
+        badge: Caminho do badge
+    """
+    print(f"\n🚀 [PUSH] Iniciando envio de notificação...")
+    print(f"   📌 Título: {title}")
+    print(f"   📌 Body: {body[:50]}...")
+    
+    if not VAPID_PRIVATE_KEY or not VAPID_PUBLIC_KEY:
+        print("⚠️  VAPID keys não configuradas. Execute: python gerar_vapid_keys.py")
+        return False
+    
+    try:
+        # Montar payload da notificação
+        payload = {
+            'title': title,
+            'body': body,
+            'icon': icon,
+            'badge': badge,
+            'vibrate': [200, 100, 200],
+            'data': data or {},
+            'actions': []
+        }
+        
+        # Adicionar actions personalizadas baseadas no tipo
+        if data and 'type' in data:
+            if data['type'] == 'nova_escala':
+                payload['actions'] = [
+                    {'action': 'view', 'title': '👁️ Ver Escala'},
+                    {'action': 'confirm', 'title': '✅ Confirmar Presença'}
+                ]
+            elif data['type'] == 'lembrete_confirmacao':
+                payload['actions'] = [
+                    {'action': 'confirm', 'title': '✅ Confirmar'},
+                    {'action': 'deny', 'title': '❌ Não Poderei'}
+                ]
+        
+        # Preparar subscription dict
+        if hasattr(subscription_info, 'endpoint'):
+            # É um objeto PushSubscription do banco
+            subscription = {
+                'endpoint': subscription_info.endpoint,
+                'keys': {
+                    'p256dh': subscription_info.p256dh_key,
+                    'auth': subscription_info.auth_key
+                }
+            }
+            print(f"   🔑 Endpoint: {subscription_info.endpoint[:60]}...")
+        else:
+            # Já é um dict
+            subscription = subscription_info
+            print(f"   🔑 Endpoint (dict): {subscription_info.get('endpoint', 'N/A')[:60]}...")
+        
+        print(f"   📡 Enviando via webpush...")
+        
+        # Carregar chave VAPID usando from_file (mais confiável que conversão PEM→DER)
+        vapid_obj = None
+        if VAPID_PRIVATE_KEY and os.path.exists(VAPID_PRIVATE_KEY):
+            try:
+                # Criar objeto Vapid diretamente do arquivo PEM
+                vapid_obj = Vapid.from_file(VAPID_PRIVATE_KEY)
+                print(f"   ✅ Objeto Vapid criado de {VAPID_PRIVATE_KEY}")
+            except Exception as e:
+                print(f"   ❌ Erro ao criar Vapid object: {e}")
+                return False
+        else:
+            print(f"   ❌ VAPID key file não encontrado: {VAPID_PRIVATE_KEY}")
+            return False
+        
+        # Extrair audience (scheme + host + port) do endpoint
+        from urllib.parse import urlparse
+        parsed_endpoint = urlparse(subscription['endpoint'])
+        audience = f"{parsed_endpoint.scheme}://{parsed_endpoint.netloc}"
+        
+        # Preparar claims VAPID (incluindo 'aud')
+        vapid_claims = {
+            "sub": VAPID_CLAIMS_EMAIL,
+            "aud": audience
+        }
+        print(f"   🎯 Audience: {audience}")
+        
+        # Gerar headers VAPID manualmente
+        vapid_headers = vapid_obj.sign(vapid_claims)
+        print(f"   ✅ VAPID headers gerados: {list(vapid_headers.keys())}")
+        
+        # Enviar notificação com headers VAPID pré-gerados
+        response = webpush(
+            subscription_info=subscription,
+            data=json.dumps(payload),
+            vapid_claims=vapid_claims,
+            vapid_private_key=vapid_obj  # Passar objeto Vapid
+        )
+        
+        print(f"   ✅ Resposta: Status {response.status_code}")
+        return True
+        
+    except WebPushException as e:
+        print(f"❌ Erro ao enviar push notification: {e}")
+        # Se o endpoint retornou 410 (Gone), a subscription expirou
+        if e.response and e.response.status_code == 410:
+            try:
+                # Desativar subscription no banco
+                if hasattr(subscription_info, 'endpoint'):
+                    sub = PushSubscription.query.filter_by(endpoint=subscription_info.endpoint).first()
+                    if sub:
+                        sub.is_active = False
+                        db.session.commit()
+                        print(f"⚠️  Subscription desativada (endpoint expirado): {subscription_info.endpoint[:50]}...")
+            except Exception as db_error:
+                print(f"Erro ao desativar subscription: {db_error}")
+        return False
+    except Exception as e:
+        print(f"❌ Erro inesperado ao enviar notificação: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+@app.route('/get_vapid_public_key', methods=['GET'])
+def get_vapid_public_key():
+    """Retorna a chave pública VAPID para o frontend."""
+    if not VAPID_PUBLIC_KEY:
+        return jsonify({'error': 'VAPID keys não configuradas'}), 500
+    return jsonify({'publicKey': VAPID_PUBLIC_KEY}), 200
+
+@app.route('/push_subscribe', methods=['POST'])
+@login_required
+def push_subscribe():
+    """Salva uma inscrição de push notification."""
+    try:
+        data = request.get_json()
+        
+        if not data or 'subscription' not in data:
+            return jsonify({'success': False, 'message': 'Dados de inscrição inválidos'}), 400
+        
+        subscription = data['subscription']
+        endpoint = subscription.get('endpoint')
+        keys = subscription.get('keys', {})
+        
+        if not endpoint or not keys.get('p256dh') or not keys.get('auth'):
+            return jsonify({'success': False, 'message': 'Subscription incompleta'}), 400
+        
+        # Identificar usuário
+        user = current_user
+        user_id = user.id if isinstance(user, User) else None
+        member_id = None
+        
+        if isinstance(user, User):
+            member = Member.query.filter_by(email=user.email).first()
+            member_id = member.id if member else None
+        else:
+            member_id = user.id
+        
+        # Verificar se já existe
+        existing = PushSubscription.query.filter_by(endpoint=endpoint).first()
+        
+        if existing:
+            # Atualizar existente
+            existing.p256dh_key = keys['p256dh']
+            existing.auth_key = keys['auth']
+            existing.is_active = True
+            existing.last_used = datetime.utcnow()
+            existing.device_info = request.headers.get('User-Agent', '')[:500]
+        else:
+            # Criar nova
+            new_subscription = PushSubscription(
+                user_id=user_id,
+                member_id=member_id,
+                endpoint=endpoint,
+                p256dh_key=keys['p256dh'],
+                auth_key=keys['auth'],
+                device_info=request.headers.get('User-Agent', '')[:500]
+            )
+            db.session.add(new_subscription)
+        
+        db.session.commit()
+        
+        # Enviar notificação de boas-vindas
+        send_push_notification(
+            subscription,
+            '🔔 Notificações Ativadas!',
+            'Você receberá alertas sobre escalas, avisos e confirmações.',
+            {'type': 'welcome', 'url': '/'}
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': 'Inscrição salva com sucesso!'
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro ao salvar subscription: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
+
+@app.route('/push_unsubscribe', methods=['POST'])
+@login_required
+def push_unsubscribe():
+    """Remove uma inscrição de push notification."""
+    try:
+        data = request.get_json()
+        endpoint = data.get('endpoint')
+        
+        if not endpoint:
+            return jsonify({'success': False, 'message': 'Endpoint não fornecido'}), 400
+        
+        subscription = PushSubscription.query.filter_by(endpoint=endpoint).first()
+        
+        if subscription:
+            db.session.delete(subscription)
+            db.session.commit()
+            return jsonify({'success': True, 'message': 'Inscrição removida!'}), 200
+        else:
+            return jsonify({'success': False, 'message': 'Inscrição não encontrada'}), 404
+            
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro ao remover subscription: {str(e)}")
+        return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
+
+@app.route('/push_test', methods=['POST'])
+@login_required
+def push_test():
+    """Envia uma notificação de teste (apenas para usuário atual)."""
+    try:
+        user = current_user
+        user_id = user.id if isinstance(user, User) else None
+        member_id = None
+        
+        # Usar MESMA lógica de detecção do push_subscribe
+        if isinstance(user, User):
+            member = Member.query.filter_by(email=user.email).first()
+            member_id = member.id if member else None
+        else:
+            member_id = user.id
+        
+        # DEBUG: Mostrar IDs detectados
+        print(f"\n🔍 DEBUG push_test:")
+        print(f"   current_user type: {type(user).__name__}")
+        print(f"   user_id: {user_id}")
+        print(f"   member_id: {member_id}")
+        
+        # Buscar subscriptions que correspondam a este usuário
+        # Busca por user_id OU member_id para cobrir ambos os casos
+        from sqlalchemy import or_
+        
+        query_filters = [PushSubscription.is_active == True]
+        user_filters = []
+        
+        if user_id:
+            user_filters.append(PushSubscription.user_id == user_id)
+        if member_id:
+            user_filters.append(PushSubscription.member_id == member_id)
+        
+        if user_filters:
+            query_filters.append(or_(*user_filters))
+            subscriptions = PushSubscription.query.filter(*query_filters).all()
+        else:
+            subscriptions = []
+        
+        # DEBUG: Mostrar resultado da query
+        print(f"   Subscriptions encontradas: {len(subscriptions)}")
+        for sub in subscriptions:
+            print(f"   - Sub ID {sub.id}: user_id={sub.user_id}, member_id={sub.member_id}")
+        
+        if not subscriptions:
+            return jsonify({'success': False, 'message': 'Nenhuma inscrição ativa encontrada'}), 404
+        
+        # Enviar para todas as subscriptions
+        sent_count = 0
+        for sub in subscriptions:
+            success = send_push_notification(
+                sub,
+                '🧪 Notificação de Teste',
+                'Se você está vendo isso, as notificações estão funcionando perfeitamente!',
+                {'type': 'test', 'timestamp': datetime.utcnow().isoformat()}
+            )
+            if success:
+                sent_count += 1
+        
+        return jsonify({
+            'success': True,
+            'message': f'Notificação de teste enviada para {sent_count} dispositivo(s)!'
+        }), 200
+        
+    except Exception as e:
+        print(f"Erro ao enviar notificação de teste: {str(e)}")
+        return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
 # ========================================
 # ROTAS PARA musicas DO CULTO (repertorio)
@@ -2385,15 +3042,25 @@ def get_avisos():
 @admin_required
 def add_aviso():
     """Adiciona um novo aviso (apenas admins)."""
+    print("\n" + "="*60)
+    print("🔔 [ADD_AVISO] Função chamada!")
+    print("="*60)
+    
     data = request.json
     title = data.get('title')
     message = data.get('message')
     priority = data.get('priority', 'normal')
     
+    print(f"📝 Dados recebidos:")
+    print(f"   Título: {title}")
+    print(f"   Mensagem: {message[:50]}...")
+    print(f"   Prioridade: {priority}")
+    
     if not all([title, message]):
         return jsonify({'success': False, 'message': 'Tetulo e mensagem seo obrigaterios.'}), 400
     
     try:
+        print(f"\n💾 Criando aviso no banco...")
         novo_aviso = Aviso(
             title=title,
             message=message,
@@ -2402,6 +3069,63 @@ def add_aviso():
         )
         db.session.add(novo_aviso)
         db.session.commit()
+        print(f"✅ Aviso criado com ID: {novo_aviso.id}")
+        
+        # PUSH NOTIFICATION: Notificar todos os usuários sobre novo aviso
+        try:
+            print(f"\n🔔 [AVISO] Tentando enviar notificações push...")
+            
+            # Buscar todas as subscricoes ativas
+            subscriptions = PushSubscription.query.filter_by(is_active=True).all()
+            print(f"   📊 Subscriptions ativas encontradas: {len(subscriptions)}")
+            
+            if subscriptions:
+                # Determinar emoji baseado na prioridade
+                emoji = '📢'
+                if priority == 'high':
+                    emoji = '⚠️'
+                elif priority == 'urgent':
+                    emoji = '🚨'
+                
+                # Truncar mensagem para preview
+                message_preview = message[:100] + ('...' if len(message) > 100 else '')
+                
+                print(f"   📝 Título: {emoji} {title}")
+                print(f"   📝 Preview: {message_preview[:50]}...")
+                
+                sent_count = 0
+                for idx, sub in enumerate(subscriptions, 1):
+                    print(f"   📤 Enviando para subscription #{idx} (ID: {sub.id})...")
+                    try:
+                        success = send_push_notification(
+                            sub,
+                            f'{emoji} {title}',
+                            message_preview,
+                            {
+                                'type': 'novo_aviso',
+                                'url': '/avisos',
+                                'aviso_id': novo_aviso.id,
+                                'priority': priority,
+                                'requireInteraction': priority in ['high', 'urgent']
+                            }
+                        )
+                        if success:
+                            sent_count += 1
+                            print(f"      ✅ Enviada com sucesso!")
+                        else:
+                            print(f"      ❌ Falhou (send_push_notification retornou False)")
+                    except Exception as sub_error:
+                        print(f"      ❌ Erro: {sub_error}")
+                
+                print(f"   ✅ Total enviadas: {sent_count}/{len(subscriptions)}\n")
+            else:
+                print(f"   ⚠️ Nenhuma subscription ativa encontrada!\n")
+        except Exception as e:
+            # Não falhar a criação do aviso se a notificação falhar
+            print(f"❌ Erro ao enviar notificações push: {e}")
+            import traceback
+            traceback.print_exc()
+        
         return jsonify({'success': True, 'message': 'Aviso criado com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
@@ -3313,6 +4037,14 @@ def get_dashboard_stats():
         total_avisos = Aviso.query.filter_by(active=True).count()
         feedbacks_pendentes = Feedback.query.filter_by(status='pending').count()
         
+        # NOVO: Contagem de confirmacoes pendentes (apenas cultos futuros)
+        confirmacoes_pendentes = db.session.query(Escala).join(
+            Culto, Escala.culto_id == Culto.id
+        ).filter(
+            Escala.status_confirmacao == 'pendente',
+            Culto.date >= date.today()
+        ).count()
+        
         # Membros por instrumento
         membros_por_instrumento = db.session.query(
             Member.instrument, 
@@ -3339,6 +4071,7 @@ def get_dashboard_stats():
             'total_musicas': total_musicas,
             'total_avisos': total_avisos,
             'feedbacks_pendentes': feedbacks_pendentes,
+            'confirmacoes_pendentes': confirmacoes_pendentes,  # NOVO
             'membros_por_instrumento': [{
                 'instrumento': inst or 'nao definido',
                 'quantidade': qtd

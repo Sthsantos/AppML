@@ -67,6 +67,15 @@
                 <p class="stat-text">Músicas</p>
             </div>
         </div>
+        <div class="stat-card-small fade-in" style="animation-delay: 0.2s;">
+            <div class="stat-icon-small" style="background: linear-gradient(135deg, #10b981, #059669);">
+                <i class="fas fa-user-check"></i>
+            </div>
+            <div class="stat-info">
+                <p class="stat-num" id="totalConfirmacoesPendentes">-</p>
+                <p class="stat-text">Confirmações Pendentes</p>
+            </div>
+        </div>
     </div>
 </div>
 {% endif %}
@@ -664,12 +673,14 @@ async function loadStats() {
         const totalCultos = stats.total_cultos || 0;
         const totalEscalas = stats.total_escalas !== undefined ? stats.total_escalas : 0;
         const totalMusicas = stats.total_musicas || 0;
+        const totalConfirmacoesPendentes = stats.confirmacoes_pendentes || 0;
         
         console.log('[DEBUG] Valores individuais:', {
             membros: totalMembros,
             cultos: totalCultos,
             escalas: totalEscalas,
             musicas: totalMusicas,
+            confirmacoes_pendentes: totalConfirmacoesPendentes,
             stats_raw: stats
         });
         
@@ -678,12 +689,14 @@ async function loadStats() {
         const elemCultos = document.getElementById('totalCultos');
         const elemEscalas = document.getElementById('totalEscalas');
         const elemMusicas = document.getElementById('totalMusicas');
+        const elemConfirmacoesPendentes = document.getElementById('totalConfirmacoesPendentes');
         
         console.log('[DEBUG] Elementos encontrados:', {
             membros: !!elemMembros,
             cultos: !!elemCultos,
             escalas: !!elemEscalas,
-            musicas: !!elemMusicas
+            musicas: !!elemMusicas,
+            confirmacoes_pendentes: !!elemConfirmacoesPendentes
         });
         
         if (elemMembros) {
@@ -709,8 +722,12 @@ async function loadStats() {
             elemMusicas.textContent = totalMusicas;
             elemMusicas.style.opacity = '1';
         }
+        if (elemConfirmacoesPendentes) {
+            elemConfirmacoesPendentes.textContent = totalConfirmacoesPendentes;
+            elemConfirmacoesPendentes.style.opacity = '1';
+        }
         
-        console.log('[DEBUG] Stats atualizadas: Membros=' + totalMembros + ', Cultos=' + totalCultos + ', Escalas=' + totalEscalas + ', Músicas=' + totalMusicas);
+        console.log('[DEBUG] Stats atualizadas: Membros=' + totalMembros + ', Cultos=' + totalCultos + ', Escalas=' + totalEscalas + ', Músicas=' + totalMusicas + ', Confirmações Pendentes=' + totalConfirmacoesPendentes);
     } catch (error) {
         console.error('[ERROR] Erro ao carregar estatísticas:', error);
         // Manter o "-" em caso de erro

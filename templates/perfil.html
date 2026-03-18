@@ -252,6 +252,138 @@ input[type="range"]::-moz-range-thumb:active {
     </div>
 </div>
 
+<!-- Card de Notificações Push -->
+<div class="card" style="margin-top: 1.5rem;">
+    <div class="card-header">
+        <h2 class="card-title">
+            <i class="fas fa-bell"></i>
+            Notificações Push
+        </h2>
+    </div>
+    <div class="card-body">
+        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+            <i class="fas fa-info-circle"></i> Receba alertas instantâneos sobre escalas, avisos e confirmações.
+        </p>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; background: var(--bg-secondary); border-radius: var(--radius-md); margin-bottom: 1rem;">
+            <div style="flex: 1;">
+                <div style="font-weight: 600; color: var(--text-color); margin-bottom: 0.25rem;">
+                    <i class="fas fa-mobile-alt"></i> Notificações no Dispositivo
+                </div>
+                <div style="font-size: 0.875rem; color: var(--text-secondary);">
+                    Status: <span id="pushStatus">🔕 Desativadas</span>
+                </div>
+            </div>
+            <label class="toggle-switch" style="margin: 0;">
+                <input type="checkbox" id="pushNotificationToggle" onchange="togglePushNotifications()">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+
+        <div id="pushNotificationControls" style="display: none;">
+            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 1rem; border-radius: var(--radius-md); color: white; margin-bottom: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                    <i class="fas fa-check-circle" style="font-size: 1.5rem;"></i>
+                    <div style="font-weight: 600;">Notificações Ativadas!</div>
+                </div>
+                <div style="font-size: 0.875rem; opacity: 0.9;">
+                    Você receberá alertas sobre:
+                </div>
+                <ul style="margin: 0.5rem 0 0 0; padding-left: 1.25rem; font-size: 0.875rem; opacity: 0.9;">
+                    <li>Novas escalas criadas para você</li>
+                    <li>Lembretes de confirmação de presença</li>
+                    <li>Avisos importantes do ministério</li>
+                    <li>Mudanças em cultos e repertórios</li>
+                </ul>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <button onclick="window.PushNotificationManager.sendTest()" class="btn btn-secondary" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                    <i class="fas fa-paper-plane"></i>
+                    Enviar Teste
+                </button>
+                <button onclick="window.PushNotificationManager.unsubscribe()" class="btn btn-danger" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                    <i class="fas fa-bell-slash"></i>
+                    Desativar
+                </button>
+            </div>
+        </div>
+
+        <div id="pushNotificationInactive" style="background: var(--bg-secondary); padding: 1.5rem; border-radius: var(--radius-md); text-align: center;">
+            <i class="fas fa-bell-slash" style="font-size: 3rem; color: var(--text-secondary); margin-bottom: 1rem; opacity: 0.5;"></i>
+            <h3 style="margin: 0 0 0.5rem; color: var(--text-color); font-size: 1.1rem;">Notificações Desativadas</h3>
+            <p style="margin: 0; color: var(--text-secondary); font-size: 0.9rem;">
+                Use o botão acima ☝️ para ativar e receber alertas importantes em tempo real.
+            </p>
+        </div>
+    </div>
+</div>
+
+<style>
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 52px;
+    height: 28px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #cbd5e1;
+    transition: .4s;
+    border-radius: 34px;
+    border: 2px solid #94a3b8;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background-color: #10b981;
+    border-color: #059669;
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(24px);
+}
+
+.toggle-switch input:focus + .toggle-slider {
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+/* Tema escuro */
+[data-theme="dark"] .toggle-slider {
+    background-color: #475569;
+    border-color: #64748b;
+}
+
+[data-theme="dark"] .toggle-switch input:checked + .toggle-slider {
+    background-color: #10b981;
+    border-color: #059669;
+}
+</style>
+
 <!-- Modal de Edição de Avatar -->
 <div id="avatarEditorModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 10000; align-items: center; justify-content: center;">
     <div style="background: var(--bg-primary); border-radius: var(--radius-lg); padding: 2rem; max-width: 500px; width: 90%; position: relative;">
@@ -785,6 +917,121 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
         showToast('error', 'Erro ao atualizar perfil');
     }
 });
+
+// ========================================
+// PUSH NOTIFICATIONS MANAGEMENT
+// ========================================
+
+function updatePushUI() {
+    const controls = document.getElementById('pushNotificationControls');
+    const inactive = document.getElementById('pushNotificationInactive');
+    const toggle = document.getElementById('pushNotificationToggle');
+    
+    if (window.PushNotificationManager && window.PushNotificationManager.isSubscribed) {
+        controls.style.display = 'block';
+        inactive.style.display = 'none';
+        toggle.checked = true;
+    } else {
+        controls.style.display = 'none';
+        inactive.style.display = 'block';
+        toggle.checked = false;
+    }
+}
+
+async function togglePushNotifications() {
+    if (!window.PushNotificationManager) {
+        console.error('PushNotificationManager não está disponível');
+        
+        // Mensagem mais útil baseada no contexto
+        const currentUrl = window.location.href;
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        
+        let mensagem = '❌ Sistema de notificações não carregou.\n\n';
+        
+        if (!isLocalhost) {
+            mensagem += '⚠️ PROBLEMA: Você está acessando via IP (não localhost)\n\n';
+            mensagem += '💡 SOLUÇÃO: Acesse via:\n';
+            mensagem += '   http://localhost:5000/perfil\n';
+            mensagem += '   OU\n';
+            mensagem += '   http://127.0.0.1:5000/perfil\n\n';
+            mensagem += 'Push Notifications requerem HTTPS ou localhost!';
+        } else {
+            mensagem += '💡 Possíveis soluções:\n\n';
+            mensagem += '1. Limpe o cache do navegador:\n';
+            mensagem += '   Ctrl+Shift+Delete → Cache de imagens\n\n';
+            mensagem += '2. Recarregue com força:\n';
+            mensagem += '   Ctrl+Shift+R (ou Ctrl+F5)\n\n';
+            mensagem += '3. Abra o Console (F12) e procure erros\n\n';
+            mensagem += '4. Execute o diagnóstico:\n';
+            mensagem += '   Cole o conteúdo de diagnostico_push_browser.js';
+        }
+        
+        alert(mensagem);
+        return;
+    }
+    
+    const toggle = document.getElementById('pushNotificationToggle');
+    
+    try {
+        if (toggle.checked && !window.PushNotificationManager.isSubscribed) {
+            // Ativar notificações
+            const success = await window.PushNotificationManager.subscribe();
+            if (!success) {
+                toggle.checked = false;
+            }
+        } else if (!toggle.checked && window.PushNotificationManager.isSubscribed) {
+            // Desativar notificações
+            const success = await window.PushNotificationManager.unsubscribe();
+            if (!success) {
+                toggle.checked = true;
+            }
+        }
+        
+        updatePushUI();
+    } catch (error) {
+        console.error('Erro ao alternar notificações:', error);
+        toggle.checked = window.PushNotificationManager.isSubscribed;
+    }
+}
+
+// Atualizar UI quando PushNotificationManager estiver pronto
+const checkPushReady = setInterval(() => {
+    if (window.PushNotificationManager && 
+        window.PushNotificationManager.swRegistration !== null && 
+        window.PushNotificationManager.publicKey !== null) {
+        console.log('[Perfil] ✅ PushNotificationManager pronto, atualizando UI');
+        updatePushUI();
+        clearInterval(checkPushReady);
+    }
+}, 200);
+
+// Timeout após 10 segundos com diagnóstico
+setTimeout(() => {
+    clearInterval(checkPushReady);
+    
+    if (!window.PushNotificationManager) {
+        console.error('[Perfil] ❌ PushNotificationManager NÃO EXISTE após 10s');
+        console.error('   Possíveis causas:');
+        console.error('   1. Arquivo push-manager.js não foi carregado');
+        console.error('   2. Erro de JavaScript impediu criação');
+        console.error('   3. Cache do navegador está desatualizado');
+        console.error('');
+        console.error('   💡 Execute: Ctrl+Shift+R para limpar cache');
+    } else if (window.PushNotificationManager.swRegistration === null) {
+        console.warn('[Perfil] ⚠️ Service Worker não foi registrado após 10s');
+        console.warn('   Contexto seguro:', window.isSecureContext);
+        console.warn('   URL:', window.location.href);
+        console.warn('');
+        if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            console.error('   ❌ PROBLEMA: Você está acessando via IP sem HTTPS!');
+            console.error('   💡 SOLUÇÃO: Acesse http://localhost:5000/perfil');
+        }
+    } else if (window.PushNotificationManager.publicKey === null) {
+        console.warn('[Perfil] ⚠️ Chave VAPID não foi carregada após 10s');
+        console.warn('   Service Worker OK, mas endpoint /get_vapid_public_key não respondeu');
+        console.warn('   💡 Verifique se o servidor Flask está rodando');
+    }
+}, 10000);
 
 // Carregar ao iniciar
 document.addEventListener('DOMContentLoaded', loadPerfil);

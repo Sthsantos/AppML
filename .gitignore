@@ -37,6 +37,10 @@ instance/
 .env.local
 .env.*.local
 
+# VAPID Keys (Push Notifications)
+vapid_private.pem
+instance/vapid_private.pem
+
 # IDEs
 .vscode/
 .idea/

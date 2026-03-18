@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ministry-v5.0.2-20260317';
+const CACHE_NAME = 'ministry-v5.0.4-20260317';
 const CACHE_ASSETS = [
     '/',
     '/static/styles.css',
@@ -128,17 +128,108 @@ self.addEventListener('sync', event => {
     console.log('[SW] Background sync:', event.tag);
 });
 
-// Push Notifications (preparado para futuro)
+// Push Notifications
 self.addEventListener('push', event => {
-    console.log('[SW] Push notification recebida');
-    const options = {
-        body: event.data ? event.data.text() : 'Nova notificação',
-        icon: '/static/icon.svg',
-        badge: '/static/icon.svg',
-        vibrate: [200, 100, 200]
-    };
+    console.log('[SW] Push notification recebida:', event);
     
+    try {
+        let notification = {
+            title: 'Ministério de Louvor',
+            body: 'Nova notificação',
+            icon: '/static/icon-192x192.png',
+            badge: '/static/icon-72x72.png',
+            vibrate: [200, 100, 200],
+            data: {
+                url: '/',
+                timestamp: Date.now()
+            },
+            actions: []
+        };
+        
+        // Parse data se disponível
+        if (event.data) {
+            const data = event.data.json();
+            notification = {
+                ...notification,
+                ...data
+            };
+        }
+        
+        event.waitUntil(
+            self.registration.showNotification(notification.title, {
+                body: notification.body,
+                icon: notification.icon,
+                badge: notification.badge,
+                vibrate: notification.vibrate,
+                data: notification.data,
+                actions: notification.actions,
+                tag: notification.data.type || 'general',
+                requireInteraction: notification.data.requireInteraction || false,
+                timestamp: notification.data.timestamp || Date.now()
+            })
+        );
+    } catch (error) {
+        console.error('[SW] Erro ao processar push:', error);
+        // Fallback: mostrar notificação básica
+        event.waitUntil(
+            self.registration.showNotification('Ministério de Louvor', {
+                body: 'Você tem uma nova notificação',
+                icon: '/static/icon-192x192.png',
+                badge: '/static/icon-72x72.png'
+            })
+        );
+    }
+});
+
+// Notification Click Handler
+self.addEventListener('notificationclick', event => {
+    console.log('[SW] Notification click:', event.notification.tag, event.action);
+    
+    event.notification.close();
+    
+    // Determinar URL baseada na action
+    let targetUrl = '/';
+    
+    if (event.notification.data) {
+        const data = event.notification.data;
+        
+        // Se tem URL específica
+        if (data.url) {
+            targetUrl = data.url;
+        }
+        
+        // Se tem action específica
+        if (event.action === 'view') {
+            targetUrl = data.url || '/';
+        } else if (event.action === 'confirm') {
+            targetUrl = '/minhas_escalas';
+        } else if (event.action === 'deny') {
+            targetUrl = '/minhas_escalas';
+        }
+        
+        // Adicionar parâmetros se necessário
+        if (data.escala_id) {
+            targetUrl += `?escala_id=${data.escala_id}`;
+        }
+    }
+    
+    // Abrir ou focar na janela
     event.waitUntil(
-        self.registration.showNotification('Ministério de Louvor', options)
+        clients.matchAll({ type: 'window', includeUncontrolled: true })
+            .then(clientList => {
+                // Tentar focar em janela existente
+                for (const client of clientList) {
+                    if (client.url.includes(self.registration.scope) && 'focus' in client) {
+                        return client.focus().then(() => {
+                            // Navigate to target URL
+                            return client.navigate(targetUrl);
+                        });
+                    }
+                }
+                // Se não encontrou janela, abrir nova
+                if (clients.openWindow) {
+                    return clients.openWindow(targetUrl);
+                }
+            })
     );
 });

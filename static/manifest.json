@@ -106,23 +106,3 @@
         }
     ]
 }
-                    "sizes": "96x96",
-                    "type": "image/svg+xml"
-                }
-            ]
-        },
-        {
-            "name": "Cultos",
-            "short_name": "Cultos",
-            "description": "Acessar agenda de cultos",
-            "url": "/cultos",
-            "icons": [
-                {
-                    "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' fill='%23667eea'/%3E%3Cpath d='M20 24h56v8H20zm0 16h56v32H20z' fill='%23fff'/%3E%3C/svg%3E",
-                    "sizes": "96x96",
-                    "type": "image/svg+xml"
-                }
-            ]
-        }
-    ]
-}
