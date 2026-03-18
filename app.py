@@ -1349,15 +1349,17 @@ def add_escala():
                     from datetime import datetime as dt
                     if culto.date and culto.time:
                         culto_datetime = dt.combine(culto.date, culto.time)
-                        culto_data_str = culto_datetime.strftime("%d/%m/%Y às %H:%M")
+                        culto_data = culto_datetime.strftime("%d/%m/%Y")
+                        culto_hora = culto_datetime.strftime("%H:%M").replace(":", "h") + "min"
+                        mensagem_corpo = f'Você foi escalado para o culto do dia {culto_data}, às {culto_hora}. Por favor, confirme a sua presença!'
                     else:
-                        culto_data_str = "data não definida"
+                        mensagem_corpo = "Você foi escalado para um culto. Por favor, confirme a sua presença!"
                     
                     for sub in subscriptions:
                         send_push_notification(
                             sub,
                             f'📋 Nova Escala: {culto.description}',
-                            f'Você foi escalado(a) como {role} em {culto_data_str}. Por favor, confirme sua presença!',
+                            mensagem_corpo,
                             {
                                 'type': 'nova_escala',
                                 'url': '/minhas_escalas',
