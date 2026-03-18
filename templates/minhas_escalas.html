@@ -457,6 +457,7 @@ async function loadMinhasEscalas() {
             }
             
             console.log(`[12.${groupIndex + 1}] minhaEscala:`, minhaEscala.role);
+            console.log(`[12.${groupIndex + 1}] ja_passou:`, group.ja_passou, ' | status_confirmacao:', minhaEscala.status_confirmacao);
             
             // Ícone e cor do instrumento do usuário
             const meuIcon = instrumentIcons[minhaEscala.role] || 'fa-user';
@@ -508,6 +509,83 @@ async function loadMinhasEscalas() {
                                     `}
                                 </div>
                             </div>
+                            
+                            ${!group.ja_passou ? `
+                                <!-- Status de Confirmação -->
+                                <div style="margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid rgba(156, 163, 175, 0.3);">
+                                    ${minhaEscala.status_confirmacao === 'confirmado' ? `
+                                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                                <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.25rem;">
+                                                    <i class="fas fa-check-circle"></i>
+                                                </div>
+                                                <div>
+                                                    <div style="font-weight: 700; color: #059669; font-size: 1rem;">✅ PRESENÇA CONFIRMADA</div>
+                                                    <div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.125rem;">
+                                                        ${minhaEscala.observacao_confirmacao ? minhaEscala.observacao_confirmacao : 'Obrigado por confirmar!'}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <button onclick='negarPresenca(${minhaEscala.escala_id})' 
+                                                    style="padding: 0.625rem 1rem; background: white; color: #6b7280; border: 1px solid #d1d5db; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: all 0.2s;"
+                                                    onmouseover="this.style.borderColor='#ef4444'; this.style.color='#ef4444'"
+                                                    onmouseout="this.style.borderColor='#d1d5db'; this.style.color='#6b7280'">
+                                                <i class="fas fa-times"></i>
+                                                <span>Não Poderei Ir</span>
+                                            </button>
+                                        </div>
+                                    ` : minhaEscala.status_confirmacao === 'negado' ? `
+                                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                                <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #ef4444, #dc2626); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.25rem;">
+                                                    <i class="fas fa-exclamation-circle"></i>
+                                                </div>
+                                                <div>
+                                                    <div style="font-weight: 700; color: #dc2626; font-size: 1rem;">❌ AUSÊNCIA INFORMADA</div>
+                                                    <div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.125rem;">
+                                                        ${minhaEscala.observacao_confirmacao ? minhaEscala.observacao_confirmacao : 'Você informou que não poderá comparecer'}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <button onclick='confirmarPresenca(${minhaEscala.escala_id})' 
+                                                    style="padding: 0.625rem 1rem; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: all 0.2s; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);"
+                                                    onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(16, 185, 129, 0.4)'"
+                                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(16, 185, 129, 0.3)'">
+                                                <i class="fas fa-check"></i>
+                                                <span>Confirmar Presença</span>
+                                            </button>
+                                        </div>
+                                    ` : `
+                                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                                <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #f59e0b, #d97706); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.25rem;">
+                                                    <i class="fas fa-clock"></i>
+                                                </div>
+                                                <div>
+                                                    <div style="font-weight: 700; color: #d97706; font-size: 1rem;">⏳ AGUARDANDO CONFIRMAÇÃO</div>
+                                                    <div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.125rem;">Por favor, confirme ou informe sua ausência</div>
+                                                </div>
+                                            </div>
+                                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                                <button onclick='confirmarPresenca(${minhaEscala.escala_id})' 
+                                                        style="padding: 0.75rem 1.25rem; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: all 0.2s; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);"
+                                                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(16, 185, 129, 0.4)'"
+                                                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(16, 185, 129, 0.3)'">
+                                                    <i class="fas fa-check"></i>
+                                                    <span>Confirmar Presença</span>
+                                                </button>
+                                                <button onclick='negarPresenca(${minhaEscala.escala_id})' 
+                                                        style="padding: 0.75rem 1.25rem; background: white; color: #6b7280; border: 1px solid #d1d5db; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: all 0.2s;"
+                                                        onmouseover="this.style.borderColor='#ef4444'; this.style.color='#ef4444'"
+                                                        onmouseout="this.style.borderColor='#d1d5db'; this.style.color='#6b7280'">
+                                                    <i class="fas fa-times"></i>
+                                                    <span>Não Poderei Ir</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    `}
+                                </div>
+                            ` : ''}
                         </div>
                         
                         <!-- Outras Escalas do Culto -->
@@ -764,5 +842,63 @@ document.addEventListener('click', (e) => {
         closeModalSolicitar();
     }
 });
+
+// ========================================
+// SISTEMA DE CONFIRMAÇÃO DE PRESENÇA
+// ========================================
+
+async function confirmarPresenca(escalaId) {
+    const observacao = prompt('Mensagem opcional (ex: "Chegarei 15min mais cedo"):');
+    
+    try {
+        const response = await fetch(`/confirmar_presenca/${escalaId}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ observacao: observacao || '' })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('success', data.message);
+            loadMinhasEscalas(); // Recarregar escalas
+        } else {
+            showToast('error', data.message);
+        }
+    } catch (error) {
+        console.error('Erro ao confirmar presença:', error);
+        showToast('error', 'Erro ao confirmar presença');
+    }
+}
+
+async function negarPresenca(escalaId) {
+    const motivo = prompt('Por favor, informe o motivo da ausência:');
+    
+    if (!motivo || motivo.trim() === '') {
+        showToast('error', 'Motivo é obrigatório');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/negar_presenca/${escalaId}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ motivo: motivo })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('success', data.message);
+            loadMinhasEscalas(); // Recarregar escalas
+        } else {
+            showToast('error', data.message);
+        }
+    } catch (error) {
+        console.error('Erro ao negar presença:', error);
+        showToast('error', 'Erro ao registrar ausência');
+    }
+}
+
 </script>
 {% endblock %}
