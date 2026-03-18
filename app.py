@@ -1896,59 +1896,6 @@ def get_vapid_public_key():
         return jsonify({'error': 'VAPID keys não configuradas'}), 500
     return jsonify({'publicKey': VAPID_PUBLIC_KEY}), 200
 
-@app.route('/admin/debug-env', methods=['GET'])
-def debug_env():
-    """TEMPORÁRIO - Debug de variáveis de ambiente. REMOVER APÓS USO!"""
-    env_vars = {
-        'VAPID_PUBLIC_KEY': os.environ.get('VAPID_PUBLIC_KEY', 'NOT FOUND'),
-        'VAPID_PRIVATE_KEY_exists': 'YES' if os.environ.get('VAPID_PRIVATE_KEY') else 'NO',
-        'VAPID_PRIVATE_KEY_length': len(os.environ.get('VAPID_PRIVATE_KEY', '')) if os.environ.get('VAPID_PRIVATE_KEY') else 0,
-        'VAPID_CLAIMS_EMAIL': os.environ.get('VAPID_CLAIMS_EMAIL', 'NOT FOUND'),
-        'DATABASE_URL_exists': 'YES' if os.environ.get('DATABASE_URL') else 'NO',
-        'FLASK_ENV': os.environ.get('FLASK_ENV', 'NOT FOUND'),
-        'vapid_private_pem_exists': 'YES' if os.path.exists('vapid_private.pem') else 'NO',
-        'instance_vapid_pem_exists': 'YES' if os.path.exists('instance/vapid_private.pem') else 'NO',
-        'VAPID_PRIVATE_KEY_variable': VAPID_PRIVATE_KEY if VAPID_PRIVATE_KEY else 'NOT SET',
-    }
-    
-    html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Debug Variáveis de Ambiente</title>
-        <style>
-            body {{ font-family: monospace; padding: 20px; }}
-            table {{ border-collapse: collapse; }}
-            td, th {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
-            th {{ background-color: #4CAF50; color: white; }}
-            .yes {{ color: green; font-weight: bold; }}
-            .no {{ color: red; font-weight: bold; }}
-        </style>
-    </head>
-    <body>
-        <h1>🔍 Debug - Variáveis de Ambiente</h1>
-        <table>
-            <tr><th>Variável</th><th>Valor</th></tr>
-    """
-    
-    for key, value in env_vars.items():
-        value_display = value
-        if value == 'YES':
-            value_display = '<span class="yes">YES</span>'
-        elif value == 'NO' or value == 'NOT FOUND' or value == 'NOT SET':
-            value_display = f'<span class="no">{value}</span>'
-        
-        html += f"<tr><td>{key}</td><td>{value_display}</td></tr>"
-    
-    html += """
-        </table>
-        <p><a href="/">← Voltar</a></p>
-    </body>
-    </html>
-    """
-    
-    return html
-
 @app.route('/push_subscribe', methods=['POST'])
 @login_required
 def push_subscribe():
