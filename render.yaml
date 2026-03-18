@@ -15,6 +15,13 @@ services:
         fromDatabase:
           name: ministry-db
           property: connectionString
+      # Push Notifications - VAPID Keys
+      - key: VAPID_PUBLIC_KEY
+        value: BIE96TdoPCTzTEV2CzZnopybGg9fXG2bo_uZt0nFY0KKi42e-zgneIS4R89Hw_oEQCaoCm0PaV_PkSAbduNLs50
+      - key: VAPID_PRIVATE_KEY
+        value: "-----BEGIN PRIVATE KEY-----\nMIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgzRp0oAPfjQBk6DOk\nPVOISDaEt6GEZebmFvTEtVB+PzuhRANCAASBPek3aDwk80xFdgs2Z6KcmxoPX1xt\nm6P7mbdJxWNCiouNnvs4J3iEuEfPR8P6BEAmqAptD2lfz5EgG3bjS7Od\n-----END PRIVATE KEY-----"
+      - key: VAPID_CLAIMS_EMAIL
+        value: mailto:admin@ministry.com
 
 # PostgreSQL Database
 databases:
