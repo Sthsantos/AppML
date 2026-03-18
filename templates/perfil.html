@@ -939,39 +939,26 @@ function updatePushUI() {
 }
 
 async function togglePushNotifications() {
+    console.log('[Toggle] 🎯 Função chamada');
+    console.log('[Toggle] PushNotificationManager existe?', !!window.PushNotificationManager);
+    
     if (!window.PushNotificationManager) {
         console.error('PushNotificationManager não está disponível');
-        
-        // Mensagem mais útil baseada no contexto
-        const currentUrl = window.location.href;
-        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const isHttps = window.location.protocol === 'https:';
-        
-        let mensagem = '❌ Sistema de notificações não carregou.\n\n';
-        
-        if (!isLocalhost && !isHttps) {
-            mensagem += '⚠️ PROBLEMA: Você está acessando via HTTP (não seguro)\n\n';
-            mensagem += '💡 SOLUÇÃO: Acesse via:\n';
-            mensagem += '   http://localhost:5000/perfil (local)\n';
-            mensagem += '   OU\n';
-            mensagem += '   https://appml-tbcw.onrender.com/perfil (produção)\n\n';
-            mensagem += 'Push Notifications requerem HTTPS ou localhost!';
-        } else {
-            mensagem += '💡 Possíveis soluções:\n\n';
-            mensagem += '1. Limpe o cache do navegador:\n';
-            mensagem += '   Ctrl+Shift+Delete → Cache de imagens\n\n';
-            mensagem += '2. Recarregue com força:\n';
-            mensagem += '   Ctrl+Shift+R (ou Ctrl+F5)\n\n';
-            mensagem += '3. Abra o Console (F12) e procure erros\n\n';
-            mensagem += '4. Execute o diagnóstico:\n';
-            mensagem += '   Cole o conteúdo de diagnostico_push_browser.js';
-        }
-        
-        alert(mensagem);
+        alert('❌ Sistema de notificações não carregou.\n\nAbra o Console (F12) e procure erros começando com [Push]');
         return;
     }
     
+    // Diagnóstico detalhado
+    console.log('[Toggle] 📊 Estado atual:', {
+        isSubscribed: window.PushNotificationManager.isSubscribed,
+        swRegistration: !!window.PushNotificationManager.swRegistration,
+        publicKey: !!window.PushNotificationManager.publicKey,
+        isSecureContext: window.isSecureContext,
+        protocol: window.location.protocol
+    });
+    
     const toggle = document.getElementById('pushNotificationToggle');
+    console.log('[Toggle] Toggle checked?', toggle.checked);
     
     try {
         if (toggle.checked && !window.PushNotificationManager.isSubscribed) {
