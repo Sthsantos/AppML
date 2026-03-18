@@ -43,6 +43,28 @@
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
 }
+
+/* Botão roxo para status de confirmações */
+.btn-purple {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    color: white;
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(139, 92, 246, 0.3);
+}
+
+.btn-purple:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(139, 92, 246, 0.4);
+}
+
 </style>
 
 <div class="page-header">
@@ -95,6 +117,29 @@
         <div class="empty-state">
             <i class="fas fa-spinner fa-spin"></i>
             <h3>Carregando cultos...</h3>
+        </div>
+    </div>
+</div>
+
+<!-- Gerenciar Substituições (Admin) -->
+<div class="section" id="substituicoesAdminSection" style="margin-bottom: 3rem;">
+    <div class="section-header">
+        <div>
+            <h2 class="section-title">
+                <i class="fas fa-exchange-alt"></i>
+                Gerenciar Substituições
+            </h2>
+            <p class="section-subtitle">Controle total sobre solicitações de substituição</p>
+        </div>
+        <button class="btn btn-primary" onclick="carregarSubstituicoesAdmin()">
+            <i class="fas fa-sync-alt"></i>
+            Atualizar
+        </button>
+    </div>
+    <div id="substituicoesAdminContainer">
+        <div class="empty-state">
+            <i class="fas fa-spinner fa-spin"></i>
+            <h3>Carregando substituições...</h3>
         </div>
     </div>
 </div>
@@ -546,6 +591,50 @@
         </div>
     </div>
 </div>
+
+<!-- Modal: Status de Confirmações -->
+<div class="modal-overlay" id="statusConfirmacoesModal">
+    <div class="modal" style="max-width: 700px; border-radius: 24px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); animation: slideIn 0.3s ease-out; overflow: hidden;">
+        <div class="modal-header" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; padding: 2rem; border-bottom: none;">
+            <h2 class="modal-title" style="color: white; font-weight: 700; font-size: 1.5rem; display: flex; align-items: center; gap: 0.75rem;">
+                <div style="width: 48px; height: 48px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-user-check" style="font-size: 1.5rem;"></i>
+                </div>
+                <div>
+                    Status de Confirmações
+                    <div style="font-size: 0.85rem; font-weight: 500; opacity: 0.9; margin-top: 0.25rem;" id="statusCultoNome"></div>
+                </div>
+            </h2>
+            <button class="modal-close" onclick="closeModal('statusConfirmacoesModal')" style="color: white; opacity: 0.9; transition: all 0.2s; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.background='rgba(255,255,255,0.2)'; this.style.opacity='1'" onmouseout="this.style.background='transparent'; this.style.opacity='0.9'">
+                <i class="fas fa-times" style="font-size: 1.25rem;"></i>
+            </button>
+        </div>
+        <div class="modal-body" style="padding: 2rem;">
+            <!-- Resumo Estatístico -->
+            <div id="resumoConfirmacoes" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+                <!-- Cards de resumo serão inseridos aqui via JS -->
+            </div>
+            
+            <!-- Lista Detalhada -->
+            <div>
+                <h4 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: var(--gray-900); display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-list"></i>
+                    Detalhamento por Membro
+                </h4>
+                <div id="listaConfirmacoes" style="max-height: 400px; overflow-y: auto; display: grid; gap: 0.75rem;">
+                    <!-- Lista será inserida aqui via JS -->
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer" style="padding: 1.5rem 2rem; background: var(--gray-50); border-top: 1px solid var(--border-color);">
+            <button class="btn btn-outline" onclick="closeModal('statusConfirmacoesModal')" style="padding: 0.75rem 1.5rem;">
+                <i class="fas fa-times"></i>
+                Fechar
+            </button>
+        </div>
+    </div>
+</div>
+
 {% endif %}
 
 {% endblock %}
@@ -1111,6 +1200,10 @@ async function loadEscalas() {
                                     <span>Culto Realizado</span>
                                 </div>
                             ` : `
+                                <button class="btn btn-purple" onclick='verStatusConfirmacoes(${group.culto_ids[0]}, "${group.name}")' title="Ver status de confirmações de presença">
+                                    <i class="fas fa-user-check"></i>
+                                    Status
+                                </button>
                                 <button class="btn btn-success" onclick='openMusicasModal(${group.culto_ids[0]}, "${group.name}")' title="Gerenciar músicas do culto">
                                     <i class="fas fa-music"></i>
                                     Músicas
@@ -1766,6 +1859,111 @@ async function deleteAllEscalas() {
 }
 
 // ========================================
+// VER STATUS DE CONFIRMAÇÕES
+// ========================================
+
+async function verStatusConfirmacoes(cultoId, cultoNome) {
+    try {
+        // Atualizar nome do culto no modal
+        document.getElementById('statusCultoNome').textContent = cultoNome;
+        
+        const response = await fetch(`/get_status_confirmacoes/${cultoId}`);
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error('Erro ao carregar status');
+        }
+        
+        const resumo = data.resumo;
+        const escalas = data.escalas;
+        
+        // Renderizar resumo estatístico
+        document.getElementById('resumoConfirmacoes').innerHTML = `
+            <div style="padding: 1.25rem; background: linear-gradient(135deg, rgba(107, 114, 128, 0.1), rgba(75, 85, 99, 0.05)); border-radius: 12px; text-align: center; border: 2px solid rgba(107, 114, 128, 0.2);">
+                <div style="font-size: 2rem; font-weight: 700; color: var(--gray-900); margin-bottom: 0.25rem;">${resumo.total}</div>
+                <div style="font-size: 0.875rem; color: var(--gray-600); font-weight: 500;">Total</div>
+            </div>
+            <div style="padding: 1.25rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.05)); border-radius: 12px; text-align: center; border: 2px solid var(--success-400);">
+                <div style="font-size: 2rem; font-weight: 700; color: var(--success-600); margin-bottom: 0.25rem;">✅ ${resumo.confirmados}</div>
+                <div style="font-size: 0.875rem; color: var(--success-700); font-weight: 500;">Confirmados</div>
+            </div>
+            <div style="padding: 1.25rem; background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.05)); border-radius: 12px; text-align: center; border: 2px solid rgba(245, 158, 11, 0.4);">
+                <div style="font-size: 2rem; font-weight: 700; color: #d97706; margin-bottom: 0.25rem;">⏳ ${resumo.pendentes}</div>
+                <div style="font-size: 0.875rem; color: #b45309; font-weight: 500;">Pendentes</div>
+            </div>
+            <div style="padding: 1.25rem; background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.05)); border-radius: 12px; text-align: center; border: 2px solid rgba(239, 68, 68, 0.4);">
+                <div style="font-size: 2rem; font-weight: 700; color: var(--danger-600); margin-bottom: 0.25rem;">❌ ${resumo.negados}</div>
+                <div style="font-size: 0.875rem; color: var(--danger-700); font-weight: 500;">Ausências</div>
+            </div>
+        `;
+        
+        // Renderizar lista detalhada
+        if (!escalas || escalas.length === 0) {
+            document.getElementById('listaConfirmacoes').innerHTML = `
+                <div class="empty-state" style="padding: 2rem;">
+                    <i class="fas fa-users" style="font-size: 2.5rem; color: var(--gray-400); margin-bottom: 0.5rem;"></i>
+                    <p style="color: var(--gray-600);">Nenhuma escala encontrada</p>
+                </div>
+            `;
+        } else {
+            document.getElementById('listaConfirmacoes').innerHTML = escalas.map(e => {
+                let badgeColor, badgeText, badgeIcon, cardBorder;
+                
+                if (e.status_confirmacao === 'confirmado') {
+                    badgeColor = 'var(--success-500)';
+                    badgeText = '✅ Confirmado';
+                    badgeIcon = 'fa-check-circle';
+                    cardBorder = 'rgba(16, 185, 129, 0.3)';
+                } else if (e.status_confirmacao === 'negado') {
+                    badgeColor = 'var(--danger-500)';
+                    badgeText = '❌ Ausência';
+                    badgeIcon = 'fa-exclamation-circle';
+                    cardBorder = 'rgba(239, 68, 68, 0.3)';
+                } else {
+                    badgeColor = '#f59e0b';
+                    badgeText = '⏳ Pendente';
+                    badgeIcon = 'fa-clock';
+                    cardBorder = 'rgba(245, 158, 11, 0.3)';
+                }
+                
+                return `
+                    <div style="padding: 1rem; background: var(--gray-50); border-radius: 12px; border-left: 4px solid ${cardBorder};">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                            <div style="flex: 1; min-width: 150px;">
+                                <div style="font-weight: 600; color: var(--gray-900); font-size: 1rem; margin-bottom: 0.25rem;">
+                                    ${e.member_name}
+                                </div>
+                                <div style="font-size: 0.875rem; color: var(--gray-600);">
+                                    <i class="fas fa-music"></i> ${e.role}
+                                </div>
+                                ${e.observacao ? `
+                                    <div style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(139, 92, 246, 0.1); border-radius: 6px; font-size: 0.875rem; color: var(--gray-700);">
+                                        <i class="fas fa-comment" style="color: #8b5cf6;"></i> ${e.observacao}
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <div style="padding: 0.5rem 1rem; background: ${badgeColor}; color: white; border-radius: 8px; font-weight: 600; font-size: 0.875rem; display: flex; align-items: center; gap: 0.375rem;">
+                                    <i class="fas ${badgeIcon}"></i>
+                                    ${badgeText}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Abrir modal
+        openModal('statusConfirmacoesModal');
+        
+    } catch (error) {
+        console.error('Erro ao carregar status de confirmações:', error);
+        showToast('Erro ao carregar status de confirmações', 'error');
+    }
+}
+
+// ========================================
 // GERENCIAR MÚSICAS DO CULTO
 // ========================================
 
@@ -2045,6 +2243,289 @@ async function saveMusicaRapida(event) {
     }
 }
 
+// ========================================
+// GERENCIAMENTO DE SUBSTITUIÇÕES (ADMIN)
+// ========================================
+
+async function carregarSubstituicoesAdmin() {
+    try {
+        const response = await fetch('/get_todas_substituicoes_admin');
+        const substituicoes = await response.json();
+        
+        const container = document.getElementById('substituicoesAdminContainer');
+        
+        if (substituicoes.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-check-circle" style="color: var(--success-color);"></i>
+                    <h3>Nenhuma substituição registrada</h3>
+                    <p>Não há solicitações de substituição no momento</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Agrupar por status
+        const pendentes = substituicoes.filter(s => s.status === 'pendente');
+        const aceitas = substituicoes.filter(s => s.status === 'aceito');
+        const recusadas = substituicoes.filter(s => s.status === 'recusado');
+        const canceladas = substituicoes.filter(s => s.status === 'cancelado');
+        
+        container.innerHTML = `
+            <div style="display: grid; gap: 2rem;">
+                ${pendentes.length > 0 ? `
+                    <div>
+                        <h3 style="color: var(--warning-color); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-clock"></i>
+                            Pendentes (${pendentes.length})
+                        </h3>
+                        <div style="display: grid; gap: 1rem;">
+                            ${pendentes.map(s => renderSubstituicaoCard(s, 'pendente')).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                ${aceitas.length > 0 ? `
+                    <div>
+                        <h3 style="color: var(--success-color); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-check-circle"></i>
+                            Aceitas (${aceitas.length})
+                        </h3>
+                        <div style="display: grid; gap: 1rem;">
+                            ${aceitas.map(s => renderSubstituicaoCard(s, 'aceito')).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                ${recusadas.length > 0 ? `
+                    <div>
+                        <h3 style="color: var(--danger-color); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-times-circle"></i>
+                            Recusadas (${recusadas.length})
+                        </h3>
+                        <div style="display: grid; gap: 1rem;">
+                            ${recusadas.map(s => renderSubstituicaoCard(s, 'recusado')).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                ${canceladas.length > 0 ? `
+                    <div>
+                        <h3 style="color: var(--text-secondary); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-ban"></i>
+                            Canceladas (${canceladas.length})
+                        </h3>
+                        <div style="display: grid; gap: 1rem;">
+                            ${canceladas.map(s => renderSubstituicaoCard(s, 'cancelado')).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    } catch (error) {
+        console.error('Erro ao carregar substituições:', error);
+        showToast('Erro ao carregar substituições', 'error');
+    }
+}
+
+function renderSubstituicaoCard(sub, tipo) {
+    const statusColors = {
+        'pendente': '#f59e0b',
+        'aceito': '#10b981',
+        'recusado': '#ef4444',
+        'cancelado': '#6b7280'
+    };
+    
+    const statusIcons = {
+        'pendente': 'fa-clock',
+        'aceito': 'fa-check-circle',
+        'recusado': 'fa-times-circle',
+        'cancelado': 'fa-ban'
+    };
+    
+    const statusLabels = {
+        'pendente': 'PENDENTE',
+        'aceito': 'ACEITA',
+        'recusado': 'RECUSADA',
+        'cancelado': 'CANCELADA'
+    };
+    
+    return `
+        <div class="card" style="border-left: 4px solid ${statusColors[tipo]};">
+            <div class="card-body" style="padding: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: start; gap: 1rem; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 300px;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                            <div style="width: 48px; height: 48px; border-radius: 50%; background: ${statusColors[tipo]}; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.25rem;">
+                                <i class="fas ${statusIcons[tipo]}"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight: 700; color: ${statusColors[tipo]}; font-size: 1rem;">${statusLabels[tipo]}</div>
+                                <div style="font-size: 0.875rem; color: var(--text-secondary);">${sub.criado_em}</div>
+                            </div>
+                        </div>
+                        
+                        <div style="display: grid; gap: 0.75rem; margin-bottom: 1rem;">
+                            <div>
+                                <strong style="color: var(--text-color);">Culto:</strong>
+                                <span style="color: var(--text-secondary);"> ${sub.culto_descricao} - ${sub.culto_data} às ${sub.culto_hora}</span>
+                            </div>
+                            <div>
+                                <strong style="color: var(--text-color);">Função:</strong>
+                                <span style="color: var(--text-secondary);"> ${sub.funcao}</span>
+                            </div>
+                            <div>
+                                <strong style="color: var(--text-color);">Solicitante:</strong>
+                                <span style="color: var(--text-secondary);"> ${sub.solicitante_nome}</span>
+                            </div>
+                            <div>
+                                <strong style="color: var(--text-color);">Substituto:</strong>
+                                <span style="color: var(--text-secondary);"> ${sub.substituto_nome}</span>
+                            </div>
+                            ${sub.mensagem ? `
+                                <div>
+                                    <strong style="color: var(--text-color);">Mensagem:</strong>
+                                    <p style="color: var(--text-secondary); margin: 0.25rem 0 0; font-style: italic;">"${sub.mensagem}"</p>
+                                </div>
+                            ` : ''}
+                            ${sub.resposta ? `
+                                <div>
+                                    <strong style="color: var(--text-color);">Resposta:</strong>
+                                    <p style="color: var(--text-secondary); margin: 0.25rem 0 0; font-style: italic;">"${sub.resposta}"</p>
+                                    <small style="color: var(--text-tertiary);">Respondido em: ${sub.respondido_em}</small>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem; min-width: 150px;">
+                        ${tipo === 'pendente' ? `
+                            <button class="btn btn-success" onclick="adminForcarAceitar(${sub.id})" style="width: 100%;">
+                                <i class="fas fa-check"></i>
+                                Forçar Aceitar
+                            </button>
+                            <button class="btn btn-danger" onclick="adminForcarRecusar(${sub.id})" style="width: 100%;">
+                                <i class="fas fa-times"></i>
+                                Forçar Recusar
+                            </button>
+                            <button class="btn btn-secondary" onclick="adminCancelarSubstituicao(${sub.id})" style="width: 100%;">
+                                <i class="fas fa-ban"></i>
+                                Cancelar
+                            </button>
+                        ` : `
+                            <button class="btn btn-danger" onclick="adminExcluirSubstituicao(${sub.id})" style="width: 100%;">
+                                <i class="fas fa-trash"></i>
+                                Excluir Registro
+                            </button>
+                        `}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+async function adminForcarAceitar(subId) {
+    if (!confirm('Deseja FORÇAR a aceitação desta substituição? A escala será modificada automaticamente.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/admin_forcar_substituicao/${subId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ acao: 'aceitar' })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast(result.message || 'Substituição aceita com sucesso!', 'success');
+            carregarSubstituicoesAdmin();
+        } else {
+            showToast(result.message || 'Erro ao aceitar substituição', 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao forçar aceitar:', error);
+        showToast('Erro ao processar requisição', 'error');
+    }
+}
+
+async function adminForcarRecusar(subId) {
+    const motivo = prompt('Informe o motivo da recusa (opcional):');
+    
+    try {
+        const response = await fetch(`/admin_forcar_substituicao/${subId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                acao: 'recusar',
+                resposta: motivo || 'Recusado pelo administrador'
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast(result.message || 'Substituição recusada com sucesso!', 'success');
+            carregarSubstituicoesAdmin();
+        } else {
+            showToast(result.message || 'Erro ao recusar substituição', 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao forçar recusar:', error);
+        showToast('Erro ao processar requisição', 'error');
+    }
+}
+
+async function adminCancelarSubstituicao(subId) {
+    if (!confirm('Deseja CANCELAR esta solicitação de substituição?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/admin_cancelar_substituicao/${subId}`, {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast(result.message || 'Substituição cancelada com sucesso!', 'success');
+            carregarSubstituicoesAdmin();
+        } else {
+            showToast(result.message || 'Erro ao cancelar substituição', 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao cancelar substituição:', error);
+        showToast('Erro ao processar requisição', 'error');
+    }
+}
+
+async function adminExcluirSubstituicao(subId) {
+    if (!confirm('Deseja EXCLUIR permanentemente este registro de substituição? Esta ação não pode ser desfeita.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/admin_excluir_substituicao/${subId}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast(result.message || 'Registro excluído com sucesso!', 'success');
+            carregarSubstituicoesAdmin();
+        } else {
+            showToast(result.message || 'Erro ao excluir registro', 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao excluir substituição:', error);
+        showToast('Erro ao processar requisição', 'error');
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 Página carregada, iniciando...');
     loadEscalas().catch(error => {
@@ -2067,6 +2548,7 @@ document.addEventListener('DOMContentLoaded', () => {
     {% if current_user.is_authenticated and current_user.is_admin %}
     loadCultosPendentes();
     loadModalData();
+    carregarSubstituicoesAdmin();
     {% endif %}
 });
 </script>

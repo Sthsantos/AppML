@@ -3027,6 +3027,157 @@ def cancelar_substituicao(sub_id):
         print(f"? Erro ao cancelar substituicao: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
+# ========================================
+# ROTAS ADMIN - GERENCIAMENTO DE SUBSTITUIÇÕES
+# ========================================
+
+@app.route('/admin_forcar_substituicao/<int:sub_id>', methods=['POST'])
+@login_required
+@admin_required
+def admin_forcar_substituicao(sub_id):
+    """Admin força aceitar ou recusar uma substituição pendente."""
+    try:
+        data = request.get_json()
+        acao = data.get('acao')  # 'aceitar' ou 'recusar'
+        resposta_texto = data.get('resposta', '')
+        
+        if acao not in ['aceitar', 'recusar']:
+            return jsonify({'success': False, 'message': 'Ação inválida'}), 400
+        
+        substituicao = db.session.get(Substituicao, sub_id)
+        if not substituicao:
+            return jsonify({'success': False, 'message': 'Substituição não encontrada'}), 404
+        
+        if substituicao.status != 'pendente':
+            return jsonify({'success': False, 'message': 'Apenas substituições pendentes podem ser forçadas'}), 400
+        
+        # Buscar escala, culto e membros
+        escala = db.session.get(Escala, substituicao.escala_id)
+        culto = db.session.get(Culto, escala.culto_id)
+        solicitante = db.session.get(Member, substituicao.membro_solicitante_id)
+        substituto = db.session.get(Member, substituicao.membro_substituto_id)
+        
+        if acao == 'aceitar':
+            substituicao.status = 'aceito'
+            substituicao.resposta = resposta_texto or 'Aceito pelo administrador'
+            
+            # MODIFICAR A ESCALA
+            escala.member_id = substituicao.membro_substituto_id
+            
+            # Notificar solicitante
+            solicitante_subscription = PushSubscription.query.filter_by(member_id=solicitante.id).first()
+            if solicitante_subscription:
+                culto_data = culto.date.strftime('%d/%m/%Y')
+                culto_hora = culto.time.strftime('%Hh%Mmin')
+                send_push_notification(
+                    solicitante_subscription.subscription,
+                    '✅ Substituição Aceita (Admin)',
+                    f'O administrador aceitou a substituição. {substituto.name} irá substituir você como {escala.role} no culto do dia {culto_data}, às {culto_hora}.',
+                    {'type': 'substituicao_respondida', 'url': '/minhas_escalas', 'status': 'aceito'}
+                )
+            
+            # Notificar substituto
+            substituto_subscription = PushSubscription.query.filter_by(member_id=substituto.id).first()
+            if substituto_subscription:
+                culto_data = culto.date.strftime('%d/%m/%Y')
+                culto_hora = culto.time.strftime('%Hh%Mmin')
+                send_push_notification(
+                    substituto_subscription.subscription,
+                    '✅ Substituição Confirmada (Admin)',
+                    f'O administrador confirmou você como {escala.role} no culto do dia {culto_data}, às {culto_hora}, substituindo {solicitante.name}.',
+                    {'type': 'substituicao_aceita', 'url': '/minhas_escalas'}
+                )
+            
+            mensagem_retorno = 'Substituição aceita com sucesso! A escala foi atualizada.'
+        else:  # recusar
+            substituicao.status = 'recusado'
+            substituicao.resposta = resposta_texto or 'Recusado pelo administrador'
+            
+            # Notificar solicitante
+            solicitante_subscription = PushSubscription.query.filter_by(member_id=solicitante.id).first()
+            if solicitante_subscription:
+                culto_data = culto.date.strftime('%d/%m/%Y')
+                send_push_notification(
+                    solicitante_subscription.subscription,
+                    '❌ Substituição Recusada (Admin)',
+                    f'O administrador recusou a solicitação de substituição para o culto do dia {culto_data}.',
+                    {'type': 'substituicao_respondida', 'url': '/minhas_escalas', 'status': 'recusado'}
+                )
+            
+            mensagem_retorno = 'Substituição recusada pelo administrador.'
+        
+        substituicao.respondido_em = datetime.now()
+        db.session.commit()
+        
+        print(f"✅ Admin forçou {acao} substituição ID {sub_id}")
+        return jsonify({'success': True, 'message': mensagem_retorno}), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Erro ao forçar substituição: {str(e)}")
+        return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
+
+@app.route('/admin_cancelar_substituicao/<int:sub_id>', methods=['POST'])
+@login_required
+@admin_required
+def admin_cancelar_substituicao(sub_id):
+    """Admin cancela uma substituição pendente."""
+    try:
+        substituicao = db.session.get(Substituicao, sub_id)
+        if not substituicao:
+            return jsonify({'success': False, 'message': 'Substituição não encontrada'}), 404
+        
+        if substituicao.status != 'pendente':
+            return jsonify({'success': False, 'message': 'Apenas substituições pendentes podem ser canceladas'}), 400
+        
+        substituicao.status = 'cancelado'
+        substituicao.resposta = 'Cancelado pelo administrador'
+        db.session.commit()
+        
+        # Notificar solicitante e substituto
+        solicitante = db.session.get(Member, substituicao.membro_solicitante_id)
+        substituto = db.session.get(Member, substituicao.membro_substituto_id)
+        
+        for membro in [solicitante, substituto]:
+            subscription = PushSubscription.query.filter_by(member_id=membro.id).first()
+            if subscription:
+                send_push_notification(
+                    subscription.subscription,
+                    '🚫 Substituição Cancelada (Admin)',
+                    'O administrador cancelou uma solicitação de substituição.',
+                    {'type': 'substituicao_cancelada', 'url': '/minhas_escalas'}
+                )
+        
+        print(f"✅ Admin cancelou substituição ID {sub_id}")
+        return jsonify({'success': True, 'message': 'Substituição cancelada pelo administrador'}), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Erro ao cancelar substituição (admin): {str(e)}")
+        return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
+
+@app.route('/admin_excluir_substituicao/<int:sub_id>', methods=['DELETE'])
+@login_required
+@admin_required
+def admin_excluir_substituicao(sub_id):
+    """Admin exclui permanentemente um registro de substituição."""
+    try:
+        substituicao = db.session.get(Substituicao, sub_id)
+        if not substituicao:
+            return jsonify({'success': False, 'message': 'Substituição não encontrada'}), 404
+        
+        # Verificar se não está pendente
+        if substituicao.status == 'pendente':
+            return jsonify({'success': False, 'message': 'Cancele a substituição antes de excluir'}), 400
+        
+        db.session.delete(substituicao)
+        db.session.commit()
+        
+        print(f"✅ Admin excluiu substituição ID {sub_id}")
+        return jsonify({'success': True, 'message': 'Registro excluído permanentemente'}), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Erro ao excluir substituição: {str(e)}")
+        return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
+
 @app.route('/get_historico_substituicoes', methods=['GET'])
 @login_required
 def get_historico_substituicoes():
