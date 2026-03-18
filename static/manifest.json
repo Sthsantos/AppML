@@ -1,7 +1,7 @@
 {
-    "name": "Ministério de Louvor",
+    "name": "Min. Louvor",
     "short_name": "Min. Louvor",
-    "description": "Sistema completo de gestão para Ministério de Louvor - Escalas, Cultos, Repertório e Membros",
+    "description": "",
     "start_url": "/",
     "scope": "/",
     "display": "standalone",
