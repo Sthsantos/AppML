@@ -1356,7 +1356,7 @@ def add_escala():
                     for sub in subscriptions:
                         send_push_notification(
                             sub,
-                            f'Min. Louvor: 📋 Nova Escala - {culto.description}',
+                            f'📋 Nova Escala: {culto.description}',
                             f'Você foi escalado(a) como {role} em {culto_data_str}. Por favor, confirme sua presença!',
                             {
                                 'type': 'nova_escala',
@@ -1659,7 +1659,7 @@ def negar_presenca(escala_id):
                 for sub in subscriptions:
                     send_push_notification(
                         sub,
-                        f'Min. Louvor: ⚠️ Ausência - {member.name}',
+                        f'⚠️ Ausência Confirmada - {member.name}',
                         f'{member.name} não poderá comparecer ao {culto_info} como {escala.role}',
                         {
                             'type': 'ausencia_confirmada',
@@ -1951,7 +1951,7 @@ def push_subscribe():
         # Enviar notificação de boas-vindas
         send_push_notification(
             subscription,
-            'Min. Louvor: 🔔 Notificações Ativadas!',
+            '🔔 Notificações Ativadas!',
             'Você receberá alertas sobre escalas, avisos e confirmações.',
             {'type': 'welcome', 'url': '/'}
         )
@@ -2046,7 +2046,7 @@ def push_test():
         for sub in subscriptions:
             success = send_push_notification(
                 sub,
-                'Min. Louvor: 🧪 Notificação de Teste',
+                '🧪 Notificação de Teste',
                 'Se você está vendo isso, as notificações estão funcionando perfeitamente!',
                 {'type': 'test', 'timestamp': datetime.utcnow().isoformat()}
             )
@@ -3097,12 +3097,9 @@ def add_aviso():
                 for idx, sub in enumerate(subscriptions, 1):
                     print(f"   📤 Enviando para subscription #{idx} (ID: {sub.id})...")
                     try:
-                        # Incluir "Min. Louvor:" no título para evitar "from Min. Louvor" duplicado no iOS
-                        titulo_completo = f'Min. Louvor: {emoji} {title}'
-                        
                         success = send_push_notification(
                             sub,
-                            titulo_completo,
+                            f'{emoji} {title}',
                             message_preview,
                             {
                                 'type': 'novo_aviso',
