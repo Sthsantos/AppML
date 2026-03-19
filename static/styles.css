@@ -399,7 +399,7 @@ body {
 
 .btn-login:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-blue);
+    box-shadow: var(--shadow-red);
 }
 
 .user-name-desktop {
@@ -548,7 +548,7 @@ body {
 .sidebar-link.active {
     background: var(--gradient-primary);
     color: var(--white);
-    box-shadow: var(--shadow-blue);
+    box-shadow: var(--shadow-red);
 }
 
 .sidebar-link.active::before {
@@ -920,7 +920,7 @@ body {
     font-size: 1.5rem;
     border-radius: var(--radius-lg);
     margin-bottom: 1rem;
-    box-shadow: var(--shadow-blue);
+    box-shadow: var(--shadow-red);
 }
 
 .feature-title {
@@ -981,7 +981,7 @@ body {
     font-size: 1.75rem;
     border-radius: var(--radius-lg);
     flex-shrink: 0;
-    box-shadow: var(--shadow-blue);
+    box-shadow: var(--shadow-red);
 }
 
 .stat-content {
@@ -1755,7 +1755,7 @@ select.form-control {
     color: var(--white);
     border-radius: var(--radius-lg);
     flex-shrink: 0;
-    box-shadow: var(--shadow-blue);
+    box-shadow: var(--shadow-red);
 }
 
 .culto-day {
