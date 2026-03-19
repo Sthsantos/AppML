@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ministry-v5.0.8-20260319';
+const CACHE_NAME = 'ministry-v5.0.9-20260319';
 const CACHE_ASSETS = [
     '/',
     '/static/styles.css',
@@ -134,7 +134,7 @@ self.addEventListener('push', event => {
     
     try {
         let notification = {
-            title: 'Ministério de Louvor',
+            title: '',
             body: 'Nova notificação',
             icon: '/static/icon-192x192.png',
             badge: '/static/icon-72x72.png',
@@ -172,7 +172,7 @@ self.addEventListener('push', event => {
         console.error('[SW] Erro ao processar push:', error);
         // Fallback: mostrar notificação básica
         event.waitUntil(
-            self.registration.showNotification('Ministério de Louvor', {
+            self.registration.showNotification('', {
                 body: 'Você tem uma nova notificação',
                 icon: '/static/icon-192x192.png',
                 badge: '/static/icon-72x72.png'
