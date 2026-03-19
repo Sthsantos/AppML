@@ -1417,6 +1417,9 @@ def edit_escala(escala_id):
 def delete_escala(escala_id):
     """Remove uma escala (apenas para admins)."""
     try:
+        # Verificar se é uma exclusão forçada (confirmada pelo usuário)
+        force = request.args.get('force', 'false').lower() == 'true'
+        
         with db.session.no_autoflush:
             escala = db.session.get(Escala, escala_id)
             if not escala:
@@ -1429,14 +1432,21 @@ def delete_escala(escala_id):
                 # Verificar se há substituições pendentes ou aceitas
                 subs_ativas = [s for s in substituicoes if s.status in ['pendente', 'aceito']]
                 
-                if subs_ativas:
+                if subs_ativas and not force:
+                    # Retornar info para confirmação do usuário
                     return jsonify({
-                        'success': False, 
-                        'message': f'Não é possível excluir esta escala pois existem {len(subs_ativas)} substituição(ões) pendente(s) ou aceita(s) vinculada(s). Cancele as substituições primeiro.'
+                        'success': False,
+                        'has_substituicoes': True,
+                        'count': len(subs_ativas),
+                        'message': f'Esta escala possui {len(subs_ativas)} substituição(ões) ativa(s). Deseja excluir tudo?'
                     }), 400
                 
-                # Se todas as substituições estão recusadas ou canceladas, deletar junto
-                print(f"🗑️ Deletando {len(substituicoes)} substituições canceladas/recusadas junto com a escala")
+                # Se force=true ou todas recusadas/canceladas, deletar junto
+                if subs_ativas:
+                    print(f"🗑️ [CONFIRMADO] Deletando {len(subs_ativas)} substituições ativas junto com a escala")
+                else:
+                    print(f"🗑️ Deletando {len(substituicoes)} substituições canceladas/recusadas junto com a escala")
+                    
                 for sub in substituicoes:
                     db.session.delete(sub)
         
@@ -1454,6 +1464,9 @@ def delete_escala(escala_id):
 def delete_escalas_culto(culto_id):
     """Remove todas as escalas de um culto especefico e limpa o repertorio (apenas para admins)."""
     try:
+        # Verificar se é uma exclusão forçada (confirmada pelo usuário)
+        force = request.args.get('force', 'false').lower() == 'true'
+        
         escalas = Escala.query.filter_by(culto_id=culto_id).all()
         if not escalas:
             return jsonify({'success': False, 'message': 'Nenhuma escala encontrada para este culto'}), 404
@@ -1466,14 +1479,21 @@ def delete_escalas_culto(culto_id):
             # Verificar se há substituições pendentes ou aceitas
             subs_ativas = [s for s in substituicoes if s.status in ['pendente', 'aceito']]
             
-            if subs_ativas:
+            if subs_ativas and not force:
+                # Retornar info para confirmação do usuário
                 return jsonify({
                     'success': False,
-                    'message': f'Não é possível excluir as escalas deste culto pois existem {len(subs_ativas)} substituição(ões) pendente(s) ou aceita(s) vinculada(s). Cancele as substituições primeiro.'
+                    'has_substituicoes': True,
+                    'count': len(subs_ativas),
+                    'message': f'Este culto possui {len(subs_ativas)} substituição(ões) ativa(s). Deseja excluir tudo?'
                 }), 400
             
-            # Se todas as substituições estão recusadas ou canceladas, deletar junto
-            print(f"🗑️ Deletando {len(substituicoes)} substituições canceladas/recusadas junto com as escalas do culto")
+            # Se force=true ou todas recusadas/canceladas, deletar junto
+            if subs_ativas:
+                print(f"🗑️ [CONFIRMADO] Deletando {len(subs_ativas)} substituições ativas junto com as escalas do culto")
+            else:
+                print(f"🗑️ Deletando {len(substituicoes)} substituições canceladas/recusadas junto com as escalas do culto")
+                
             for sub in substituicoes:
                 db.session.delete(sub)
         

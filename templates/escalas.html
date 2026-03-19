@@ -1665,8 +1665,97 @@ async function deleteEscalaConfirm(escalaId) {
             if (response.ok) {
                 showToast('Membro removido da escala com sucesso!', 'success');
                 loadEscalas();
+            } else if (result.has_substituicoes) {
+                // Há substituições vinculadas - pedir confirmação
+                mostrarConfirmacaoExclusaoComSubstituicoes(escalaId, result.count);
             } else {
                 showToast(result.message || 'Erro ao remover membro', 'error');
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            showToast('Erro ao processar requisição', 'error');
+        }
+    };
+    
+    openModal('deleteConfirmModal');
+}
+
+async function mostrarConfirmacaoExclusaoComSubstituicoes(escalaId, count) {
+    // Segunda confirmação: usuário confirma que quer excluir junto com substituições
+    document.getElementById('deleteConfirmTitle').textContent = '⚠️ Atenção: Substituições Vinculadas';
+    document.getElementById('deleteConfirmMessage').innerHTML = `
+        Esta escala possui <strong>${count} solicitação(ões) de substituição ativa(s)</strong> (pendente ou aceita).<br><br>
+        Se você excluir a escala, as substituições também serão removidas permanentemente.<br><br>
+        <strong>Deseja continuar e excluir tudo?</strong>
+    `;
+    
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+    confirmBtn.onclick = async () => {
+        closeModal('deleteConfirmModal');
+        
+        try {
+            // Fazer requisição com force=true para confirmar exclusão
+            const response = await fetch(`/delete_escala/${escalaId}?force=true`, {
+                method: 'POST'
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                showToast('Escala e substituições removidas com sucesso!', 'success');
+                loadEscalas();
+                // Recarregar painel de substituições se admin
+                if (typeof carregarSubstituicoesAdmin === 'function') {
+                    carregarSubstituicoesAdmin();
+                }
+            } else {
+                showToast(result.message || 'Erro ao remover escala', 'error');
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            showToast('Erro ao processar requisição', 'error');
+        }
+    };
+    
+    openModal('deleteConfirmModal');
+}
+
+async function mostrarConfirmacaoExclusaoCultoComSubstituicoes(cultoIds, cultoName, totalSubs) {
+    // Segunda confirmação: usuário confirma que quer excluir culto completo junto com substituições
+    const idsArray = Array.isArray(cultoIds) ? cultoIds : [cultoIds];
+    
+    document.getElementById('deleteConfirmTitle').textContent = '⚠️ Atenção: Substituições Vinculadas';
+    document.getElementById('deleteConfirmMessage').innerHTML = `
+        A escala "${cultoName}" possui <strong>${totalSubs} solicitação(ões) de substituição ativa(s)</strong> (pendente ou aceita).<br><br>
+        Se você excluir a escala completa, todas as substituições também serão removidas permanentemente.<br><br>
+        <strong>Deseja continuar e excluir tudo?</strong>
+    `;
+    
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+    confirmBtn.onclick = async () => {
+        closeModal('deleteConfirmModal');
+        
+        try {
+            // Fazer requisição com force=true para confirmar exclusão
+            const deletePromises = idsArray.map(id => 
+                fetch(`/delete_escalas_culto/${id}?force=true`, { method: 'POST' })
+            );
+            
+            const responses = await Promise.all(deletePromises);
+            const allSuccess = responses.every(r => r.ok);
+            
+            if (allSuccess) {
+                showToast('Escala completa e substituições removidas com sucesso!', 'success');
+                loadEscalas();
+                // Recarregar painel de substituições se admin
+                if (typeof carregarSubstituicoesAdmin === 'function') {
+                    carregarSubstituicoesAdmin();
+                }
+                {% if current_user.is_authenticated and current_user.is_admin %}
+                loadCultosPendentes();
+                {% endif %}
+            } else {
+                showToast('Erro ao remover algumas escalas', 'error');
             }
         } catch (error) {
             console.error('Erro:', error);
@@ -1696,6 +1785,18 @@ async function deleteEscalaCompletaConfirm(cultoIds, cultoName) {
             );
             
             const responses = await Promise.all(deletePromises);
+            const results = await Promise.all(responses.map(r => r.json()));
+            
+            // Verificar se algum tem substituições
+            const comSubstituicoes = results.filter(r => r.has_substituicoes);
+            
+            if (comSubstituicoes.length > 0) {
+                // Há substituições em pelo menos um culto - pedir confirmação
+                const totalSubs = comSubstituicoes.reduce((sum, r) => sum + r.count, 0);
+                mostrarConfirmacaoExclusaoCultoComSubstituicoes(idsArray, cultoName, totalSubs);
+                return;
+            }
+            
             const allSuccess = responses.every(r => r.ok);
             
             if (allSuccess) {
@@ -1705,7 +1806,8 @@ async function deleteEscalaCompletaConfirm(cultoIds, cultoName) {
                 loadCultosPendentes();
                 {% endif %}
             } else {
-                showToast('Erro ao remover algumas escalas', 'error');
+                const errorMsg = results.find(r => !r.success)?.message || 'Erro ao remover algumas escalas';
+                showToast(errorMsg, 'error');
             }
         } catch (error) {
             console.error('Erro:', error);
