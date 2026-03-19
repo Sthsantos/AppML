@@ -8,6 +8,8 @@ from sqlalchemy.orm import aliased  # Para criar aliases nas queries
 import secrets
 import os
 import json
+import requests  # Para WhatsApp API
+import re  # Para formatação de números
 from functools import wraps  # Importando wraps para decoradores
 from dotenv import load_dotenv
 from pywebpush import webpush, WebPushException
@@ -17,6 +19,11 @@ from py_vapid import Vapid
 
 # Carrega variaveis de ambiente do arquivo .env
 load_dotenv()
+
+# Configurações WhatsApp Business Cloud API
+WHATSAPP_TOKEN = os.environ.get('WHATSAPP_TOKEN')
+WHATSAPP_PHONE_ID = os.environ.get('WHATSAPP_PHONE_ID')
+WHATSAPP_API_URL = f"https://graph.facebook.com/v18.0/{WHATSAPP_PHONE_ID}/messages" if WHATSAPP_PHONE_ID else None
 
 # Configurações VAPID para Push Notifications  
 VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY')
@@ -1332,45 +1339,39 @@ def add_escala():
         db.session.add(nova_escala)
         db.session.commit()
         
-        # PUSH NOTIFICATION: Notificar membro sobre nova escala
+        # NOTIFICAÇÃO DUAL: Push + WhatsApp para nova escala
         try:
             member = db.session.get(Member, member_id)
             culto = db.session.get(Culto, culto_id)
             
             if member and culto:
-                # Buscar todas as subscricoes ativas do membro
-                subscriptions = PushSubscription.query.filter_by(
-                    member_id=member_id, 
-                    is_active=True
-                ).all()
+                # Formatar data e hora do culto
+                from datetime import datetime as dt
+                if culto.date and culto.time:
+                    culto_datetime = dt.combine(culto.date, culto.time)
+                    culto_data = culto_datetime.strftime("%d/%m/%Y")
+                    culto_hora = culto_datetime.strftime("%H:%M").replace(":", "h") + "min"
+                    mensagem_corpo = f'Você foi escalado como *{role}* para o culto do dia {culto_data}, às {culto_hora}. Por favor, confirme a sua presença!'
+                else:
+                    mensagem_corpo = f"Você foi escalado como *{role}* para um culto. Por favor, confirme a sua presença!"
                 
-                if subscriptions:
-                    # Formatar data e hora do culto
-                    from datetime import datetime as dt
-                    if culto.date and culto.time:
-                        culto_datetime = dt.combine(culto.date, culto.time)
-                        culto_data = culto_datetime.strftime("%d/%m/%Y")
-                        culto_hora = culto_datetime.strftime("%H:%M").replace(":", "h") + "min"
-                        mensagem_corpo = f'Você foi escalado para o culto do dia {culto_data}, às {culto_hora}. Por favor, confirme a sua presença!'
-                    else:
-                        mensagem_corpo = "Você foi escalado para um culto. Por favor, confirme a sua presença!"
-                    
-                    for sub in subscriptions:
-                        send_push_notification(
-                            sub,
-                            f'📋 Nova Escala: {culto.description}',
-                            mensagem_corpo,
-                            {
-                                'type': 'nova_escala',
-                                'url': '/minhas_escalas',
-                                'escala_id': nova_escala.id,
-                                'culto_id': culto_id,
-                                'requireInteraction': True
-                            }
-                        )
+                # Enviar notificação via Push + WhatsApp
+                results = send_notification_dual(
+                    member,
+                    f'📋 Nova Escala: {culto.description}',
+                    mensagem_corpo,
+                    {
+                        'type': 'nova_escala',
+                        'url': '/minhas_escalas',
+                        'escala_id': nova_escala.id,
+                        'culto_id': culto_id,
+                        'requireInteraction': True
+                    }
+                )
+                print(f"✅ Notificação enviada - Push: {results['push']}, WhatsApp: {results['whatsapp']}")
         except Exception as e:
             # Não falhar a criação da escala se a notificação falhar
-            print(f"Erro ao enviar notificação push: {e}")
+            print(f"⚠️ Erro ao enviar notificações: {e}")
         
         return jsonify({'success': True, 'message': 'Escala adicionada com sucesso!'}), 200
     except Exception as e:
@@ -1890,6 +1891,150 @@ def send_push_notification(subscription_info, title, body, data=None, icon='/sta
         import traceback
         traceback.print_exc()
         return False
+
+# ========================================
+# WHATSAPP NOTIFICATIONS
+# ========================================
+
+def format_phone_number(phone):
+    """
+    Formata número de telefone para padrão WhatsApp (apenas dígitos com código do país).
+    Exemplos:
+        (11) 98765-4321 → 5511987654321
+        11987654321 → 5511987654321
+        +55 11 98765-4321 → 5511987654321
+    """
+    if not phone:
+        return None
+    
+    # Remove todos os caracteres não numéricos
+    digits = re.sub(r'\D', '', phone)
+    
+    # Se já tem código do país (55), retorna
+    if digits.startswith('55') and len(digits) >= 12:
+        return digits
+    
+    # Se não tem código do país, adiciona 55 (Brasil)
+    if len(digits) >= 10:
+        return f'55{digits}'
+    
+    return None
+
+def send_whatsapp_notification(phone_number, message, title=None):
+    """
+    Envia notificação via WhatsApp Business Cloud API.
+    
+    Args:
+        phone_number: Número de telefone (será formatado automaticamente)
+        message: Mensagem de texto
+        title: Título opcional (será adicionado ao início da mensagem)
+    
+    Returns:
+        bool: True se enviado com sucesso, False caso contrário
+    """
+    if not WHATSAPP_TOKEN or not WHATSAPP_PHONE_ID:
+        print("⚠️  WhatsApp API não configurada. Configure WHATSAPP_TOKEN e WHATSAPP_PHONE_ID no .env")
+        return False
+    
+    # Formatar número
+    formatted_phone = format_phone_number(phone_number)
+    if not formatted_phone:
+        print(f"❌ Número de telefone inválido: {phone_number}")
+        return False
+    
+    # Formatar mensagem com título
+    full_message = f"*{title}*\n\n{message}" if title else message
+    
+    print(f"\n📱 [WHATSAPP] Enviando mensagem...")
+    print(f"   📞 Para: {formatted_phone}")
+    print(f"   📝 Mensagem: {full_message[:50]}...")
+    
+    try:
+        headers = {
+            'Authorization': f'Bearer {WHATSAPP_TOKEN}',
+            'Content-Type': 'application/json'
+        }
+        
+        payload = {
+            'messaging_product': 'whatsapp',
+            'to': formatted_phone,
+            'type': 'text',
+            'text': {
+                'preview_url': False,
+                'body': full_message
+            }
+        }
+        
+        response = requests.post(
+            WHATSAPP_API_URL,
+            headers=headers,
+            json=payload,
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            message_id = result.get('messages', [{}])[0].get('id', 'N/A')
+            print(f"   ✅ WhatsApp enviado com sucesso! ID: {message_id}")
+            return True
+        else:
+            print(f"   ❌ Erro ao enviar WhatsApp: {response.status_code}")
+            print(f"   📄 Resposta: {response.text}")
+            return False
+            
+    except requests.Timeout:
+        print(f"   ❌ Timeout ao enviar WhatsApp")
+        return False
+    except Exception as e:
+        print(f"   ❌ Erro inesperado ao enviar WhatsApp: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+def send_notification_dual(member, title, message, data=None):
+    """
+    Envia notificação via Push E WhatsApp simultaneamente.
+    
+    Args:
+        member: Objeto Member do banco de dados
+        title: Título da notificação
+        message: Corpo da mensagem
+        data: Dados adicionais para push notification (dict)
+    
+    Returns:
+        dict: {'push': bool, 'whatsapp': bool}
+    """
+    results = {
+        'push': False,
+        'whatsapp': False
+    }
+    
+    # Enviar Push Notification
+    try:
+        subscriptions = PushSubscription.query.filter_by(
+            member_id=member.id,
+            is_active=True
+        ).all()
+        
+        if subscriptions:
+            for sub in subscriptions:
+                success = send_push_notification(sub, title, message, data)
+                if success:
+                    results['push'] = True
+    except Exception as e:
+        print(f"⚠️ Erro ao enviar push para {member.name}: {e}")
+    
+    # Enviar WhatsApp
+    if member.phone:
+        try:
+            success = send_whatsapp_notification(member.phone, message, title)
+            results['whatsapp'] = success
+        except Exception as e:
+            print(f"⚠️ Erro ao enviar WhatsApp para {member.name}: {e}")
+    else:
+        print(f"⚠️ Membro {member.name} não tem telefone cadastrado")
+    
+    return results
 
 @app.route('/get_vapid_public_key', methods=['GET'])
 def get_vapid_public_key():
@@ -2777,29 +2922,26 @@ def solicitar_substituicao():
             solicitante = db.session.get(Member, member_id)
             
             if substituto and culto and solicitante:
-                subscriptions = PushSubscription.query.filter_by(
-                    member_id=membro_substituto_id,
-                    is_active=True
-                ).all()
+                from datetime import datetime as dt
+                culto_datetime = dt.combine(culto.date, culto.time)
+                culto_data = culto_datetime.strftime("%d/%m/%Y")
+                culto_hora = culto_datetime.strftime("%H:%M").replace(":", "h") + "min"
                 
-                if subscriptions:
-                    from datetime import datetime as dt
-                    culto_datetime = dt.combine(culto.date, culto.time)
-                    culto_data = culto_datetime.strftime("%d/%m/%Y")
-                    culto_hora = culto_datetime.strftime("%H:%M").replace(":", "h") + "min"
-                    
-                    for sub in subscriptions:
-                        send_push_notification(
-                            sub,
-                            '🔄 Solicitação de Substituição',
-                            f'{solicitante.name} solicitou que você o substitua como {escala.role} no culto do dia {culto_data}, às {culto_hora}.',
-                            {
-                                'type': 'substituicao_solicitada',
-                                'url': '/substituicoes',
-                                'substituicao_id': substituicao.id,
-                                'requireInteraction': True
-                            }
-                        )
+                mensagem = f'{solicitante.name} solicitou que você o substitua como *{escala.role}* no culto do dia {culto_data}, às {culto_hora}.'
+                
+                # Enviar notificação dual (Push + WhatsApp)
+                results = send_notification_dual(
+                    substituto,
+                    '🔄 Solicitação de Substituição',
+                    mensagem,
+                    {
+                        'type': 'substituicao_solicitada',
+                        'url': '/substituicoes',
+                        'substituicao_id': substituicao.id,
+                        'requireInteraction': True
+                    }
+                )
+                print(f"✅ Notificação enviada para {substituto.name} - Push: {results['push']}, WhatsApp: {results['whatsapp']}")
         except Exception as e:
             print(f"⚠️ Erro ao enviar notificação de substituição: {e}")
         
@@ -2912,37 +3054,34 @@ def responder_substituicao(sub_id):
             substituto = db.session.get(Member, member_id)
             
             if solicitante_id and culto and substituto:
-                subscriptions = PushSubscription.query.filter_by(
-                    member_id=solicitante_id,
-                    is_active=True
-                ).all()
+                solicitante = db.session.get(Member, solicitante_id)
                 
-                if subscriptions:
-                    from datetime import datetime as dt
-                    culto_datetime = dt.combine(culto.date, culto.time)
-                    culto_data = culto_datetime.strftime("%d/%m/%Y")
-                    culto_hora = culto_datetime.strftime("%H:%M").replace(":", "h") + "min"
-                    
-                    if acao == 'aceitar':
-                        titulo = '✅ Substituição Aceita'
-                        mensagem = f'{substituto.name} aceitou substituir você como {escala.role} no culto do dia {culto_data}, às {culto_hora}.'
-                    else:
-                        titulo = '❌ Substituição Recusada'
-                        mensagem = f'{substituto.name} recusou substituir você como {escala.role} no culto do dia {culto_data}, às {culto_hora}.'
-                    
-                    for sub in subscriptions:
-                        send_push_notification(
-                            sub,
-                            titulo,
-                            mensagem,
-                            {
-                                'type': 'substituicao_respondida',
-                                'url': '/minhas_escalas',
-                                'substituicao_id': substituicao.id,
-                                'status': acao,
-                                'requireInteraction': True
-                            }
-                        )
+                from datetime import datetime as dt
+                culto_datetime = dt.combine(culto.date, culto.time)
+                culto_data = culto_datetime.strftime("%d/%m/%Y")
+                culto_hora = culto_datetime.strftime("%H:%M").replace(":", "h") + "min"
+                
+                if acao == 'aceitar':
+                    titulo = '✅ Substituição Aceita'
+                    mensagem = f'{substituto.name} aceitou substituir você como *{escala.role}* no culto do dia {culto_data}, às {culto_hora}.'
+                else:
+                    titulo = '❌ Substituição Recusada'
+                    mensagem = f'{substituto.name} recusou substituir você como *{escala.role}* no culto do dia {culto_data}, às {culto_hora}.'
+                
+                # Enviar notificação dual (Push + WhatsApp)
+                results = send_notification_dual(
+                    solicitante,
+                    titulo,
+                    mensagem,
+                    {
+                        'type': 'substituicao_respondida',
+                        'url': '/minhas_escalas',
+                        'substituicao_id': substituicao.id,
+                        'status': acao,
+                        'requireInteraction': True
+                    }
+                )
+                print(f"✅ Notificação enviada para {solicitante.name} - Push: {results['push']}, WhatsApp: {results['whatsapp']}")
         except Exception as e:
             print(f"⚠️ Erro ao enviar notificação de resposta: {e}")
         
