@@ -2996,15 +2996,21 @@ def responder_substituicao(sub_id):
 def get_todas_substituicoes_admin():
     """Retorna todas as substituieees para o painel admin."""
     try:
-        substituicoes = db.session.query(Substituicao, Escala, Culto, Member, Member).join(
+        # Criar aliases para distinguir solicitante e substituto
+        Solicitante = aliased(Member)
+        Substituto = aliased(Member)
+        
+        # Query com aliases explícitos
+        substituicoes = db.session.query(
+            Substituicao, Escala, Culto, Solicitante, Substituto
+        ).join(
             Escala, Substituicao.escala_id == Escala.id
         ).join(
             Culto, Escala.culto_id == Culto.id
         ).join(
-            Member, Substituicao.membro_solicitante_id == Member.id
+            Solicitante, Substituicao.membro_solicitante_id == Solicitante.id
         ).join(
-            Member, Substituicao.membro_substituto_id == Member.id,
-            aliased=True
+            Substituto, Substituicao.membro_substituto_id == Substituto.id
         ).order_by(Substituicao.criado_em.desc()).all()
         
         subs_list = []
@@ -3026,7 +3032,9 @@ def get_todas_substituicoes_admin():
         
         return jsonify(subs_list), 200
     except Exception as e:
-        print(f"? Erro ao buscar substituieees admin: {str(e)}")
+        print(f"❌ Erro ao buscar substituieees admin: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/cancelar_substituicao/<int:sub_id>', methods=['POST'])
