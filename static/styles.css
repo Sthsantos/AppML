@@ -145,10 +145,25 @@
 }
 
 button, a, input, select, textarea {
-    -webkit-tap-highlight-color: rgba(102, 126, 234, 0.3);
+    -webkit-tap-highlight-color: rgba(220, 38, 38, 0.2);
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
+}
+
+/* Remove outline azul padrão do navegador */
+*:focus,
+*:focus-visible {
+    outline: none;
+}
+
+/* Adiciona outline vermelho personalizado para acessibilidade */
+a:focus-visible,
+button:focus-visible,
+.card:focus-visible,
+.feature-card:focus-visible {
+    outline: 2px solid var(--primary-500);
+    outline-offset: 2px;
 }
 
 button, a[href], input[type="submit"], input[type="button"], 
@@ -337,9 +352,9 @@ body {
 }
 
 .theme-toggle:hover {
-    background: var(--primary-50);
-    color: var(--primary-600);
-    border-color: var(--primary-200);
+    background: var(--bg-hover);
+    color: var(--text-color);
+    border-color: var(--gray-400);
     transform: scale(1.1) rotate(20deg);
 }
 
@@ -348,8 +363,8 @@ body {
 }
 
 [data-theme="dark"] .theme-toggle:hover {
-    background: var(--primary-900);
-    border-color: var(--primary-700);
+    background: var(--bg-hover);
+    border-color: var(--gray-600);
 }
 
 .theme-toggle i {

@@ -545,6 +545,20 @@
             grid-template-columns: 1fr;
         }
     }
+    
+    /* Estilos dos avisos para dark theme */
+    [data-theme="dark"] .announcement-title {
+        color: var(--text-color) !important;
+    }
+    
+    [data-theme="dark"] .announcement-message {
+        color: var(--text-secondary) !important;
+    }
+    
+    [data-theme="dark"] .announcement-time {
+        background: var(--bg-hover) !important;
+        color: var(--text-secondary) !important;
+    }
 </style>
 
 <script>
@@ -608,12 +622,12 @@ async function loadAnnouncements() {
                         <div class="card-body">
                             <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
                                 <i class="fas ${config.icon}" style="color: ${config.color}; font-size: 1.25rem;"></i>
-                                <h3 style="margin: 0; font-weight: 700; color: var(--gray-900); flex: 1; font-size: 1.1rem;">${aviso.title}</h3>
-                                <span style="display: inline-block; padding: 0.25rem 0.5rem; background: var(--gray-100); border-radius: 1rem; font-size: 0.75rem; font-weight: 600; color: var(--gray-700);">
+                                <h3 class="announcement-title" style="margin: 0; font-weight: 700; color: var(--text-color); flex: 1; font-size: 1.1rem;">${aviso.title}</h3>
+                                <span class="announcement-time" style="display: inline-block; padding: 0.25rem 0.5rem; background: var(--bg-hover); border-radius: 1rem; font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);">
                                     <i class="fas fa-clock"></i> ${formatRelativeDate(aviso.created_at)}
                                 </span>
                             </div>
-                            <p style="margin: 0.5rem 0 0 0; color: var(--gray-700); line-height: 1.6; white-space: pre-wrap;">${aviso.message}</p>
+                            <p class="announcement-message" style="margin: 0.5rem 0 0 0; color: var(--text-secondary); line-height: 1.6; white-space: pre-wrap;">${aviso.message}</p>
                             <div style="margin-top: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
                                 <span style="display: inline-block; padding: 0.2rem 0.6rem; background: ${config.color}; color: white; border-radius: 0.5rem; font-size: 0.75rem; font-weight: 600;">
                                     <i class="fas fa-flag"></i> ${config.label}
