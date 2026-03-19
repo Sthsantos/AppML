@@ -103,16 +103,43 @@ ADMIN_ROLES = [ROLE_ADMIN, ROLE_PASTOR, ROLE_LIDER_BANDA, ROLE_LIDER_MINISTERIO]
 # Configuracao do Flask
 app = Flask(__name__)
 
-# Validacao do SECRET_KEY em producao
+# Validacao e persistencia do SECRET_KEY em producao
 secret_key = os.environ.get('SECRET_KEY')
 flask_env = os.environ.get('FLASK_ENV', 'development')
+secret_key_file = os.path.join('instance', 'secret_key.txt')
 
-if flask_env == 'production' and not secret_key:
-    print("AVISO: SECRET_KEY nao definido em producao! Usando chave temporaria.")
-    print("Configure a variavel de ambiente SECRET_KEY no Render!")
-    secret_key = secrets.token_hex(32)
-elif not secret_key:
-    secret_key = secrets.token_hex(16)
+# Garantir que a pasta instance existe
+os.makedirs('instance', exist_ok=True)
+
+if not secret_key:
+    # Tentar carregar de arquivo persistente
+    if os.path.exists(secret_key_file):
+        try:
+            with open(secret_key_file, 'r') as f:
+                secret_key = f.read().strip()
+            print(f"✅ SECRET_KEY carregada de: {secret_key_file}")
+        except Exception as e:
+            print(f"⚠️ Erro ao ler SECRET_KEY do arquivo: {e}")
+            secret_key = None
+    
+    # Se não existe arquivo ou falhou ao ler, gerar nova chave e salvar
+    if not secret_key:
+        if flask_env == 'production':
+            print("⚠️ AVISO: SECRET_KEY não definida em produção! Gerando e salvando...")
+            secret_key = secrets.token_hex(32)
+        else:
+            secret_key = secrets.token_hex(16)
+        
+        # Salvar para reutilizar em próximos restarts
+        try:
+            with open(secret_key_file, 'w') as f:
+                f.write(secret_key)
+            print(f"✅ SECRET_KEY salva em: {secret_key_file}")
+            print(f"💡 DICA: Para produção, defina SECRET_KEY como variável de ambiente no Render")
+        except Exception as e:
+            print(f"⚠️ Erro ao salvar SECRET_KEY: {e}")
+else:
+    print(f"✅ SECRET_KEY carregada de variável de ambiente")
 
 app.secret_key = secret_key
 
