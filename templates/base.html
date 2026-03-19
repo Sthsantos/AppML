@@ -8,7 +8,7 @@
     <!-- PWA Meta Tags -->
     <meta name="description" content="">
     <meta name="theme-color" content="#dc2626" media="(prefers-color-scheme: light)">
-    <meta name="theme-color" content="#1a1a2e" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#1a1a1a" media="(prefers-color-scheme: dark)">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="">
@@ -873,7 +873,7 @@
                     // Atualizar meta theme-color
                     const metaColor = document.querySelector('meta[name="theme-color"]');
                     if (metaColor) {
-                        metaColor.setAttribute('content', newTheme === 'dark' ? '#1a1a2e' : '#667eea');
+                        metaColor.setAttribute('content', newTheme === 'dark' ? '#1a1a1a' : '#dc2626');
                     }
                     
                     console.log('✅ [TEMA NOVO] Tema alterado com sucesso!');

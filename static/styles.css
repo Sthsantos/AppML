@@ -104,19 +104,19 @@
    ======================================== */
 [data-theme="dark"] {
     /* Cores Dinâmicas (Dark Theme) */
-    --bg-primary: #0f172a;
-    --bg-secondary: #1e293b;
-    --bg-hover: #334155;
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #262626;
+    --bg-hover: #3a3a3a;
     --text-color: #f1f5f9;
     --text-secondary: #cbd5e1;
     --text-muted: #94a3b8;
-    --border-color: #334155;
-    --card-bg: #1e293b;
-    --navbar-bg: rgba(30, 41, 59, 0.95);
-    --sidebar-bg: #1e293b;
+    --border-color: #3a3a3a;
+    --card-bg: #262626;
+    --navbar-bg: rgba(38, 38, 38, 0.95);
+    --sidebar-bg: #262626;
     
     /* Ajustes de Gradientes para Dark */
-    --gradient-soft: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    --gradient-soft: linear-gradient(135deg, #262626 0%, #3a3a3a 100%);
     
     /* Sombras mais sutis no dark */
     --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px -1px rgba(0, 0, 0, 0.3);

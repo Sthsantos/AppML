@@ -137,7 +137,7 @@ const App = {
         updateMetaThemeColor(theme) {
             const metaThemeColor = document.querySelector('meta[name="theme-color"]');
             if (metaThemeColor) {
-                const color = theme === 'dark' ? '#1a1a2e' : '#667eea';
+                const color = theme === 'dark' ? '#1a1a1a' : '#dc2626';
                 metaThemeColor.setAttribute('content', color);
                 console.log('🎨 Meta theme-color atualizado para:', color);
             }
