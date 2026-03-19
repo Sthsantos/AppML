@@ -53,32 +53,32 @@
 
         <!-- Rankings de Escalas -->
         <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
-            <!-- Top 10 Mais Escalados -->
+            <!-- Mais Escalados -->
             <div class="section">
                 <div class="section-header">
                     <h2 class="section-title">
                         <i class="fas fa-award" style="color: #10b981;"></i>
-                        Top 10 - Mais Escalados
+                        Mais Escalados
                     </h2>
                 </div>
                 <div class="card">
                     <div class="card-body">
-                        <canvas id="rankingMaisChart" style="max-height: 500px;"></canvas>
+                        <canvas id="rankingMaisChart"></canvas>
                     </div>
                 </div>
             </div>
 
-            <!-- Top 10 Menos Escalados -->
+            <!-- Menos Escalados -->
             <div class="section">
                 <div class="section-header">
                     <h2 class="section-title">
                         <i class="fas fa-exclamation-triangle" style="color: #ef4444;"></i>
-                        Top 10 - Menos Escalados
+                        Menos Escalados
                     </h2>
                 </div>
                 <div class="card">
                     <div class="card-body">
-                        <canvas id="rankingMenosChart" style="max-height: 500px;"></canvas>
+                        <canvas id="rankingMenosChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -776,11 +776,12 @@ async function loadRankingEscalas() {
             return;
         }
         
-        // Ordenar: mais escalados (top 10)
-        const maisEscalados = data.ranking.sort((a, b) => b.total_escalas - a.total_escalas).slice(0, 10);
+        // Criar cópias do array e ordenar (spread operator cria novo array)
+        // Mais escalados: ordem decrescente (maior para menor)
+        const maisEscalados = [...data.ranking].sort((a, b) => b.total_escalas - a.total_escalas);
         
-        // Ordenar: menos escalados (top 10 com menos participações)
-        const menosEscalados = data.ranking.sort((a, b) => a.total_escalas - b.total_escalas).slice(0, 10);
+        // Menos escalados: ordem crescente (menor para maior)
+        const menosEscalados = [...data.ranking].sort((a, b) => a.total_escalas - b.total_escalas);
         
         renderRankingBarChart(
             'rankingMaisChart', 
@@ -887,6 +888,10 @@ function renderRankingBarChart(canvasId, data, label, bgColor, borderColor) {
     const labels = data.map(item => `${item.name} (${item.instrument})`);
     const values = data.map(item => item.total_escalas !== undefined ? item.total_escalas : item.total);
     
+    // Altura dinâmica baseada no número de itens (30px por barra)
+    const chartHeight = Math.max(300, data.length * 30);
+    ctx.style.height = chartHeight + 'px';
+    
     const chartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -901,7 +906,7 @@ function renderRankingBarChart(canvasId, data, label, bgColor, borderColor) {
         options: {
             indexAxis: 'y',  // Horizontal
             responsive: true,
-            maintainAspectRatio: true,
+            maintainAspectRatio: false,  // Permite altura dinâmica
             plugins: {
                 legend: { display: false }
             },
