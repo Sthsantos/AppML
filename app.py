@@ -164,8 +164,24 @@ if database_url and database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Desativa notificacoes de modificacao para performance
-app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')  # Pasta para uploads de audio
-app.config['AVATAR_FOLDER'] = os.path.join('static', 'uploads', 'avatars')  # Pasta para fotos de perfil
+
+# ========================================
+# PERSISTENCIA DE ARQUIVOS
+# ========================================
+# Detecta se há pasta persistente configurada (Render Disk ou volume externo)
+persistent_upload_folder = os.environ.get('PERSISTENT_UPLOAD_FOLDER')
+if persistent_upload_folder:
+    # PRODUCAO com Render Disk ou volume persistente montado
+    app.config['UPLOAD_FOLDER'] = persistent_upload_folder
+    app.config['AVATAR_FOLDER'] = os.path.join(persistent_upload_folder, 'avatars')
+    print(f"✅ Usando pasta persistente para uploads: {persistent_upload_folder}")
+else:
+    # DESENVOLVIMENTO LOCAL - pasta dentro do projeto (não persiste em deploys)
+    app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
+    app.config['AVATAR_FOLDER'] = os.path.join('static', 'uploads', 'avatars')
+    print(f"⚠️ Usando pasta local (não persistente): static/uploads")
+    print(f"   Para produção, configure PERSISTENT_UPLOAD_FOLDER no Render")
+
 app.config['MAX_CONTENT_LENGTH'] = int(os.environ.get('MAX_CONTENT_LENGTH', 50 * 1024 * 1024))  # 50 MB max file size
 
 # Extensoes de arquivo permitidas
@@ -181,8 +197,10 @@ app.config['WTF_CSRF_CHECK_DEFAULT'] = False  # Desativa verificacao CSRF por pa
 try:
     os.makedirs(app.instance_path, exist_ok=True)
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)  # Criar pasta de uploads
+    os.makedirs(app.config['AVATAR_FOLDER'], exist_ok=True)  # Criar pasta de avatares
+    print(f"✅ Pastas de upload criadas/verificadas")
 except OSError as e:
-    print(f"Erro ao criar pastas: {e}")
+    print(f"❌ Erro ao criar pastas: {e}")
 
 # Funcao auxiliar para validar extensao de arquivo de audio
 def allowed_audio_file(filename):
@@ -3676,8 +3694,22 @@ def delete_musica(musica_id):
 @app.route('/uploads/<filename>')
 @login_required
 def uploaded_file(filename):
-    """Serve arquivos de audio do direterio de uploads."""
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    """
+    Serve arquivos de audio do diretorio de uploads.
+    Funciona tanto com pasta local (static/uploads) quanto com pasta persistente (Render Disk).
+    """
+    try:
+        # Verifica segurança: impede acesso a diretórios superiores
+        if '..' in filename or filename.startswith('/'):
+            return jsonify({'error': 'Filename inválido'}), 400
+        
+        # Tenta servir o arquivo do diretório configurado
+        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    except FileNotFoundError:
+        return jsonify({'error': 'Arquivo não encontrado'}), 404
+    except Exception as e:
+        print(f"Erro ao servir arquivo {filename}: {str(e)}")
+        return jsonify({'error': 'Erro ao acessar arquivo'}), 500
 
 # ========================================
 # ROTAS PARA INDISPONIBILIDADE
