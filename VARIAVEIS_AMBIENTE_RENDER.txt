@@ -1,0 +1,41 @@
+===========================================
+🔑 VARIÁVEIS DE AMBIENTE - RENDER
+===========================================
+
+📋 COPIE E COLE EXATAMENTE COMO ESTÁ ABAIXO:
+
+-------------------------------------------
+VARIÁVEL 1: VAPID_PUBLIC_KEY
+-------------------------------------------
+
+BIE96TdoPCTzTEV2CzZnopybGg9fXG2bo_uZt0nFY0KKi42e-zgneIS4R89Hw_oEQCaoCm0PaV_PkSAbduNLs50
+
+-------------------------------------------
+VARIÁVEL 2: VAPID_PRIVATE_KEY
+-------------------------------------------
+
+-----BEGIN PRIVATE KEY-----
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgzRp0oAPfjQBk6DOk
+PVOISDaEt6GEZebmFvTEtVB+PzuhRANCAASBPek3aDwk80xFdgs2Z6KcmxoPX1xt
+m6P7mbdJxWNCiouNnvs4J3iEuEfPR8P6BEAmqAptD2lfz5EgG3bjS7Od
+-----END PRIVATE KEY-----
+
+-------------------------------------------
+VARIÁVEL 3: VAPID_CLAIMS_EMAIL
+-------------------------------------------
+
+mailto:admin@ministry.com
+
+===========================================
+
+⚠️ IMPORTANTE:
+- Cole EXATAMENTE como está
+- Mantenha as quebras de linha no VAPID_PRIVATE_KEY
+- Não adicione espaços extras
+
+✅ Depois de adicionar as 3 variáveis:
+1. Click "Save Changes"
+2. Aguardar redeploy automático
+3. Verificar logs
+
+===========================================

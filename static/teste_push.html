@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Push Notifications</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 500;
+        }
+        
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 2px solid #10b981;
+        }
+        
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 2px solid #ef4444;
+        }
+        
+        .status.warning {
+            background: #fef3c7;
+            color: #92400e;
+            border: 2px solid #f59e0b;
+        }
+        
+        .icon {
+            font-size: 24px;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-top: 20px;
+            width: 100%;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .output {
+            background: #1a1a2e;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .output .error-text {
+            color: #ff4444;
+        }
+        
+        .output .success-text {
+            color: #00ff00;
+        }
+        
+        .output .warning-text {
+            color: #ffaa00;
+        }
+        
+        .info-box {
+            background: #f3f4f6;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+        
+        .info-box strong {
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔔 Teste Push Notifications</h1>
+        <p class="subtitle">Diagnóstico Rápido do Sistema</p>
+        
+        <div id="statusContainer"></div>
+        
+        <button class="btn" onclick="runDiagnostic()">🔍 Executar Diagnóstico Completo</button>
+        
+        <div class="info-box">
+            <strong>⚠️ Importante:</strong><br>
+            Esta página deve ser acessada via:<br>
+            <code>http://localhost:5000/teste_push.html</code>
+        </div>
+        
+        <div id="output" class="output" style="display: none;"></div>
+    </div>
+    
+    <script>
+        async function runDiagnostic() {
+            const statusContainer = document.getElementById('statusContainer');
+            const output = document.getElementById('output');
+            
+            statusContainer.innerHTML = '<div class="status warning"><span class="icon">⏳</span> Executando diagnóstico...</div>';
+            output.style.display = 'block';
+            output.innerHTML = '';
+            
+            let log = '';
+            const addLog = (msg, type = 'normal') => {
+                const className = type === 'error' ? 'error-text' : type === 'success' ? 'success-text' : type === 'warning' ? 'warning-text' : '';
+                log += `<div class="${className}">${msg}</div>`;
+                output.innerHTML = log;
+                output.scrollTop = output.scrollHeight;
+            };
+            
+            addLog('═══════════════════════════════════════', 'success');
+            addLog('  DIAGNÓSTICO PUSH NOTIFICATIONS', 'success');
+            addLog('═══════════════════════════════════════', 'success');
+            addLog('');
+            
+            // 1. URL e Contexto
+            addLog('1️⃣ VERIFICANDO URL E CONTEXTO:', 'success');
+            addLog(`   URL: ${window.location.href}`);
+            addLog(`   Protocolo: ${window.location.protocol}`);
+            addLog(`   Hostname: ${window.location.hostname}`);
+            addLog(`   Contexto Seguro: ${window.isSecureContext ? '✅ SIM' : '❌ NÃO'}`, window.isSecureContext ? 'success' : 'error');
+            
+            if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                addLog('', 'error');
+                addLog('   ❌ PROBLEMA: Acessando via IP sem HTTPS!', 'error');
+                addLog('   💡 Use: http://localhost:5000/teste_push.html', 'warning');
+            }
+            addLog('');
+            
+            // 2. APIs do Navegador
+            addLog('2️⃣ VERIFICANDO APIs DO NAVEGADOR:', 'success');
+            addLog(`   Service Worker: ${'serviceWorker' in navigator ? '✅ Suportado' : '❌ Não suportado'}`, 'serviceWorker' in navigator ? 'success' : 'error');
+            addLog(`   Push Manager: ${'PushManager' in window ? '✅ Suportado' : '❌ Não suportado'}`, 'PushManager' in window ? 'success' : 'error');
+            addLog(`   Notification API: ${'Notification' in window ? '✅ Suportado' : '❌ Não suportado'}`, 'Notification' in window ? 'success' : 'error');
+            
+            if ('Notification' in window) {
+                addLog(`   Permissão: ${Notification.permission}`);
+                if (Notification.permission === 'denied') {
+                    addLog('   ⚠️ Notificações BLOQUEADAS pelo usuário!', 'warning');
+                }
+            }
+            addLog('');
+            
+            // 3. Servidor Flask
+            addLog('3️⃣ VERIFICANDO SERVIDOR FLASK:', 'success');
+            try {
+                const response = await fetch('/get_vapid_public_key');
+                const data = await response.json();
+                
+                if (response.ok && data.publicKey) {
+                    addLog(`   Status: ${response.status} ✅`, 'success');
+                    addLog(`   Chave VAPID: ${data.publicKey.substring(0, 30)}...`);
+                    addLog('   ✅ Servidor respondendo corretamente!', 'success');
+                } else {
+                    addLog(`   Status: ${response.status} ❌`, 'error');
+                    addLog('   ❌ Chave VAPID não encontrada', 'error');
+                }
+            } catch (error) {
+                addLog(`   ❌ Erro ao conectar: ${error.message}`, 'error');
+                addLog('   💡 Verifique se o servidor Flask está rodando', 'warning');
+            }
+            addLog('');
+            
+            // 4. PushNotificationManager
+            addLog('4️⃣ VERIFICANDO PUSHNOTIFICATIONMANAGER:', 'success');
+            
+            // Aguardar um pouco para o script carregar
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            if (window.PushNotificationManager) {
+                addLog('   ✅ PushNotificationManager existe!', 'success');
+                addLog(`   Tipo: ${typeof window.PushNotificationManager}`);
+                addLog(`   isSubscribed: ${window.PushNotificationManager.isSubscribed}`);
+                addLog(`   swRegistration: ${window.PushNotificationManager.swRegistration !== null ? 'Registrado ✅' : 'Não registrado ❌'}`, window.PushNotificationManager.swRegistration !== null ? 'success' : 'error');
+                addLog(`   publicKey: ${window.PushNotificationManager.publicKey !== null ? 'Carregada ✅' : 'Não carregada ❌'}`, window.PushNotificationManager.publicKey !== null ? 'success' : 'error');
+                
+                // Tentar inicializar
+                if (window.PushNotificationManager.swRegistration === null) {
+                    addLog('');
+                    addLog('   🔄 Tentando inicializar...', 'warning');
+                    try {
+                        const result = await window.PushNotificationManager.init();
+                        if (result) {
+                            addLog('   ✅ Inicialização bem-sucedida!', 'success');
+                        } else {
+                            addLog('   ⚠️ Inicialização retornou false', 'warning');
+                        }
+                    } catch (error) {
+                        addLog(`   ❌ Erro na inicialização: ${error.message}`, 'error');
+                    }
+                }
+            } else {
+                addLog('   ❌ PushNotificationManager NÃO EXISTE!', 'error');
+                addLog('   Possíveis causas:', 'warning');
+                addLog('   - push-manager.js não foi carregado', 'warning');
+                addLog('   - Erro de JavaScript impediu criação', 'warning');
+                addLog('   - Cache do navegador desatualizado', 'warning');
+            }
+            addLog('');
+            
+            // 5. Service Worker
+            if ('serviceWorker' in navigator) {
+                addLog('5️⃣ VERIFICANDO SERVICE WORKER:', 'success');
+                try {
+                    const reg = await navigator.serviceWorker.getRegistration();
+                    if (reg) {
+                        addLog('   ✅ Service Worker registrado!', 'success');
+                        addLog(`   Scope: ${reg.scope}`);
+                        addLog(`   Estado: ${reg.active ? reg.active.state : 'sem worker ativo'}`);
+                    } else {
+                        addLog('   ⚠️ Service Worker não registrado', 'warning');
+                    }
+                } catch (error) {
+                    addLog(`   ❌ Erro ao verificar: ${error.message}`, 'error');
+                }
+                addLog('');
+            }
+            
+            // Resumo
+            addLog('═══════════════════════════════════════', 'success');
+            addLog('  RESUMO', 'success');
+            addLog('═══════════════════════════════════════', 'success');
+            
+            const problemas = [];
+            
+            if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                problemas.push('Acessando via IP sem HTTPS');
+            }
+            
+            if (!window.PushNotificationManager) {
+                problemas.push('PushNotificationManager não existe');
+            }
+            
+            if (window.PushNotificationManager && window.PushNotificationManager.swRegistration === null) {
+                problemas.push('Service Worker não registrado');
+            }
+            
+            if (window.PushNotificationManager && window.PushNotificationManager.publicKey === null) {
+                problemas.push('Chave VAPID não carregada');
+            }
+            
+            if ('Notification' in window && Notification.permission === 'denied') {
+                problemas.push('Notificações bloqueadas');
+            }
+            
+            if (problemas.length === 0) {
+                addLog('✅ TUDO OK! Sistema funcionando!', 'success');
+                statusContainer.innerHTML = '<div class="status success"><span class="icon">✅</span> Sistema funcionando corretamente!</div>';
+            } else {
+                addLog('❌ PROBLEMAS ENCONTRADOS:', 'error');
+                problemas.forEach(p => addLog(`   - ${p}`, 'error'));
+                statusContainer.innerHTML = `<div class="status error"><span class="icon">❌</span> ${problemas.length} problema(s) encontrado(s)</div>`;
+            }
+            
+            addLog('═══════════════════════════════════════', 'success');
+        }
+        
+        // Executar automaticamente ao carregar
+        window.addEventListener('load', () => {
+            setTimeout(runDiagnostic, 500);
+        });
+    </script>
+    
+    <!-- Carregar push-manager.js -->
+    <script src="/static/js/push-manager.js?v=1.0.1"></script>
+</body>
+</html>
