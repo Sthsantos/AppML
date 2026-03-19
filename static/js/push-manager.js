@@ -466,7 +466,7 @@ const PushNotificationManager = {
             position: fixed;
             top: 20px;
             right: 20px;
-            background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#3b82f6'};
+            background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#dc2626'};
             color: white;
             padding: 1rem 1.5rem;
             border-radius: 0.75rem;

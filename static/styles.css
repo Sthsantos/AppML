@@ -221,7 +221,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
 }
 
 /* ========================================
@@ -1318,8 +1318,8 @@ select.form-control {
 }
 
 .toast-info .toast-icon-wrapper {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.1));
-    color: #2563eb;
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.15), rgba(239, 68, 68, 0.1));
+    color: #dc2626;
 }
 
 .toast-content {
@@ -1392,7 +1392,7 @@ select.form-control {
 }
 
 .toast-info .toast-progress {
-    color: #3b82f6;
+    color: #dc2626;
 }
 
 @keyframes toastProgress {
@@ -2341,7 +2341,7 @@ select.form-control {
     }
     
     .toast-info {
-        background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.08));
+        background: linear-gradient(135deg, rgba(220, 38, 38, 0.15), rgba(239, 68, 68, 0.08));
     }
     
     .toast-title {

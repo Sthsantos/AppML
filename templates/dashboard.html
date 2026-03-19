@@ -359,7 +359,7 @@
             <!-- Cards de Resumo -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
                 <div class="stat-card">
-                    <div class="stat-icon" style="background: rgba(59, 130, 246, 0.1);">
+                    <div class="stat-icon" style="background: rgba(220, 38, 38, 0.1);">
                         <i class="fas fa-music" style="color: rgb(59, 130, 246);"></i>
                     </div>
                     <div class="stat-info">
@@ -708,7 +708,7 @@ function renderInstrumentChart(data) {
         'rgba(236, 72, 153, 0.8)',
         'rgba(245, 158, 11, 0.8)',
         'rgba(16, 185, 129, 0.8)',
-        'rgba(59, 130, 246, 0.8)',
+        'rgba(220, 38, 38, 0.8)',
         'rgba(6, 182, 212, 0.8)'
     ];
     
@@ -1575,11 +1575,11 @@ function atualizarGraficoTop10Musicas(top10) {
             datasets: [{
                 label: 'Vezes Cantada',
                 data: top10.map(m => m.vezes),
-                backgroundColor: 'rgba(59, 130, 246, 0.8)',
-                borderColor: 'rgba(59, 130, 246, 1)',
+                backgroundColor: 'rgba(220, 38, 38, 0.8)',
+                borderColor: 'rgba(220, 38, 38, 1)',
                 borderWidth: 2,
                 borderRadius: 8,
-                hoverBackgroundColor: 'rgba(59, 130, 246, 1)'
+                hoverBackgroundColor: 'rgba(220, 38, 38, 1)'
             }]
         },
         options: {
@@ -1651,7 +1651,7 @@ function atualizarTabelaRankingMusicas(ranking) {
         <div style="overflow-x: auto;">
         <table style="width: 100%; border-collapse: collapse;">
             <thead>
-                <tr style="background: rgba(59, 130, 246, 0.1); border-bottom: 2px solid var(--primary-color);">
+                <tr style="background: rgba(220, 38, 38, 0.1); border-bottom: 2px solid var(--primary-color);">
                     <th style="padding: 1rem; text-align: left; font-weight: 700; color: var(--text-color);">#</th>
                     <th style="padding: 1rem; text-align: left; font-weight: 700; color: var(--text-color);">Música</th>
                     <th style="padding: 1rem; text-align: left; font-weight: 700; color: var(--text-color);">Artista</th>
@@ -1672,7 +1672,7 @@ function atualizarTabelaRankingMusicas(ranking) {
         
         html += `
             <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.2s;" 
-                onmouseover="this.style.background='rgba(59, 130, 246, 0.05)'" 
+                onmouseover="this.style.background='rgba(220, 38, 38, 0.05)'" 
                 onmouseout="this.style.background='transparent'">
                 <td style="padding: 1rem; font-weight: 600; color: var(--text-color); font-size: 1.1rem;">${posicao}</td>
                 <td style="padding: 1rem; font-weight: 600; color: var(--text-color);">${musica.titulo}</td>

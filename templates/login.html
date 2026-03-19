@@ -511,7 +511,7 @@
     </div>
     
     <!-- PWA Install Prompt -->
-    <div id="pwaInstallPrompt" style="display: none; position: fixed; bottom: 1rem; left: 1rem; right: 1rem; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%); color: white; padding: 1.5rem; border-radius: 1rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); z-index: 9999; animation: slideInUp 0.4s ease-out; border: 1px solid rgba(255, 255, 255, 0.1);">
+    <div id="pwaInstallPrompt" style="display: none; position: fixed; bottom: 1rem; left: 1rem; right: 1rem; background: linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%); color: white; padding: 1.5rem; border-radius: 1rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); z-index: 9999; animation: slideInUp 0.4s ease-out; border: 1px solid rgba(255, 255, 255, 0.1);">
         <button onclick="closePWAPrompt()" style="position: absolute; top: 0.75rem; right: 0.75rem; background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; backdrop-filter: blur(10px); transition: all 0.2s;">
             <i class="fas fa-times"></i>
         </button>
@@ -523,7 +523,7 @@
                 <h3 style="margin: 0 0 0.5rem 0; font-size: 1.25rem; font-weight: 700; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);">Instalar Aplicativo</h3>
                 <p style="margin: 0 0 1.25rem 0; font-size: 0.925rem; opacity: 0.95; line-height: 1.5;">Adicione à tela inicial para acesso rápido, notificações e uso offline!</p>
                 <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-                    <button onclick="installPWA()" class="btn-install" style="background: white; color: #2563eb; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; font-size: 0.925rem; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); transition: all 0.2s; font-family: 'Inter', sans-serif;">
+                    <button onclick="installPWA()" class="btn-install" style="background: white; color: #dc2626; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; font-size: 0.925rem; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); transition: all 0.2s; font-family: 'Inter', sans-serif;">
                         <i class="fas fa-download"></i> Instalar Agora
                     </button>
                     <button onclick="closePWAPrompt()" class="btn-dismiss" style="background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 500; cursor: pointer; font-size: 0.925rem; backdrop-filter: blur(10px); transition: all 0.2s; font-family: 'Inter', sans-serif;">
