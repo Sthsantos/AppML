@@ -2528,104 +2528,163 @@ function renderSubstituicaoCard(sub, tipo) {
 }
 
 async function adminForcarAceitar(subId) {
-    if (!confirm('Deseja FORÇAR a aceitação desta substituição? A escala será modificada automaticamente.')) {
-        return;
-    }
+    // Abrir modal moderno de confirmação
+    document.getElementById('deleteConfirmTitle').textContent = '✅ Forçar aceitação da substituição?';
+    document.getElementById('deleteConfirmMessage').innerHTML = `
+        A substituição será <strong>aceita automaticamente</strong> pelo sistema.<br><br>
+        A escala será modificada e os membros envolvidos receberão notificações.<br><br>
+        <strong>Deseja continuar?</strong>
+    `;
     
-    try {
-        const response = await fetch(`/admin_forcar_substituicao/${subId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ acao: 'aceitar' })
-        });
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+    confirmBtn.textContent = 'Aceitar';
+    confirmBtn.className = 'btn btn-success';
+    confirmBtn.onclick = async () => {
+        closeModal('deleteConfirmModal');
         
-        const result = await response.json();
-        
-        if (result.success) {
-            showToast(result.message || 'Substituição aceita com sucesso!', 'success');
-            carregarSubstituicoesAdmin();
-        } else {
-            showToast(result.message || 'Erro ao aceitar substituição', 'error');
+        try {
+            const response = await fetch(`/admin_forcar_substituicao/${subId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ acao: 'aceitar' })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showToast(result.message || 'Substituição aceita com sucesso!', 'success');
+                carregarSubstituicoesAdmin();
+            } else {
+                showToast(result.message || 'Erro ao aceitar substituição', 'error');
+            }
+        } catch (error) {
+            console.error('Erro ao forçar aceitar:', error);
+            showToast('Erro ao processar requisição', 'error');
+        } finally {
+            // Restaurar botão padrão
+            confirmBtn.textContent = 'Confirmar';
+            confirmBtn.className = 'btn btn-danger';
         }
-    } catch (error) {
-        console.error('Erro ao forçar aceitar:', error);
-        showToast('Erro ao processar requisição', 'error');
-    }
+    };
+    
+    openModal('deleteConfirmModal');
 }
 
 async function adminForcarRecusar(subId) {
-    const motivo = prompt('Informe o motivo da recusa (opcional):');
+    // Abrir modal moderno de confirmação
+    document.getElementById('deleteConfirmTitle').textContent = '❌ Forçar recusa da substituição?';
+    document.getElementById('deleteConfirmMessage').innerHTML = `
+        A substituição será <strong>recusada automaticamente</strong> pelo sistema.<br><br>
+        Os membros envolvidos receberão notificações da decisão.<br><br>
+        <label for="motivoRecusa" style="display: block; margin-top: 15px; margin-bottom: 5px; font-weight: 500;">Motivo da recusa (opcional):</label>
+        <textarea id="motivoRecusa" class="form-control" rows="3" placeholder="Informe o motivo da recusa..." style="width: 100%; margin-bottom: 10px;"></textarea>
+    `;
     
-    try {
-        const response = await fetch(`/admin_forcar_substituicao/${subId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                acao: 'recusar',
-                resposta: motivo || 'Recusado pelo administrador'
-            })
-        });
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+    confirmBtn.textContent = 'Recusar';
+    confirmBtn.className = 'btn btn-danger';
+    confirmBtn.onclick = async () => {
+        const motivo = document.getElementById('motivoRecusa')?.value || '';
+        closeModal('deleteConfirmModal');
         
-        const result = await response.json();
-        
-        if (result.success) {
-            showToast(result.message || 'Substituição recusada com sucesso!', 'success');
-            carregarSubstituicoesAdmin();
-        } else {
-            showToast(result.message || 'Erro ao recusar substituição', 'error');
+        try {
+            const response = await fetch(`/admin_forcar_substituicao/${subId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    acao: 'recusar',
+                    resposta: motivo || 'Recusado pelo administrador'
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showToast(result.message || 'Substituição recusada com sucesso!', 'success');
+                carregarSubstituicoesAdmin();
+            } else {
+                showToast(result.message || 'Erro ao recusar substituição', 'error');
+            }
+        } catch (error) {
+            console.error('Erro ao forçar recusar:', error);
+            showToast('Erro ao processar requisição', 'error');
+        } finally {
+            // Restaurar botão padrão
+            confirmBtn.textContent = 'Confirmar';
+            confirmBtn.className = 'btn btn-danger';
         }
-    } catch (error) {
-        console.error('Erro ao forçar recusar:', error);
-        showToast('Erro ao processar requisição', 'error');
-    }
+    };
+    
+    openModal('deleteConfirmModal');
 }
 
 async function adminCancelarSubstituicao(subId) {
-    if (!confirm('Deseja CANCELAR esta solicitação de substituição?')) {
-        return;
-    }
+    // Abrir modal moderno de confirmação
+    document.getElementById('deleteConfirmTitle').textContent = 'Cancelar solicitação de substituição?';
+    document.getElementById('deleteConfirmMessage').innerHTML = `
+        Esta solicitação de substituição será <strong>cancelada</strong>.<br><br>
+        O status mudará para "cancelado" e os membros envolvidos serão notificados.<br><br>
+        Esta ação não pode ser desfeita.
+    `;
     
-    try {
-        const response = await fetch(`/admin_cancelar_substituicao/${subId}`, {
-            method: 'POST'
-        });
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+    confirmBtn.onclick = async () => {
+        closeModal('deleteConfirmModal');
         
-        const result = await response.json();
-        
-        if (result.success) {
-            showToast(result.message || 'Substituição cancelada com sucesso!', 'success');
-            carregarSubstituicoesAdmin();
-        } else {
-            showToast(result.message || 'Erro ao cancelar substituição', 'error');
+        try {
+            const response = await fetch(`/admin_cancelar_substituicao/${subId}`, {
+                method: 'POST'
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showToast(result.message || 'Substituição cancelada com sucesso!', 'success');
+                carregarSubstituicoesAdmin();
+            } else {
+                showToast(result.message || 'Erro ao cancelar substituição', 'error');
+            }
+        } catch (error) {
+            console.error('Erro ao cancelar substituição:', error);
+            showToast('Erro ao processar requisição', 'error');
         }
-    } catch (error) {
-        console.error('Erro ao cancelar substituição:', error);
-        showToast('Erro ao processar requisição', 'error');
-    }
+    };
+    
+    openModal('deleteConfirmModal');
 }
 
 async function adminExcluirSubstituicao(subId) {
-    if (!confirm('Deseja EXCLUIR permanentemente este registro de substituição? Esta ação não pode ser desfeita.')) {
-        return;
-    }
+    // Abrir modal moderno de confirmação
+    document.getElementById('deleteConfirmTitle').textContent = 'Excluir registro de substituição?';
+    document.getElementById('deleteConfirmMessage').innerHTML = `
+        Este registro de solicitação de substituição será <strong>excluído permanentemente</strong> do sistema.<br><br>
+        Esta ação não pode ser desfeita.
+    `;
     
-    try {
-        const response = await fetch(`/admin_excluir_substituicao/${subId}`, {
-            method: 'DELETE'
-        });
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+    confirmBtn.onclick = async () => {
+        closeModal('deleteConfirmModal');
         
-        const result = await response.json();
-        
-        if (result.success) {
-            showToast(result.message || 'Registro excluído com sucesso!', 'success');
-            carregarSubstituicoesAdmin();
-        } else {
-            showToast(result.message || 'Erro ao excluir registro', 'error');
+        try {
+            const response = await fetch(`/admin_excluir_substituicao/${subId}`, {
+                method: 'DELETE'
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showToast(result.message || 'Registro excluído com sucesso!', 'success');
+                carregarSubstituicoesAdmin();
+            } else {
+                showToast(result.message || 'Erro ao excluir registro', 'error');
+            }
+        } catch (error) {
+            console.error('Erro ao excluir substituição:', error);
+            showToast('Erro ao processar requisição', 'error');
         }
-    } catch (error) {
-        console.error('Erro ao excluir substituição:', error);
-        showToast('Erro ao processar requisição', 'error');
-    }
+    };
+    
+    openModal('deleteConfirmModal');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
