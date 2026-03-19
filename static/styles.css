@@ -742,12 +742,12 @@ body {
 .btn-blue {
     background: var(--gradient-primary);
     color: var(--white);
-    box-shadow: var(--shadow-blue);
+    box-shadow: var(--shadow-red);
 }
 
 .btn-blue:hover {
     transform: translateY(-2px);
-    box-shadow: 0 15px 50px -10px rgba(59, 130, 246, 0.5);
+    box-shadow: 0 15px 50px -10px rgba(220, 38, 38, 0.5);
 }
 
 .btn-success {
