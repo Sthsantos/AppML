@@ -103,20 +103,20 @@
    TEMA ESCURO ELEGANTE
    ======================================== */
 [data-theme="dark"] {
-    /* Cores Dinâmicas (Dark Theme) */
-    --bg-primary: #1a1a1a;
-    --bg-secondary: #262626;
-    --bg-hover: #3a3a3a;
+    /* Cores Dinâmicas (Dark Theme) - Cinza Moderno */
+    --bg-primary: #121212;
+    --bg-secondary: #1e1e1e;
+    --bg-hover: #2a2a2a;
     --text-color: #f1f5f9;
     --text-secondary: #cbd5e1;
     --text-muted: #94a3b8;
-    --border-color: #3a3a3a;
-    --card-bg: #262626;
-    --navbar-bg: rgba(38, 38, 38, 0.95);
-    --sidebar-bg: #262626;
+    --border-color: #2a2a2a;
+    --card-bg: #1e1e1e;
+    --navbar-bg: rgba(30, 30, 30, 0.95);
+    --sidebar-bg: #1e1e1e;
     
     /* Ajustes de Gradientes para Dark */
-    --gradient-soft: linear-gradient(135deg, #262626 0%, #3a3a3a 100%);
+    --gradient-soft: linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 100%);
     
     /* Sombras mais sutis no dark */
     --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px -1px rgba(0, 0, 0, 0.3);
