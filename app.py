@@ -1421,6 +1421,25 @@ def delete_escala(escala_id):
             escala = db.session.get(Escala, escala_id)
             if not escala:
                 return jsonify({'success': False, 'message': 'Escala nao encontrada'}), 404
+            
+            # Verificar se há substituições vinculadas
+            substituicoes = Substituicao.query.filter_by(escala_id=escala_id).all()
+            
+            if substituicoes:
+                # Verificar se há substituições pendentes ou aceitas
+                subs_ativas = [s for s in substituicoes if s.status in ['pendente', 'aceito']]
+                
+                if subs_ativas:
+                    return jsonify({
+                        'success': False, 
+                        'message': f'Não é possível excluir esta escala pois existem {len(subs_ativas)} substituição(ões) pendente(s) ou aceita(s) vinculada(s). Cancele as substituições primeiro.'
+                    }), 400
+                
+                # Se todas as substituições estão recusadas ou canceladas, deletar junto
+                print(f"🗑️ Deletando {len(substituicoes)} substituições canceladas/recusadas junto com a escala")
+                for sub in substituicoes:
+                    db.session.delete(sub)
+        
         db.session.delete(escala)
         db.session.commit()
         return jsonify({'success': True, 'message': 'Escala removida com sucesso!'}), 200
@@ -1438,6 +1457,25 @@ def delete_escalas_culto(culto_id):
         escalas = Escala.query.filter_by(culto_id=culto_id).all()
         if not escalas:
             return jsonify({'success': False, 'message': 'Nenhuma escala encontrada para este culto'}), 404
+        
+        # Verificar substituições vinculadas a qualquer escala do culto
+        escala_ids = [e.id for e in escalas]
+        substituicoes = Substituicao.query.filter(Substituicao.escala_id.in_(escala_ids)).all()
+        
+        if substituicoes:
+            # Verificar se há substituições pendentes ou aceitas
+            subs_ativas = [s for s in substituicoes if s.status in ['pendente', 'aceito']]
+            
+            if subs_ativas:
+                return jsonify({
+                    'success': False,
+                    'message': f'Não é possível excluir as escalas deste culto pois existem {len(subs_ativas)} substituição(ões) pendente(s) ou aceita(s) vinculada(s). Cancele as substituições primeiro.'
+                }), 400
+            
+            # Se todas as substituições estão recusadas ou canceladas, deletar junto
+            print(f"🗑️ Deletando {len(substituicoes)} substituições canceladas/recusadas junto com as escalas do culto")
+            for sub in substituicoes:
+                db.session.delete(sub)
         
         count = len(escalas)
         for escala in escalas:
