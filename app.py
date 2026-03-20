@@ -2,6 +2,9 @@ from flask import Flask, render_template, jsonify, request, redirect, url_for, s
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_required, login_user, logout_user, current_user
 from flask_wtf.csrf import CSRFProtect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_caching import Cache
 from datetime import datetime, date, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -12,6 +15,7 @@ import secrets
 import os
 import json
 import traceback
+import bcrypt
 from functools import wraps  # Importando wraps para decoradores
 from dotenv import load_dotenv
 from pywebpush import webpush, WebPushException
@@ -113,6 +117,214 @@ ROLE_MEMBRO = 'membro'  # Membro comum - Acesso limitado
 # Roles com acesso administrativo pleno
 ADMIN_ROLES = [ROLE_ADMIN, ROLE_PASTOR, ROLE_LIDER_BANDA, ROLE_LIDER_MINISTERIO]
 
+# ========================================
+# FUNCOES AUXILIARES DE SEGURANCA
+# ========================================
+def hash_password(password: str, cost_factor: int = 12) -> str:
+    """
+    Hash de senha usando bcrypt com cost factor configuravel.
+    
+    Args:
+        password: Senha em texto plano
+        cost_factor: Custo do bcrypt (default: 12, recomendado: 12-14)
+        
+    Returns:
+        Hash bcrypt da senha (string)
+    """
+    if isinstance(password, str):
+        password = password.encode('utf-8')
+    salt = bcrypt.gensalt(rounds=cost_factor)
+    hashed = bcrypt.hashpw(password, salt)
+    return hashed.decode('utf-8')
+
+def verify_password(password: str, hash_stored: str) -> bool:
+    """
+    Verifica senha contra hash armazenado.
+    Suporta tanto bcrypt (novo) quanto Werkzeug (legacy).
+    
+    Args:
+        password: Senha em texto plano
+        hash_stored: Hash armazenado no banco
+        
+    Returns:
+        True se senha corresponde ao hash
+    """
+    if not hash_stored:
+        return False
+    
+    # Detectar tipo de hash
+    if hash_stored.startswith('$2b$') or hash_stored.startswith('$2a$') or hash_stored.startswith('$2y$'):
+        # Hash bcrypt
+        if isinstance(password, str):
+            password = password.encode('utf-8')
+        if isinstance(hash_stored, str):
+            hash_stored = hash_stored.encode('utf-8')
+        return bcrypt.checkpw(password, hash_stored)
+    else:
+        # Hash Werkzeug (legacy) - compatibilidade retroativa
+        return check_password_hash(hash_stored, password)
+
+# ========================================
+# FUNCOES DE VALIDACAO E SANITIZACAO
+# ========================================
+import html
+import re
+from typing import Optional
+
+def sanitize_html(text: str) -> str:
+    """
+    Remove tags HTML e escapa caracteres especiais para prevenir XSS.
+    
+    Args:
+        text: Texto a ser sanitizado
+        
+    Returns:
+        Texto sanitizado
+    """
+    if not text:
+        return ""
+    # Escapa caracteres HTML especiais
+    return html.escape(str(text).strip())
+
+def validate_email(email: str) -> bool:
+    """
+    Valida formato de email.
+    
+    Args:
+        email: Email a ser validado
+        
+    Returns:
+        True se email valido, False caso contrario
+    """
+    if not email:
+        return False
+    # Regex simples para validacao de email
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return bool(re.match(pattern, email.strip()))
+
+def validate_phone(phone: str) -> bool:
+    """
+    Valida formato de telefone brasileiro.
+    
+    Args:
+        phone: Telefone a ser validado
+        
+    Returns:
+        True se telefone valido, False caso contrario
+    """
+    if not phone:
+        return True  # Telefone opcional
+    # Remove caracteres nao numericos
+    phone_numbers = re.sub(r'\D', '', phone)
+    # Valida: 10 digitos (fixo) ou 11 digitos (celular com 9)
+    return len(phone_numbers) in [10, 11]
+
+def sanitize_string(text: str, max_length: Optional[int] = None) -> str:
+    """
+    Sanitiza string removendo caracteres perigosos e limitando tamanho.
+    
+    Args:
+        text: Texto a ser sanitizado
+        max_length: Tamanho maximo permitido (None = sem limite)
+        
+    Returns:
+        Texto sanitizado
+    """
+    if not text:
+        return ""
+    # Remove espacos extras e caracteres de controle
+    sanitized = ' '.join(str(text).split())
+    # Limita tamanho se especificado
+    if max_length and len(sanitized) > max_length:
+        sanitized = sanitized[:max_length]
+    return sanitized.strip()
+
+def validate_date_string(date_str: str, format: str = "%Y-%m-%d") -> bool:
+    """
+    Valida se string e uma data valida no formato especificado.
+    
+    Args:
+        date_str: String de data a ser validada
+        format: Formato esperado (default: YYYY-MM-DD)
+        
+    Returns:
+        True se data valida, False caso contrario
+    """
+    if not date_str:
+        return False
+    try:
+        datetime.strptime(date_str, format)
+        return True
+    except ValueError:
+        return False
+
+def sanitize_filename(filename: str) -> str:
+    """
+    Sanitiza nome de arquivo removendo caracteres perigosos.
+    
+    Args:
+        filename: Nome do arquivo original
+        
+    Returns:
+        Nome de arquivo seguro
+    """
+    if not filename:
+        return "unnamed"
+    # Remove path traversal (../, ..\, etc)
+    filename = os.path.basename(filename)
+    # Remove caracteres perigosos
+    filename = re.sub(r'[<>:"/\\|?*]', '', filename)
+    # Remove espacos extras
+    filename = '_'.join(filename.split())
+    return filename or "unnamed"
+
+# ============================================================
+# FUNÇÕES AUXILIARES - DRY PRINCIPLE
+# ============================================================
+
+def json_response(success: bool, message: str = None, data: dict = None, status_code: int = None) -> tuple:
+    """
+    Padroniza respostas JSON da API.
+    
+    Args:
+        success: Indica se a operação foi bem-sucedida
+        message: Mensagem para o usuário
+        data: Dados adicionais para incluir na resposta
+        status_code: Código HTTP de status (opcional, auto-detectado se None)
+        
+    Returns:
+        Tupla (response, status_code) para retornar do Flask
+    """
+    response = {'success': success}
+    
+    if message:
+        response['message'] = message
+    
+    if data:
+        response.update(data)
+    
+    # Auto-detectar status code se não fornecido
+    if status_code is None:
+        status_code = 200 if success else 400
+    
+    return jsonify(response), status_code
+
+
+def handle_db_error(e: Exception, operation: str = "operação") -> tuple:
+    """
+    Padroniza tratamento de erros de banco de dados.
+    
+    Args:
+        e: Exceção capturada
+        operation: Nome da operação que falhou (para logging)
+        
+    Returns:
+        Tupla (response, status_code) para retornar do Flask
+    """
+    db.session.rollback()
+    logger.error(f"Erro ao realizar {operation}: {str(e)}")
+    return json_response(False, f"Erro ao realizar {operation}: {str(e)}", status_code=500)
+
 # Configuracao do Flask
 app = Flask(__name__)
 
@@ -168,6 +380,42 @@ app.config['REMEMBER_COOKIE_DURATION'] = 2592000  # 30 dias para "lembrar-me"
 app.config['REMEMBER_COOKIE_SECURE'] = flask_env == 'production'
 app.config['REMEMBER_COOKIE_HTTPONLY'] = True
 app.config['REMEMBER_COOKIE_SAMESITE'] = 'Lax'
+
+# ========================================
+# CONFIGURACAO DE RATE LIMITING
+# ========================================
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://",  # Em producao, considere redis:// para persistencia
+    headers_enabled=True,  # Adiciona headers X-RateLimit-* nas respostas
+)
+logger.info("Rate limiter configurado: 200/dia, 50/hora (default)")
+
+# ========================================
+# CONFIGURACAO DE CACHE
+# ========================================
+# Detecta se Redis está disponível em produção
+redis_url = os.environ.get('REDIS_URL')
+if redis_url:
+    # PRODUCAO: Usar Redis para cache
+    cache_config = {
+        'CACHE_TYPE': 'redis',
+        'CACHE_REDIS_URL': redis_url,
+        'CACHE_DEFAULT_TIMEOUT': 300,  # 5 minutos
+        'CACHE_KEY_PREFIX': 'ministry_'
+    }
+    logger.info(f"Cache configurado com Redis: {redis_url}")
+else:
+    # DESENVOLVIMENTO: Usar cache em memória
+    cache_config = {
+        'CACHE_TYPE': 'SimpleCache',
+        'CACHE_DEFAULT_TIMEOUT': 300  # 5 minutos
+    }
+    logger.info("Cache configurado com SimpleCache (memória)")
+
+cache = Cache(app, config=cache_config)
 
 # Configura o banco de dados SQLite na pasta 'instance'
 # Em producao, use DATABASE_URL do ambiente (ex: PostgreSQL do Render/Heroku)
@@ -235,20 +483,27 @@ except ImportError:
 # Modelos para o banco de dados
 class User(db.Model, UserMixin):
     """Modelo para Usuarios administradores."""
+    __tablename__ = 'user'
+    
     id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False, index=True)  # Index para login
     password = db.Column(db.String(255), nullable=False)  # Armazena o hash da senha
     is_admin = db.Column(db.Boolean, default=False)  # Mantido para compatibilidade
-    role = db.Column(db.String(20), default=ROLE_MEMBRO)  # Nivel de permissao
+    role = db.Column(db.String(20), default=ROLE_MEMBRO, index=True)  # Index para queries por role
     avatar = db.Column(db.String(255), nullable=True, default='default-avatar.png')  # Foto de perfil
 
     def set_password(self, password):
         """Define a senha como hash para o Usuario."""
-        self.password = generate_password_hash(password)
+        self.password = hash_password(password)
 
     def check_password(self, password):
         """Verifica se a senha fornecida corresponde ao hash armazenado."""
-        return check_password_hash(self.password, password)
+        return verify_password(password, self.password)
+    
+    @property
+    def password_hash(self):
+        """Alias para password para compatibilidade."""
+        return self.password
     
     def has_admin_access(self):
         """Verifica se o Usuario tem acesso administrativo pleno."""
@@ -264,24 +519,31 @@ class User(db.Model, UserMixin):
 
 class Member(db.Model, UserMixin):
     """Modelo para membros comuns do Ministerio."""
+    __tablename__ = 'member'
+    
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
     instrument = db.Column(db.String(120), nullable=True)
-    email = db.Column(db.String(120), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False, index=True)  # Index para login
     phone = db.Column(db.String(20), nullable=True)
     password = db.Column(db.String(255), nullable=False)  # Armazena o hash da senha para membros
-    suspended = db.Column(db.Boolean, default=False)  # Campo para indicar Suspensao
+    suspended = db.Column(db.Boolean, default=False, index=True)  # Index para filtros de membros ativos
     is_admin = db.Column(db.Boolean, default=False)  # Mantido para compatibilidade
-    role = db.Column(db.String(20), default=ROLE_MEMBRO)  # Nivel de permissao
+    role = db.Column(db.String(20), default=ROLE_MEMBRO, index=True)  # Index para queries por role
     avatar = db.Column(db.String(255), nullable=True, default='default-avatar.png')  # Foto de perfil
 
     def set_password(self, password):
         """Define a senha como hash para o membro."""
-        self.password = generate_password_hash(password)
+        self.password = hash_password(password)
 
     def check_password(self, password):
         """Verifica se a senha fornecida corresponde ao hash armazenado."""
-        return check_password_hash(self.password, password)
+        return verify_password(password, self.password)
+    
+    @property
+    def password_hash(self):
+        """Alias para password para compatibilidade."""
+        return self.password
     
     def has_admin_access(self):
         """Verifica se o membro tem acesso administrativo pleno."""
@@ -304,8 +566,10 @@ culto_repertorio = db.Table('culto_repertorio',
 
 class Culto(db.Model):
     """Modelo para cultos do Ministerio."""
+    __tablename__ = 'culto'
+    
     id = db.Column(db.Integer, primary_key=True)
-    date = db.Column(db.Date, nullable=False)
+    date = db.Column(db.Date, nullable=False, index=True)  # Index para ordenação e filtros de data
     time = db.Column(db.Time, nullable=False)  # Alterado para db.Time para melhor manipulacao
     description = db.Column(db.String(255), nullable=False)
     
@@ -316,13 +580,15 @@ class Culto(db.Model):
 
 class Escala(db.Model):
     """Modelo para escalas de membros em cultos."""
+    __tablename__ = 'escala'
+    
     id = db.Column(db.Integer, primary_key=True)
-    member_id = db.Column(db.Integer, db.ForeignKey('member.id'), nullable=False)
-    culto_id = db.Column(db.Integer, db.ForeignKey('culto.id'), nullable=False)
+    member_id = db.Column(db.Integer, db.ForeignKey('member.id'), nullable=False, index=True)  # Index para JOINs
+    culto_id = db.Column(db.Integer, db.ForeignKey('culto.id'), nullable=False, index=True)  # Index para JOINs
     role = db.Column(db.String(120), nullable=False)  # Ex.: "Guitarrista Principal"
     
     # NOVOS CAMPOS - Sistema de Confirmacao de Presenca
-    status_confirmacao = db.Column(db.String(20), default='pendente')  # 'pendente', 'confirmado', 'negado'
+    status_confirmacao = db.Column(db.String(20), default='pendente', index=True)  # Index para filtros
     data_confirmacao = db.Column(db.DateTime, nullable=True)  # Quando confirmou/negou
     observacao_confirmacao = db.Column(db.Text, nullable=True)  # Mensagem opcional do membro
 
@@ -331,13 +597,15 @@ class Escala(db.Model):
 
 class Aviso(db.Model):
     """Modelo para avisos/notificacoes do Ministerio."""
+    __tablename__ = 'aviso'
+    
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(120), nullable=False)
     message = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     priority = db.Column(db.String(20), default='normal')  # low, normal, high, urgent
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    active = db.Column(db.Boolean, default=True)
+    active = db.Column(db.Boolean, default=True, index=True)  # Index para filtros de avisos ativos
 
 class Repertorio(db.Model):
     """Modelo para repertorio musical."""
@@ -390,12 +658,14 @@ class SolicitacaoExcecao(db.Model):
 
 class Feedback(db.Model):
     """Modelo para armazenar feedback dos Usuarios."""
+    __tablename__ = 'feedback'
+    
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, nullable=True)
     email = db.Column(db.String(120), nullable=False)
     message = db.Column(db.Text, nullable=False)
     type = db.Column(db.String(50), default='feedback')  # feedback, bug, suggestion
-    status = db.Column(db.String(20), default='pending')  # pending, reviewed, resolved
+    status = db.Column(db.String(20), default='pending', index=True)  # Index para filtros de status
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     response = db.Column(db.Text, nullable=True)  # Resposta do admin
     responded_at = db.Column(db.DateTime, nullable=True)  # Data da resposta
@@ -649,11 +919,21 @@ def index():
     return render_template('index.html')
 
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.limit("5 per minute")  # Protecao contra brute force: max 5 tentativas por minuto
 def login():
     """Rota para login de Usuarios e membros."""
     if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
+        email = request.form.get('email', '').strip()
+        password = request.form.get('password', '')
+        
+        # Validacao de entrada
+        if not email or not password:
+            flash('Email e senha são obrigatórios.', 'error')
+            return render_template('login.html')
+        
+        if not validate_email(email):
+            flash('Formato de email inválido.', 'error')
+            return render_template('login.html')
         
         try:
             # Tenta encontrar o Usuario como User ou Member
@@ -740,6 +1020,7 @@ def get_perfil():
 
 @app.route('/update_perfil', methods=['POST'])
 @login_required
+@limiter.limit("15 per minute")  # Limita atualizacoes de perfil
 def update_perfil():
     """Atualiza os dados do perfil do Usuario logado."""
     try:
@@ -748,39 +1029,53 @@ def update_perfil():
         user = current_user
         
         if not user or not user.is_authenticated:
-            return jsonify({'success': False, 'message': 'Usuario nao encontrado'}), 404
+            return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 404
+        
+        # Sanitizar e validar inputs
+        name = sanitize_string(data.get('name', ''), max_length=200) if 'name' in data else None
+        phone = data.get('phone', '').strip() if 'phone' in data else None
+        instrument = sanitize_string(data.get('instrument', ''), max_length=100) if 'instrument' in data else None
+        password = data.get('password', '').strip() if 'password' in data else None
+        
+        # Validações
+        if phone and not validate_phone(phone):
+            return jsonify({'success': False, 'message': 'Formato de telefone inválido.'}), 400
+        
+        if password and len(password) < 6:
+            return jsonify({'success': False, 'message': 'Senha deve ter no mínimo 6 caracteres.'}), 400
+        
+        if name and not name.strip():
+            return jsonify({'success': False, 'message': 'Nome não pode ser vazio.'}), 400
         
         # Se for Member, atualizar diretamente
         if isinstance(user, Member):
-            if 'name' in data:
-                user.name = data['name']
-            if 'phone' in data:
-                user.phone = data['phone']
-            if 'instrument' in data:
-                user.instrument = data['instrument']
-            if 'password' in data and data['password']:
-                user.set_password(data['password'])
+            if name:
+                user.name = name
+            if phone is not None:
+                user.phone = phone
+            if instrument:
+                user.instrument = instrument
+            if password:
+                user.set_password(password)
         else:  # User (admin)
             # Atualizar Member associado se existir
             member = Member.query.filter_by(email=user.email).first()
             if member:
-                if 'name' in data:
-                    member.name = data['name']
-                if 'phone' in data:
-                    member.phone = data['phone']
-                if 'instrument' in data:
-                    member.instrument = data['instrument']
+                if name:
+                    member.name = name
+                if phone is not None:
+                    member.phone = phone
+                if instrument:
+                    member.instrument = instrument
             
             # Atualizar senha do User
-            if 'password' in data and data['password']:
-                user.set_password(data['password'])
+            if password:
+                user.set_password(password)
         
         db.session.commit()
-        return jsonify({'success': True, 'message': 'Perfil atualizado com sucesso!'})
+        return json_response(True, 'Perfil atualizado com sucesso!')
     except Exception as e:
-        db.session.rollback()
-        logger.error(f"Erro ao atualizar perfil: {str(e)}")
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return handle_db_error(e, "atualizar perfil")
 
 @app.route('/upload_avatar', methods=['POST'])
 @login_required
@@ -831,11 +1126,9 @@ def upload_avatar():
         user.avatar = filename
         db.session.commit()
         
-        return jsonify({'success': True, 'message': 'Foto atualizada com sucesso!', 'avatar': filename})
+        return json_response(True, 'Foto atualizada com sucesso!', data={'avatar': filename})
     except Exception as e:
-        db.session.rollback()
-        logger.error(f"Erro ao fazer upload de avatar: {str(e)}")
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return handle_db_error(e, "fazer upload de avatar")
 
 @app.route('/membros')
 @login_required
@@ -1038,6 +1331,7 @@ def get_minhas_escalas():
 # Rotas para gerenciar cultos (apenas para admins)
 @app.route('/get_cultos', methods=['GET'])
 @login_required
+@cache.cached(timeout=60, key_prefix='all_cultos')  # Cache por 1 minuto (cultos podem ter passado)
 def get_cultos():
     """Carrega a lista de cultos, ordenada por data."""
     with db.session.no_autoflush:
@@ -1084,17 +1378,23 @@ def get_culto(culto_id):
 @app.route('/add_culto', methods=['POST'])
 @login_required
 @admin_required
+@limiter.limit("15 per minute")  # Limita criacao de cultos
 def add_culto():
     """Adiciona um novo culto (apenas para admins)."""
     data = request.json
-    logger.debug(f"Dados recebidos para add_culto: {data}")  # Depuraeeo
+    logger.debug(f"Dados recebidos para add_culto: {data}")
     
-    name = data.get('name')
-    date_time_str = data.get('date_time')
-    description = data.get('description', '')
+    # Sanitizar e validar inputs
+    name = sanitize_string(data.get('name', ''), max_length=200)
+    date_time_str = data.get('date_time', '').strip()
+    description = sanitize_html(data.get('description', ''))
     
-    if not all([name, date_time_str]):
-        return jsonify({'success': False, 'message': 'Nome e data/hora seo obrigaterios.'}), 400
+    if not name or not date_time_str:
+        return jsonify({'success': False, 'message': 'Nome e data/hora são obrigatórios.'}), 400
+    
+    # Validar formato de data/hora
+    if not re.match(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$', date_time_str):
+        return jsonify({'success': False, 'message': 'Formato de data/hora inválido. Use YYYY-MM-DDTHH:MM.'}), 400
     
     try:
         # Parse date_time no formato ISO: "2026-03-15T19:30"
@@ -1111,15 +1411,14 @@ def add_culto():
         novo_culto = Culto(date=date_obj, time=time_obj, description=name)
         db.session.add(novo_culto)
         db.session.commit()
+        cache.delete('all_cultos')  # Invalidar cache de cultos
         logger.debug(f"Culto cadastrado com sucesso: {novo_culto.id}, {novo_culto.date}, {novo_culto.time}, {novo_culto.description}")  # Depuraeeo
-        return jsonify({'success': True, 'message': 'Culto adicionado com sucesso!'}), 200
+        return json_response(True, 'Culto adicionado com sucesso!')
     except ValueError as ve:
         logger.error(f"Erro de formato nos dados: {str(ve)}")  # Depuraeeo
-        return jsonify({'success': False, 'message': f'Data ou horerio em formato invelido: {str(ve)}'}), 400
+        return json_response(False, f'Data ou horerio em formato invelido: {str(ve)}', status_code=400)
     except Exception as e:
-        db.session.rollback()
-        logger.error(f"Erro ao salvar culto: {str(e)}")  # Depuraeeo
-        return jsonify({'success': False, 'message': f'Erro interno ao cadastrar culto: {str(e)}'}), 500
+        return handle_db_error(e, "salvar culto")
 
 @app.route('/edit_culto', methods=['PUT'])
 @login_required
@@ -1161,12 +1460,12 @@ def edit_culto():
         culto.time = time_obj
         culto.description = name
         db.session.commit()
-        return jsonify({'success': True, 'message': 'Culto atualizado com sucesso!'}), 200
+        cache.delete('all_cultos')  # Invalidar cache de cultos
+        return json_response(True, 'Culto atualizado com sucesso!')
     except ValueError as ve:
-        return jsonify({'success': False, 'message': f'Data ou horerio em formato invelido: {str(ve)}'}), 400
+        return json_response(False, f'Data ou horerio em formato invelido: {str(ve)}', status_code=400)
     except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'message': f'Erro ao atualizar culto: {str(e)}'}), 500
+        return handle_db_error(e, "atualizar culto")
 
 @app.route('/delete_culto/<int:culto_id>', methods=['DELETE'])
 @login_required
@@ -1179,23 +1478,39 @@ def delete_culto(culto_id):
             return jsonify({'success': False, 'message': 'Culto nao encontrado'}), 404
     db.session.delete(culto)
     db.session.commit()
+    cache.delete('all_cultos')  # Invalidar cache de cultos
     return jsonify({'success': True, 'message': 'Culto removido com sucesso!'}), 200
 
 # Rotas para gerenciar membros (apenas para admins)
 @app.route('/add_member', methods=['POST'])
 @login_required
 @admin_required
+@limiter.limit("10 per minute")  # Limita criacao de membros para prevenir spam
 def add_member():
     """Adiciona um novo membro (apenas para admins)."""
     data = request.json
     logger.debug(f"Dados recebidos para add_member: {data}")
-    name = data.get('name')
-    instrument = data.get('instrument')
-    email = data.get('email')
-    phone = data.get('phone')
+    
+    # Sanitizar e validar inputs
+    name = sanitize_string(data.get('name', ''), max_length=200)
+    instrument = sanitize_string(data.get('instrument', ''), max_length=100)
+    email = data.get('email', '').strip().lower()
+    phone = data.get('phone', '').strip()
     password = data.get('password', '123456')  # Senha padrao, caso nao fornecida
-    if not all([name, email]):  # Nome e email seo obrigaterios
-        return jsonify({'success': False, 'message': 'Nome e email seo obrigaterios.'}), 400
+    
+    # Validacoes
+    if not name or not email:
+        return jsonify({'success': False, 'message': 'Nome e email são obrigatórios.'}), 400
+    
+    if not validate_email(email):
+        return jsonify({'success': False, 'message': 'Formato de email inválido.'}), 400
+    
+    if phone and not validate_phone(phone):
+        return jsonify({'success': False, 'message': 'Formato de telefone inválido.'}), 400
+    
+    if len(password) < 6:
+        return jsonify({'success': False, 'message': 'Senha deve ter no mínimo 6 caracteres.'}), 400
+    
     try:
         with db.session.no_autoflush:
             existing_member = Member.query.filter_by(email=email).first()
@@ -1212,12 +1527,11 @@ def add_member():
         novo_membro.set_password(password)  # Define a senha hashada
         db.session.add(novo_membro)
         db.session.commit()
+        cache.delete('all_members')  # Invalidar cache de membros
         logger.debug(f"Membro cadastrado com sucesso: {novo_membro.id}, {novo_membro.name}, {novo_membro.email}")
-        return jsonify({'success': True, 'message': 'Membro cadastrado com sucesso! A senha padrao e 123456, e o membro pode altere-la no perfil.'}), 200
+        return json_response(True, 'Membro cadastrado com sucesso! A senha padrao e 123456, e o membro pode altere-la no perfil.')
     except Exception as e:
-        db.session.rollback()
-        logger.error(f"Erro ao salvar membro: {str(e)}")
-        return jsonify({'success': False, 'message': f'Erro interno ao cadastrar membro: {str(e)}'}), 500
+        return handle_db_error(e, "salvar membro")
 
 @app.route('/get_member/<int:member_id>', methods=['GET'])
 @login_required
@@ -1242,22 +1556,45 @@ def get_member(member_id):
 @app.route('/update_member', methods=['POST'])
 @login_required
 @admin_required
+@limiter.limit("10 per minute")  # Limita atualizacoes de membros para prevenir abuso
 def update_member():
     """Edita um membro existente (apenas para admins)."""
     data = request.get_json()
-    logger.debug(f"Recebendo atualizaeeo para membro ID {data.get('id')}: {data}")
+    logger.debug(f"Recebendo atualizacao para membro ID {data.get('id')}: {data}")
+    
     if not data or 'id' not in data:
-        return jsonify({'success': False, 'message': 'Dados invelidos ou ID ausente'}), 400
+        return jsonify({'success': False, 'message': 'Dados inválidos ou ID ausente'}), 400
+    
+    # Sanitizar e validar inputs
+    name = sanitize_string(data.get('name', ''), max_length=200)
+    instrument = sanitize_string(data.get('instrument', ''), max_length=100)
+    email = data.get('email', '').strip().lower()
+    phone = data.get('phone', '').strip()
+    
+    # Validacoes
+    if name and not name.strip():
+        return jsonify({'success': False, 'message': 'Nome não pode ser vazio.'}), 400
+    
+    if email and not validate_email(email):
+        return jsonify({'success': False, 'message': 'Formato de email inválido.'}), 400
+    
+    if phone and not validate_phone(phone):
+        return jsonify({'success': False, 'message': 'Formato de telefone inválido.'}), 400
+    
     try:
         with db.session.no_autoflush:
             member = db.session.get(Member, data['id'])
             if not member:
                 return jsonify({'success': False, 'message': 'Membro nao encontrado'}), 404
         
-        member.name = data.get('name', member.name)
-        member.instrument = data.get('instrument', member.instrument)
-        member.email = data.get('email', member.email)
-        member.phone = data.get('phone', member.phone)
+        if name:
+            member.name = name
+        if instrument:
+            member.instrument = instrument
+        if email:
+            member.email = email
+        if phone:
+            member.phone = phone
         
         # Atualizar role (Nivel de permissao)
         if 'role' in data:
@@ -1272,11 +1609,10 @@ def update_member():
             member.set_password(data['password'])
         
         db.session.commit()
-        return jsonify({'success': True, 'message': 'Membro atualizado com sucesso!'})
+        cache.delete('all_members')  # Invalidar cache de membros
+        return json_response(True, 'Membro atualizado com sucesso!')
     except Exception as e:
-        db.session.rollback()
-        logger.error(f"Erro ao atualizar membro: {str(e)}")  # Depuraeeo
-        return jsonify({'success': False, 'message': f'Erro interno ao atualizar membro: {str(e)}'}), 500
+        return handle_db_error(e, "atualizar membro")
 
 @app.route('/toggle_suspend_member/<int:member_id>', methods=['POST'])
 @login_required
@@ -1291,11 +1627,10 @@ def toggle_suspend_member(member_id):
         logger.debug(f"Alterando status de Suspensao do membro {member_id}: {member.suspended} -> {not member.suspended}")  # Depuraeeo
         member.suspended = not member.suspended  # Alterna o estado
         db.session.commit()
-        return jsonify({'success': True, 'message': f'Membro {member.suspended and "suspenso" or "reativado"} com sucesso!'})
+        cache.delete('all_members')  # Invalidar cache de membros
+        return json_response(True, f'Membro {member.suspended and "suspenso" or "reativado"} com sucesso!')
     except Exception as e:
-        db.session.rollback()
-        logger.error(f"Erro ao suspender/reativar membro: {str(e)}")  # Depuraeeo
-        return jsonify({'success': False, 'message': f'Erro interno ao suspender/reativar membro: {str(e)}'}), 500
+        return handle_db_error(e, "suspender/reativar membro")
 
 @app.route('/delete_member/<int:member_id>', methods=['POST'])
 @login_required
@@ -1326,16 +1661,16 @@ def delete_member(member_id):
         # Deletar o membro
         db.session.delete(member)
         db.session.commit()
-        return jsonify({'success': True, 'message': 'Membro excluedo com sucesso!'})
+        cache.delete('all_members')  # Invalidar cache de membros
+        return json_response(True, 'Membro excluedo com sucesso!')
     except Exception as e:
-        db.session.rollback()
-        logger.error(f"Erro ao excluir membro: {str(e)}")  # Depuraeeo
-        return jsonify({'success': False, 'message': f'Erro ao excluir membro'}), 500
+        return handle_db_error(e, "excluir membro")
 
 # Rotas para gerenciar escalas (apenas para admins)
 @app.route('/add_escala', methods=['POST'])
 @login_required
 @admin_required
+@limiter.limit("20 per minute")  # Limita criacao de escalas (mais permissivo que membros)
 def add_escala():
     """Adiciona uma nova escala (apenas para admins)."""
     # Aceitar tanto JSON quanto form data
@@ -2477,6 +2812,7 @@ def get_cult_calendar():
 
 @app.route('/get_membros', methods=['GET'])
 @login_required
+@cache.cached(timeout=300, key_prefix='all_members')  # Cache por 5 minutos
 def get_membros():
     """Carrega a lista de membros."""
     with db.session.no_autoflush:
@@ -2493,34 +2829,42 @@ def get_membros():
 
 @app.route('/submit_feedback', methods=['POST'])
 @login_required
+@limiter.limit("10 per minute")  # Previne spam de feedback
 def submit_feedback():
     """Processa feedback enviado pelo Usuario."""
     data = request.json
-    feedback_text = data.get('feedback')
-    feedback_type = data.get('type', 'feedback')
+    feedback_text = sanitize_string(data.get('feedback', ''), max_length=2000)
+    feedback_type = sanitize_string(data.get('type', 'feedback'), max_length=50)
+    
+    # Validação
+    if not feedback_text or len(feedback_text.strip()) < 10:
+        return jsonify({'success': False, 'message': 'Feedback deve ter pelo menos 10 caracteres.'}), 400
+    
+    # Validar tipo de feedback (valores permitidos)
+    allowed_types = ['feedback', 'sugestao', 'bug', 'reclamacao', 'elogio']
+    if feedback_type not in allowed_types:
+        feedback_type = 'feedback'
     
     with db.session.no_autoflush:
         user = current_user
     user_email = user.email
     user_id = user.id
 
-    if feedback_text and user_email:
-        try:
-            novo_feedback = Feedback(
-                user_id=user_id,
-                email=user_email,
-                message=feedback_text,
-                type=feedback_type
-            )
-            db.session.add(novo_feedback)
-            db.session.commit()
-            logger.debug(f"Feedback recebido de {user_email}: {feedback_text}")
-            return jsonify({'success': True, 'message': 'Feedback enviado com sucesso!'}), 200
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Erro ao salvar feedback: {str(e)}")
-            return jsonify({'success': False, 'message': f'Erro ao enviar feedback: {str(e)}'}), 500
-    return jsonify({'success': False, 'message': 'Erro ao enviar feedback. Tente novamente.'}), 400
+    try:
+        novo_feedback = Feedback(
+            user_id=user_id,
+            email=user_email,
+            message=feedback_text,
+            type=feedback_type
+        )
+        db.session.add(novo_feedback)
+        db.session.commit()
+        logger.debug(f"Feedback recebido de {user_email}: {feedback_text[:50]}...")
+        return jsonify({'success': True, 'message': 'Feedback enviado com sucesso!'}), 200
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Erro ao salvar feedback: {str(e)}")
+        return jsonify({'success': False, 'message': f'Erro ao enviar feedback: {str(e)}'}), 500
 
 @app.route('/get_feedbacks', methods=['GET'])
 @login_required
@@ -2590,6 +2934,7 @@ def get_my_feedbacks():
 
 @app.route('/respond_feedback/<int:feedback_id>', methods=['POST'])
 @login_required
+@limiter.limit("30 per minute")  # Limita respostas de feedback
 def respond_feedback(feedback_id):
     """Responde a um feedback (apenas para admin)."""
     with db.session.no_autoflush:
@@ -2627,6 +2972,7 @@ def respond_feedback(feedback_id):
 
 @app.route('/update_feedback_status/<int:feedback_id>', methods=['POST'])
 @login_required
+@limiter.limit("30 per minute")  # Limita atualizacoes de status
 def update_feedback_status(feedback_id):
     """Atualiza o status de um feedback (apenas para admin)."""
     with db.session.no_autoflush:
@@ -2658,6 +3004,7 @@ def update_feedback_status(feedback_id):
 
 @app.route('/edit_feedback/<int:feedback_id>', methods=['POST'])
 @login_required
+@limiter.limit("30 per minute")  # Limita edicoes de feedback
 def edit_feedback(feedback_id):
     """Edita a resposta de um feedback (apenas para admin)."""
     with db.session.no_autoflush:
@@ -2695,6 +3042,7 @@ def edit_feedback(feedback_id):
 
 @app.route('/delete_feedback/<int:feedback_id>', methods=['DELETE', 'POST'])
 @login_required
+@limiter.limit("10 per minute")  # Limita exclusoes de feedback
 def delete_feedback(feedback_id):
     """Deleta um feedback (apenas para admin)."""
     with db.session.no_autoflush:
@@ -4345,6 +4693,7 @@ def estatisticas():
 @app.route('/get_dashboard_stats', methods=['GET'])
 @login_required
 @admin_required
+@cache.cached(timeout=120, key_prefix='dashboard_stats')  # Cache por 2 minutos
 def get_dashboard_stats():
     """Retorna estatesticas para o dashboard administrativo."""
     try:
