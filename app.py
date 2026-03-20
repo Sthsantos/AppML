@@ -1,31 +1,44 @@
-﻿from flask import Flask, render_template, jsonify, request, redirect, url_for, session, flash, send_from_directory
+from flask import Flask, render_template, jsonify, request, redirect, url_for, session, flash, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_required, login_user, logout_user, current_user
+from flask_wtf.csrf import CSRFProtect
 from datetime import datetime, date, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from sqlalchemy.orm import aliased  # Para criar aliases nas queries
+from sqlalchemy import or_
+from urllib.parse import urlparse
 import secrets
 import os
 import json
+import traceback
 from functools import wraps  # Importando wraps para decoradores
 from dotenv import load_dotenv
 from pywebpush import webpush, WebPushException
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
 from py_vapid import Vapid
+import logging
+
+# Configurar sistema de logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
 
 # Carrega variaveis de ambiente do arquivo .env
 load_dotenv()
 
-# Configurações VAPID para Push Notifications  
+# Configura��es VAPID para Push Notifications  
 VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY')
-VAPID_PRIVATE_KEY_FILE = 'vapid_private.pem'  # Usar arquivo PEM direto que já existe
+VAPID_PRIVATE_KEY_FILE = 'vapid_private.pem'  # Usar arquivo PEM direto que j� existe
 
 # Verificar se arquivo existe e usar
 if os.path.exists(VAPID_PRIVATE_KEY_FILE):
     VAPID_PRIVATE_KEY = VAPID_PRIVATE_KEY_FILE
-    print(f"✅ Usando VAPID key file: {VAPID_PRIVATE_KEY_FILE}")
+    logger.info(f"Usando VAPID key file: {VAPID_PRIVATE_KEY_FILE}")
 else:
     # Fallback: tentar criar do .env
     VAPID_PRIVATE_KEY_RAW = os.environ.get('VAPID_PRIVATE_KEY')
@@ -41,19 +54,19 @@ else:
             with open(key_file, 'w') as f:
                 f.write(VAPID_PRIVATE_KEY_RAW)
             VAPID_PRIVATE_KEY = key_file
-            print(f"✅ VAPID key salva em: {key_file}")
+            logger.info(f"VAPID key salva em: {key_file}")
         except Exception as e:
-            print(f"⚠️ Erro ao salvar VAPID key: {e}")
+            logger.warning(f"Erro ao salvar VAPID key: {e}")
             VAPID_PRIVATE_KEY = VAPID_PRIVATE_KEY_RAW
     else:
-        print("⚠️ VAPID_PRIVATE_KEY não encontrada!")
+        logger.warning("VAPID_PRIVATE_KEY n�o encontrada!")
         VAPID_PRIVATE_KEY = None
     
 VAPID_CLAIMS_EMAIL = os.environ.get('VAPID_CLAIMS_EMAIL', 'mailto:admin@ministry.com')
 
 def convert_pem_to_der(pem_key_str):
     """
-    Converte chave privada PEM para DER (necessário porque py_vapid não reconhece PEM)
+    Converte chave privada PEM para DER (necess�rio porque py_vapid n�o reconhece PEM)
     
     Args:
         pem_key_str: String com chave PEM (com \\n ou newlines reais)
@@ -84,7 +97,7 @@ def convert_pem_to_der(pem_key_str):
         
         return der_data
     except Exception as e:
-        print(f"❌ Erro ao converter PEM para DER: {e}")
+        logger.error(f"Erro ao converter PEM para DER: {e}")
         raise
 
 # ========================================
@@ -117,29 +130,29 @@ if not secret_key:
         try:
             with open(secret_key_file, 'r') as f:
                 secret_key = f.read().strip()
-            print(f"✅ SECRET_KEY carregada de: {secret_key_file}")
+            logger.info(f"SECRET_KEY carregada de: {secret_key_file}")
         except Exception as e:
-            print(f"⚠️ Erro ao ler SECRET_KEY do arquivo: {e}")
+            logger.warning(f"Erro ao ler SECRET_KEY do arquivo: {e}")
             secret_key = None
     
-    # Se não existe arquivo ou falhou ao ler, gerar nova chave e salvar
+    # Se n�o existe arquivo ou falhou ao ler, gerar nova chave e salvar
     if not secret_key:
         if flask_env == 'production':
-            print("⚠️ AVISO: SECRET_KEY não definida em produção! Gerando e salvando...")
+            logger.warning("AVISO: SECRET_KEY n�o definida em produ��o! Gerando e salvando...")
             secret_key = secrets.token_hex(32)
         else:
             secret_key = secrets.token_hex(16)
         
-        # Salvar para reutilizar em próximos restarts
+        # Salvar para reutilizar em pr�ximos restarts
         try:
             with open(secret_key_file, 'w') as f:
                 f.write(secret_key)
-            print(f"✅ SECRET_KEY salva em: {secret_key_file}")
-            print(f"💡 DICA: Para produção, defina SECRET_KEY como variável de ambiente no Render")
+            logger.info(f"SECRET_KEY salva em: {secret_key_file}")
+            logger.info("DICA: Para produ��o, defina SECRET_KEY como vari�vel de ambiente no Render")
         except Exception as e:
-            print(f"⚠️ Erro ao salvar SECRET_KEY: {e}")
+            logger.warning(f"Erro ao salvar SECRET_KEY: {e}")
 else:
-    print(f"✅ SECRET_KEY carregada de variável de ambiente")
+    logger.info("SECRET_KEY carregada de vari�vel de ambiente")
 
 app.secret_key = secret_key
 
@@ -168,19 +181,19 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Desativa notificacoes de
 # ========================================
 # PERSISTENCIA DE ARQUIVOS
 # ========================================
-# Detecta se há pasta persistente configurada (Render Disk ou volume externo)
+# Detecta se h� pasta persistente configurada (Render Disk ou volume externo)
 persistent_upload_folder = os.environ.get('PERSISTENT_UPLOAD_FOLDER')
 if persistent_upload_folder:
     # PRODUCAO com Render Disk ou volume persistente montado
     app.config['UPLOAD_FOLDER'] = persistent_upload_folder
     app.config['AVATAR_FOLDER'] = os.path.join(persistent_upload_folder, 'avatars')
-    print(f"✅ Usando pasta persistente para uploads: {persistent_upload_folder}")
+    logger.info(f"Usando pasta persistente para uploads: {persistent_upload_folder}")
 else:
-    # DESENVOLVIMENTO LOCAL - pasta dentro do projeto (não persiste em deploys)
+    # DESENVOLVIMENTO LOCAL - pasta dentro do projeto (n�o persiste em deploys)
     app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
     app.config['AVATAR_FOLDER'] = os.path.join('static', 'uploads', 'avatars')
-    print(f"⚠️ Usando pasta local (não persistente): static/uploads")
-    print(f"   Para produção, configure PERSISTENT_UPLOAD_FOLDER no Render")
+    logger.warning("Usando pasta local (n�o persistente): static/uploads")
+    logger.info("Para produ��o, configure PERSISTENT_UPLOAD_FOLDER no Render")
 
 app.config['MAX_CONTENT_LENGTH'] = int(os.environ.get('MAX_CONTENT_LENGTH', 50 * 1024 * 1024))  # 50 MB max file size
 
@@ -188,19 +201,14 @@ app.config['MAX_CONTENT_LENGTH'] = int(os.environ.get('MAX_CONTENT_LENGTH', 50 *
 ALLOWED_AUDIO_EXTENSIONS = {'mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'}
 ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}  # Extensoes permitidas para avatares
 
-# Configuracao para CSRF (opcional, caso queira usar Flask-WTF)
-# Desativando temporariamente para testes, caso o Flask-WTF nao esteja instalado
-app.config['WTF_CSRF_ENABLED'] = False  # Desativa protecao CSRF temporariamente para testes
-app.config['WTF_CSRF_CHECK_DEFAULT'] = False  # Desativa verificacao CSRF por padrao temporariamente
-
 # Garante que a pasta 'instance' exista
 try:
     os.makedirs(app.instance_path, exist_ok=True)
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)  # Criar pasta de uploads
     os.makedirs(app.config['AVATAR_FOLDER'], exist_ok=True)  # Criar pasta de avatares
-    print(f"✅ Pastas de upload criadas/verificadas")
+    logger.info("Pastas de upload criadas/verificadas")
 except OSError as e:
-    print(f"❌ Erro ao criar pastas: {e}")
+    logger.error(f"Erro ao criar pastas: {e}")
 
 # Funcao auxiliar para validar extensao de arquivo de audio
 def allowed_audio_file(filename):
@@ -218,10 +226,9 @@ login_manager.login_view = 'login'  # Define a rota de login como padrao
 
 # Configuracao opcional do Flask-WTF para CSRF
 try:
-    from flask_wtf.csrf import CSRFProtect
     csrf = CSRFProtect(app)
 except ImportError:
-    print("Flask-WTF nao instalado. protecao CSRF desativada. Instale com 'pip install flask-wtf' para habilitar.")
+    logger.warning("Flask-WTF n�o instalado. Prote��o CSRF desativada. Instale com 'pip install flask-wtf' para habilitar.")
     app.config['WTF_CSRF_ENABLED'] = False
     app.config['WTF_CSRF_CHECK_DEFAULT'] = False
 
@@ -400,8 +407,8 @@ class PushSubscription(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     member_id = db.Column(db.Integer, db.ForeignKey('member.id'), nullable=True)
     endpoint = db.Column(db.Text, nullable=False, unique=True)
-    p256dh_key = db.Column(db.Text, nullable=False)  # Chave pública para criptografia
-    auth_key = db.Column(db.Text, nullable=False)  # Chave de autenticação
+    p256dh_key = db.Column(db.Text, nullable=False)  # Chave p�blica para criptografia
+    auth_key = db.Column(db.Text, nullable=False)  # Chave de autentica��o
     device_info = db.Column(db.String(500), nullable=True)  # User agent / info do dispositivo
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_used = db.Column(db.DateTime, default=datetime.utcnow)
@@ -494,11 +501,11 @@ def inject_user_permissions():
 def add_cache_headers(response):
     """Adiciona headers de cache para arquivos estaticos e icones PWA."""
     if request.path.startswith('/static/'):
-        # Para ícones PWA: cache curto para forçar verificação de novas versões
+        # Para �cones PWA: cache curto para for�ar verifica��o de novas vers�es
         if 'icon' in request.path and any(request.path.endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.ico']):
             response.headers['Cache-Control'] = 'public, max-age=3600, must-revalidate'
             response.headers['ETag'] = 'v5.0-20260316'
-        # Cache de 1 ano para outros assets estáticos (fontes, etc)
+        # Cache de 1 ano para outros assets est�ticos (fontes, etc)
         elif any(request.path.endswith(ext) for ext in ['.svg', '.gif', '.woff', '.woff2', '.ttf', '.eot']):
             response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
         # Cache de 1 dia para CSS e JS
@@ -587,19 +594,19 @@ def create_admin():
             new_admin.set_password(password)
             db.session.add(new_admin)
             db.session.commit()
-            print(f"? Administrador criado: {email} / {password}")
+            logger.info(f"Administrador criado: {email} / {password}")
         else:
             # Atualizar role se je existe mas nao tem role definido
             if not existing_admin.role or existing_admin.role == ROLE_MEMBRO:
                 existing_admin.role = ROLE_ADMIN
                 existing_admin.is_admin = True
                 db.session.commit()
-                print(f"? Role do administrador atualizado: {email}")
+                logger.info(f"Role do administrador atualizado: {email}")
             else:
-                print(f"?? Administrador je existe: {email}")
+                logger.info(f"Administrador je existe: {email}")
     except Exception as e:
         db.session.rollback()
-        print(f"?? Erro ao criar admin: {e}")
+        logger.error(f"Erro ao criar admin: {e}")
 
 # funcao para verificar e garantir a criaeeo do banco de dados
 def ensure_database_exists():
@@ -611,26 +618,26 @@ def ensure_database_exists():
     if is_sqlite:
         try:
             os.makedirs(app.instance_path, exist_ok=True)
-            print(f"Pasta instance criada/verificada em: {app.instance_path}")
+            logger.info(f"Pasta instance criada/verificada em: {app.instance_path}")
         except Exception as e:
-            print(f"Erro ao criar pasta instance: {e}")
+            logger.error(f"Erro ao criar pasta instance: {e}")
             raise
     
     # Garantir que a pasta de uploads existe
     try:
         os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-        print(f"Pasta uploads criada/verificada em: {app.config['UPLOAD_FOLDER']}")
+        logger.info(f"Pasta uploads criada/verificada em: {app.config['UPLOAD_FOLDER']}")
     except Exception as e:
-        print(f"Aviso: Erro ao criar pasta uploads: {e}")
+        logger.warning(f"Aviso: Erro ao criar pasta uploads: {e}")
     
     # Criar todas as tabelas no banco de dados
     try:
         with app.app_context():
             db.create_all()
-            print(f"Tabelas do banco de dados criadas/verificadas.")
-            print(f"Usando banco de dados: {'SQLite' if is_sqlite else 'PostgreSQL'}")
+            logger.info(f"Tabelas do banco de dados criadas/verificadas.")
+            logger.info(f"Usando banco de dados: {'SQLite' if is_sqlite else 'PostgreSQL'}")
     except Exception as e:
-        print(f"ERRO ao criar tabelas do banco de dados: {e}")
+        logger.error(f"ERRO ao criar tabelas do banco de dados: {e}")
         raise
 
 # Rotas principais
@@ -638,7 +645,7 @@ def ensure_database_exists():
 @login_required
 def index():
     """Rota para a pegina inicial."""
-    print(f"User is admin: {current_user.is_admin}")  # Depuraeeo para verificar is_admin
+    logger.debug(f"User is admin: {current_user.is_admin}")
     return render_template('index.html')
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -666,15 +673,14 @@ def login():
                 login_user(user, remember=True)  # remember=True ativa cookie "lembrar-me"
                 session['user_id'] = user.id
                 session['is_admin'] = getattr(user, 'is_admin', False)  # Verifica se e admin (se User tem is_admin)
-                print(f"? Login bem-sucedido: {email} (Admin: {session['is_admin']}) - sessao permanente ativada")
+                logger.info(f"Login bem-sucedido: {email} (Admin: {session['is_admin']}) - sessao permanente ativada")
                 return redirect(url_for('index'))
             
             flash('Login falhou. Verifique email e senha.', 'error')
-            print(f"? Login falhou para: {email}")
+            logger.warning(f"Login falhou para: {email}")
             
         except Exception as e:
-            print(f"?? Erro no login: {e}")
-            import traceback
+            logger.error(f"Erro no login: {e}")
             traceback.print_exc()
             flash('Erro ao processar login. Tente novamente.', 'error')
     
@@ -728,8 +734,7 @@ def get_perfil():
         
         return jsonify({'success': True, 'perfil': perfil_data})
     except Exception as e:
-        print(f"Erro ao carregar perfil: {str(e)}")
-        import traceback
+        logger.error(f"Erro ao carregar perfil: {str(e)}")
         traceback.print_exc()
         return jsonify({'success': False, 'message': str(e)}), 500
 
@@ -774,7 +779,7 @@ def update_perfil():
         return jsonify({'success': True, 'message': 'Perfil atualizado com sucesso!'})
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao atualizar perfil: {str(e)}")
+        logger.error(f"Erro ao atualizar perfil: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/upload_avatar', methods=['POST'])
@@ -829,14 +834,14 @@ def upload_avatar():
         return jsonify({'success': True, 'message': 'Foto atualizada com sucesso!', 'avatar': filename})
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao fazer upload de avatar: {str(e)}")
+        logger.error(f"Erro ao fazer upload de avatar: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/membros')
 @login_required
 def membros():
     """Rota para a pegina de membros."""
-    print(f"User is admin in /membros: {current_user.is_admin}")  # Depuraeeo
+    logger.debug(f"User is admin in /membros: {current_user.is_admin}")
     return render_template('membros.html')
 
 @app.route('/get_members', methods=['GET'])
@@ -875,7 +880,7 @@ def get_members():
         
         return jsonify({'members': members_list})
     except Exception as e:
-        print(f"Erro ao carregar membros: {str(e)}")
+        logger.error(f"Erro ao carregar membros: {str(e)}")
         return jsonify({'error': str(e), 'members': []}), 500
 
 @app.route('/feedback')
@@ -921,7 +926,7 @@ def get_escalas():
         for escala, culto, membro in escalas:
             date_time_str = f"{culto.date.strftime('%Y-%m-%d')}T{culto.time.strftime('%H:%M')}"
             
-            # Verificar se o culto já passou
+            # Verificar se o culto j� passou
             culto_datetime = datetime.combine(culto.date, culto.time)
             ja_passou = culto_datetime < datetime.now()
             
@@ -943,7 +948,7 @@ def get_escalas():
         
         return jsonify({'escalas': escalas_list}), 200
     except Exception as e:
-        print(f"Erro ao buscar escalas: {str(e)}")
+        logger.error(f"Erro ao buscar escalas: {str(e)}")
         return jsonify({'escalas': []}), 500
 
 @app.route('/get_minhas_escalas', methods=['GET'])
@@ -951,28 +956,28 @@ def get_escalas():
 def get_minhas_escalas():
     """Retorna as escalas onde o Usuario logado esta escalado + outros membros da mesma equipe."""
     try:
-        print(f"\nDEBUG: get_minhas_escalas chamado")
-        print(f"current_user: {current_user}")
-        print(f"current_user.id: {current_user.id if current_user.is_authenticated else 'Not authenticated'}")
-        print(f"current_user type: {type(current_user)}")
+        logger.debug(f"get_minhas_escalas chamado")
+        logger.debug(f"current_user: {current_user}")
+        logger.debug(f"current_user.id: {current_user.id if current_user.is_authenticated else 'Not authenticated'}")
+        logger.debug(f"current_user type: {type(current_user)}")
         
         # Usar current_user ao inves de session para evitar problemas
         user = current_user
-        print(f"User encontrado: {user}")
+        logger.debug(f"User encontrado: {user}")
         
         # Buscar o membro correspondente
         if isinstance(user, User):
             member = Member.query.filter_by(email=user.email).first()
-            print(f"Membro encontrado via email: {member}")
+            logger.debug(f"Membro encontrado via email: {member}")
         else:
             member = user
-            print(f"Usuario ja e membro: {member}")
+            logger.debug(f"Usuario ja e membro: {member}")
         
         if not member:
-            print("ERRO: Nenhum membro encontrado!")
+            logger.error("ERRO: Nenhum membro encontrado!")
             return jsonify({'escalas': []}), 200
         
-        print(f"OK - Membro: {member.name} (ID: {member.id})")
+        logger.debug(f"OK - Membro: {member.name} (ID: {member.id})")
         
         # 1. Buscar cultos onde o Usuario esta escalado
         meus_cultos = db.session.query(Escala.culto_id).filter(
@@ -980,10 +985,10 @@ def get_minhas_escalas():
         ).distinct().all()
         
         culto_ids = [c[0] for c in meus_cultos]
-        print(f"Cultos onde esta escalado: {culto_ids}")
+        logger.debug(f"Cultos onde esta escalado: {culto_ids}")
         
         if not culto_ids:
-            print("INFO: Usuario nao esta escalado em nenhum culto")
+            logger.info("INFO: Usuario nao esta escalado em nenhum culto")
             return jsonify({'escalas': []}), 200
         
         # 2. Buscar TODAS as escalas desses cultos (para mostrar a equipe completa)
@@ -995,7 +1000,7 @@ def get_minhas_escalas():
             Escala.culto_id.in_(culto_ids)
         ).order_by(Culto.date, Culto.time, Escala.id).all()
         
-        print(f"Total de escalas (incluindo equipe): {len(escalas)}")
+        logger.debug(f"Total de escalas (incluindo equipe): {len(escalas)}")
         
         # 3. Montar lista com marcaeeo do Usuario atual
         escalas_list = []
@@ -1023,11 +1028,10 @@ def get_minhas_escalas():
                 'observacao_confirmacao': escala.observacao_confirmacao
             })
         
-        print(f"OK - Retornando {len(escalas_list)} escalas")
+        logger.debug(f"OK - Retornando {len(escalas_list)} escalas")
         return jsonify({'escalas': escalas_list}), 200
     except Exception as e:
-        print(f"ERRO ao buscar minhas escalas: {str(e)}")
-        import traceback
+        logger.error(f"ERRO ao buscar minhas escalas: {str(e)}")
         traceback.print_exc()
         return jsonify({'escalas': []}), 500
 
@@ -1038,14 +1042,14 @@ def get_cultos():
     """Carrega a lista de cultos, ordenada por data."""
     with db.session.no_autoflush:
         cultos = Culto.query.order_by(Culto.date.asc(), Culto.time.asc()).all()
-    print(f"Retornando {len(cultos)} cultos: {[(c.id, c.date, c.time, c.description) for c in cultos]}")  # Depuraeeo
+    logger.debug(f"Retornando {len(cultos)} cultos: {[(c.id, c.date, c.time, c.description) for c in cultos]}")
     
     cultos_list = []
     for culto in cultos:
         # Combinar data e hora em um enico datetime string
         date_time_str = f"{culto.date.strftime('%Y-%m-%d')}T{culto.time.strftime('%H:%M')}"
         
-        # Verificar se o culto já passou
+        # Verificar se o culto j� passou
         culto_datetime = datetime.combine(culto.date, culto.time)
         ja_passou = culto_datetime < datetime.now()
         
@@ -1083,7 +1087,7 @@ def get_culto(culto_id):
 def add_culto():
     """Adiciona um novo culto (apenas para admins)."""
     data = request.json
-    print(f"Dados recebidos para add_culto: {data}")  # Depuraeeo
+    logger.debug(f"Dados recebidos para add_culto: {data}")  # Depuraeeo
     
     name = data.get('name')
     date_time_str = data.get('date_time')
@@ -1101,20 +1105,20 @@ def add_culto():
         with db.session.no_autoflush:
             existing_culto = Culto.query.filter_by(date=date_obj, time=time_obj, description=name).first()
             if existing_culto:
-                print(f"Culto je existe no banco: ID {existing_culto.id}, Data {existing_culto.date}, Horerio {existing_culto.time}, Descrieeo {existing_culto.description}")  # Depuraeeo
+                logger.debug(f"Culto je existe no banco: ID {existing_culto.id}, Data {existing_culto.date}, Horerio {existing_culto.time}, Descrieeo {existing_culto.description}")  # Depuraeeo
                 return jsonify({'success': False, 'message': 'Este culto je existe.'}), 400
         
         novo_culto = Culto(date=date_obj, time=time_obj, description=name)
         db.session.add(novo_culto)
         db.session.commit()
-        print(f"Culto cadastrado com sucesso: {novo_culto.id}, {novo_culto.date}, {novo_culto.time}, {novo_culto.description}")  # Depuraeeo
+        logger.debug(f"Culto cadastrado com sucesso: {novo_culto.id}, {novo_culto.date}, {novo_culto.time}, {novo_culto.description}")  # Depuraeeo
         return jsonify({'success': True, 'message': 'Culto adicionado com sucesso!'}), 200
     except ValueError as ve:
-        print(f"Erro de formato nos dados: {str(ve)}")  # Depuraeeo
+        logger.error(f"Erro de formato nos dados: {str(ve)}")  # Depuraeeo
         return jsonify({'success': False, 'message': f'Data ou horerio em formato invelido: {str(ve)}'}), 400
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao salvar culto: {str(e)}")  # Depuraeeo
+        logger.error(f"Erro ao salvar culto: {str(e)}")  # Depuraeeo
         return jsonify({'success': False, 'message': f'Erro interno ao cadastrar culto: {str(e)}'}), 500
 
 @app.route('/edit_culto', methods=['PUT'])
@@ -1184,7 +1188,7 @@ def delete_culto(culto_id):
 def add_member():
     """Adiciona um novo membro (apenas para admins)."""
     data = request.json
-    print(f"Dados recebidos para add_member: {data}")  # Depuraeeo
+    logger.debug(f"Dados recebidos para add_member: {data}")
     name = data.get('name')
     instrument = data.get('instrument')
     email = data.get('email')
@@ -1208,11 +1212,11 @@ def add_member():
         novo_membro.set_password(password)  # Define a senha hashada
         db.session.add(novo_membro)
         db.session.commit()
-        print(f"Membro cadastrado com sucesso: {novo_membro.id}, {novo_membro.name}, {novo_membro.email}")  # Depuraeeo
+        logger.debug(f"Membro cadastrado com sucesso: {novo_membro.id}, {novo_membro.name}, {novo_membro.email}")
         return jsonify({'success': True, 'message': 'Membro cadastrado com sucesso! A senha padrao e 123456, e o membro pode altere-la no perfil.'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao salvar membro: {str(e)}")  # Depuraeeo
+        logger.error(f"Erro ao salvar membro: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro interno ao cadastrar membro: {str(e)}'}), 500
 
 @app.route('/get_member/<int:member_id>', methods=['GET'])
@@ -1224,7 +1228,7 @@ def get_member(member_id):
         member = db.session.get(Member, member_id)
         if not member:
             return jsonify({'error': 'Membro nao encontrado'}), 404
-    print(f"Retornando dados do membro {member_id}: {member.name}, suspended: {member.suspended}")  # Depuraeeo
+    logger.debug(f"Retornando dados do membro {member_id}: {member.name}, suspended: {member.suspended}")
     return jsonify({
         'id': member.id,
         'name': member.name,
@@ -1241,7 +1245,7 @@ def get_member(member_id):
 def update_member():
     """Edita um membro existente (apenas para admins)."""
     data = request.get_json()
-    print(f"Recebendo atualizaeeo para membro ID {data.get('id')}: {data}")  # Depuraeeo
+    logger.debug(f"Recebendo atualizaeeo para membro ID {data.get('id')}: {data}")
     if not data or 'id' not in data:
         return jsonify({'success': False, 'message': 'Dados invelidos ou ID ausente'}), 400
     try:
@@ -1262,7 +1266,7 @@ def update_member():
                 member.role = new_role
                 # Sincronizar is_admin com o role
                 member.is_admin = new_role in ADMIN_ROLES
-                print(f"Role atualizado para: {new_role}")
+                logger.debug(f"Role atualizado para: {new_role}")
         
         if 'password' in data and data['password']:
             member.set_password(data['password'])
@@ -1271,7 +1275,7 @@ def update_member():
         return jsonify({'success': True, 'message': 'Membro atualizado com sucesso!'})
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao atualizar membro: {str(e)}")  # Depuraeeo
+        logger.error(f"Erro ao atualizar membro: {str(e)}")  # Depuraeeo
         return jsonify({'success': False, 'message': f'Erro interno ao atualizar membro: {str(e)}'}), 500
 
 @app.route('/toggle_suspend_member/<int:member_id>', methods=['POST'])
@@ -1284,13 +1288,13 @@ def toggle_suspend_member(member_id):
             member = db.session.get(Member, member_id)
             if not member:
                 return jsonify({'success': False, 'message': 'Membro nao encontrado'}), 404
-        print(f"Alterando status de Suspensao do membro {member_id}: {member.suspended} -> {not member.suspended}")  # Depuraeeo
+        logger.debug(f"Alterando status de Suspensao do membro {member_id}: {member.suspended} -> {not member.suspended}")  # Depuraeeo
         member.suspended = not member.suspended  # Alterna o estado
         db.session.commit()
         return jsonify({'success': True, 'message': f'Membro {member.suspended and "suspenso" or "reativado"} com sucesso!'})
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao suspender/reativar membro: {str(e)}")  # Depuraeeo
+        logger.error(f"Erro ao suspender/reativar membro: {str(e)}")  # Depuraeeo
         return jsonify({'success': False, 'message': f'Erro interno ao suspender/reativar membro: {str(e)}'}), 500
 
 @app.route('/delete_member/<int:member_id>', methods=['POST'])
@@ -1304,20 +1308,20 @@ def delete_member(member_id):
             if not member:
                 return jsonify({'success': False, 'message': 'Membro nao encontrado'}), 404
         
-        print(f"Excluindo membro {member_id}: {member.name}")  # Depuraeeo
+        logger.debug(f"Excluindo membro {member_id}: {member.name}")  # Depuraeeo
         
         # Deletar registros relacionados primeiro (se as tabelas existirem)
         try:
             # Deletar indisponibilidades relacionadas
             Indisponibilidade.query.filter_by(member_id=member_id).delete()
         except Exception as e:
-            print(f"Aviso: nao foi possevel deletar indisponibilidades (tabela pode nao existir): {e}")
+            logger.warning(f"Aviso: nao foi possevel deletar indisponibilidades (tabela pode nao existir): {e}")
         
         try:
             # Deletar escalas relacionadas
             Escala.query.filter_by(member_id=member_id).delete()
         except Exception as e:
-            print(f"Aviso: nao foi possevel deletar escalas: {e}")
+            logger.warning(f"Aviso: nao foi possevel deletar escalas: {e}")
         
         # Deletar o membro
         db.session.delete(member)
@@ -1325,7 +1329,7 @@ def delete_member(member_id):
         return jsonify({'success': True, 'message': 'Membro excluedo com sucesso!'})
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao excluir membro: {str(e)}")  # Depuraeeo
+        logger.error(f"Erro ao excluir membro: {str(e)}")  # Depuraeeo
         return jsonify({'success': False, 'message': f'Erro ao excluir membro'}), 500
 
 # Rotas para gerenciar escalas (apenas para admins)
@@ -1391,19 +1395,18 @@ def add_escala():
                 
                 if subscriptions:
                     # Formatar data e hora do culto
-                    from datetime import datetime as dt
                     if culto.date and culto.time:
-                        culto_datetime = dt.combine(culto.date, culto.time)
+                        culto_datetime = datetime.combine(culto.date, culto.time)
                         culto_data = culto_datetime.strftime("%d/%m/%Y")
                         culto_hora = culto_datetime.strftime("%H:%M").replace(":", "h") + "min"
-                        mensagem_corpo = f'Você foi escalado para o culto do dia {culto_data}, às {culto_hora}. Por favor, confirme a sua presença!'
+                        mensagem_corpo = f'Voc� foi escalado para o culto do dia {culto_data}, �s {culto_hora}. Por favor, confirme a sua presen�a!'
                     else:
-                        mensagem_corpo = "Você foi escalado para um culto. Por favor, confirme a sua presença!"
+                        mensagem_corpo = "Voc� foi escalado para um culto. Por favor, confirme a sua presen�a!"
                     
                     for sub in subscriptions:
                         send_push_notification(
                             sub,
-                            f'📋 Nova Escala: {culto.description}',
+                            f'?? Nova Escala: {culto.description}',
                             mensagem_corpo,
                             {
                                 'type': 'nova_escala',
@@ -1414,13 +1417,13 @@ def add_escala():
                             }
                         )
         except Exception as e:
-            # Não falhar a criação da escala se a notificação falhar
-            print(f"Erro ao enviar notificação push: {e}")
+            # N�o falhar a cria��o da escala se a notifica��o falhar
+            logger.error(f"Erro ao enviar notifica��o push: {e}")
         
         return jsonify({'success': True, 'message': 'Escala adicionada com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao salvar escala: {str(e)}")  # Depuraeeo
+        logger.error(f"Erro ao salvar escala: {str(e)}")  # Depuraeeo
         return jsonify({'success': False, 'message': f'Erro interno ao cadastrar escala: {str(e)}'}), 500
 
 @app.route('/edit_escala/<int:escala_id>', methods=['POST'])
@@ -1451,9 +1454,7 @@ def edit_escala(escala_id):
         return jsonify({'success': True, 'message': 'Escala atualizada com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao editar escala: {str(e)}")  # Depuraeeo
-        return jsonify({'success': False, 'message': f'Erro interno ao atualizar escala: {str(e)}'}), 500
-        print(f"Erro ao editar escala: {str(e)}")  # Depuraeeo
+        logger.error(f"Erro ao editar escala: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro interno ao atualizar escala: {str(e)}'}), 500
 
 @app.route('/delete_escala/<int:escala_id>', methods=['POST'])
@@ -1462,7 +1463,7 @@ def edit_escala(escala_id):
 def delete_escala(escala_id):
     """Remove uma escala (apenas para admins)."""
     try:
-        # Verificar se é uma exclusão forçada (confirmada pelo usuário)
+        # Verificar se � uma exclus�o for�ada (confirmada pelo usu�rio)
         force = request.args.get('force', 'false').lower() == 'true'
         
         with db.session.no_autoflush:
@@ -1470,27 +1471,27 @@ def delete_escala(escala_id):
             if not escala:
                 return jsonify({'success': False, 'message': 'Escala nao encontrada'}), 404
             
-            # Verificar se há substituições vinculadas
+            # Verificar se h� substitui��es vinculadas
             substituicoes = Substituicao.query.filter_by(escala_id=escala_id).all()
             
             if substituicoes:
-                # Verificar se há substituições pendentes ou aceitas
+                # Verificar se h� substitui��es pendentes ou aceitas
                 subs_ativas = [s for s in substituicoes if s.status in ['pendente', 'aceito']]
                 
                 if subs_ativas and not force:
-                    # Retornar info para confirmação do usuário
+                    # Retornar info para confirma��o do usu�rio
                     return jsonify({
                         'success': False,
                         'has_substituicoes': True,
                         'count': len(subs_ativas),
-                        'message': f'Esta escala possui {len(subs_ativas)} substituição(ões) ativa(s). Deseja excluir tudo?'
+                        'message': f'Esta escala possui {len(subs_ativas)} substitui��o(�es) ativa(s). Deseja excluir tudo?'
                     }), 400
                 
                 # Se force=true ou todas recusadas/canceladas, deletar junto
                 if subs_ativas:
-                    print(f"🗑️ [CONFIRMADO] Deletando {len(subs_ativas)} substituições ativas junto com a escala")
+                    logger.debug(f"[CONFIRMADO] Deletando {len(subs_ativas)} substitui��es ativas junto com a escala")
                 else:
-                    print(f"🗑️ Deletando {len(substituicoes)} substituições canceladas/recusadas junto com a escala")
+                    logger.debug(f"Deletando {len(substituicoes)} substitui��es canceladas/recusadas junto com a escala")
                     
                 for sub in substituicoes:
                     db.session.delete(sub)
@@ -1500,7 +1501,7 @@ def delete_escala(escala_id):
         return jsonify({'success': True, 'message': 'Escala removida com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao excluir escala: {str(e)}")  # Depuraeeo
+        logger.error(f"Erro ao excluir escala: {str(e)}")  # Depuraeeo
         return jsonify({'success': False, 'message': f'Erro interno ao excluir escala: {str(e)}'}), 500
 
 @app.route('/delete_escalas_culto/<int:culto_id>', methods=['POST'])
@@ -1509,35 +1510,35 @@ def delete_escala(escala_id):
 def delete_escalas_culto(culto_id):
     """Remove todas as escalas de um culto especefico e limpa o repertorio (apenas para admins)."""
     try:
-        # Verificar se é uma exclusão forçada (confirmada pelo usuário)
+        # Verificar se � uma exclus�o for�ada (confirmada pelo usu�rio)
         force = request.args.get('force', 'false').lower() == 'true'
         
         escalas = Escala.query.filter_by(culto_id=culto_id).all()
         if not escalas:
             return jsonify({'success': False, 'message': 'Nenhuma escala encontrada para este culto'}), 404
         
-        # Verificar substituições vinculadas a qualquer escala do culto
+        # Verificar substitui��es vinculadas a qualquer escala do culto
         escala_ids = [e.id for e in escalas]
         substituicoes = Substituicao.query.filter(Substituicao.escala_id.in_(escala_ids)).all()
         
         if substituicoes:
-            # Verificar se há substituições pendentes ou aceitas
+            # Verificar se h� substitui��es pendentes ou aceitas
             subs_ativas = [s for s in substituicoes if s.status in ['pendente', 'aceito']]
             
             if subs_ativas and not force:
-                # Retornar info para confirmação do usuário
+                # Retornar info para confirma��o do usu�rio
                 return jsonify({
                     'success': False,
                     'has_substituicoes': True,
                     'count': len(subs_ativas),
-                    'message': f'Este culto possui {len(subs_ativas)} substituição(ões) ativa(s). Deseja excluir tudo?'
+                    'message': f'Este culto possui {len(subs_ativas)} substitui��o(�es) ativa(s). Deseja excluir tudo?'
                 }), 400
             
             # Se force=true ou todas recusadas/canceladas, deletar junto
             if subs_ativas:
-                print(f"🗑️ [CONFIRMADO] Deletando {len(subs_ativas)} substituições ativas junto com as escalas do culto")
+                logger.debug(f"[CONFIRMADO] Deletando {len(subs_ativas)} substitui��es ativas junto com as escalas do culto")
             else:
-                print(f"🗑️ Deletando {len(substituicoes)} substituições canceladas/recusadas junto com as escalas do culto")
+                logger.debug(f"Deletando {len(substituicoes)} substitui��es canceladas/recusadas junto com as escalas do culto")
                 
             for sub in substituicoes:
                 db.session.delete(sub)
@@ -1555,7 +1556,7 @@ def delete_escalas_culto(culto_id):
         return jsonify({'success': True, 'message': f'{count} escala(s) removida(s) e repertorio limpo com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao excluir escalas: {str(e)}")
+        logger.error(f"Erro ao excluir escalas: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro interno ao excluir escalas: {str(e)}'}), 500
 
 @app.route('/delete_all_escalas', methods=['POST'])
@@ -1580,16 +1581,16 @@ def delete_all_escalas():
         return jsonify({'success': True, 'message': f'{count} escala(s) removida(s) e repertorios limpos com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao excluir todas as escalas: {str(e)}")
+        logger.error(f"Erro ao excluir todas as escalas: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro interno ao excluir escalas: {str(e)}'}), 500
 
 @app.route('/limpar_escalas_orfas', methods=['POST'])
 @login_required
 @admin_required
 def limpar_escalas_orfas():
-    """Remove escalas que referenciam cultos ou membros que não existem mais."""
+    """Remove escalas que referenciam cultos ou membros que n�o existem mais."""
     try:
-        # Buscar IDs de cultos e membros válidos
+        # Buscar IDs de cultos e membros v�lidos
         cultos_validos = {c.id for c in Culto.query.all()}
         membros_validos = {m.id for m in Member.query.all()}
         
@@ -1599,7 +1600,7 @@ def limpar_escalas_orfas():
         
         for escala in todas_escalas:
             if escala.culto_id not in cultos_validos or escala.member_id not in membros_validos:
-                print(f"[INFO] Removendo escala órfã ID {escala.id}: culto_id={escala.culto_id}, member_id={escala.member_id}")
+                logger.info(f"Removendo escala �rf� ID {escala.id}: culto_id={escala.culto_id}, member_id={escala.member_id}")
                 db.session.delete(escala)
                 escalas_removidas += 1
         
@@ -1608,17 +1609,16 @@ def limpar_escalas_orfas():
         if escalas_removidas > 0:
             return jsonify({
                 'success': True, 
-                'message': f'{escalas_removidas} escala(s) órfã(s) removida(s) com sucesso!'
+                'message': f'{escalas_removidas} escala(s) �rf�(s) removida(s) com sucesso!'
             }), 200
         else:
             return jsonify({
                 'success': True, 
-                'message': 'Nenhuma escala órfã encontrada.'
+                'message': 'Nenhuma escala �rf� encontrada.'
             }), 200
     except Exception as e:
         db.session.rollback()
-        print(f"[ERROR] Erro ao limpar escalas órfãs: {str(e)}")
-        import traceback
+        logger.error(f"Erro ao limpar escalas �rf�s: {str(e)}")
         traceback.print_exc()
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
@@ -1647,7 +1647,7 @@ def get_escala(escala_id):
             'instrument': membro.instrument
         }), 200
     except Exception as e:
-        print(f"Erro ao buscar escala: {str(e)}")
+        logger.error(f"Erro ao buscar escala: {str(e)}")
         return jsonify({'error': 'Erro ao buscar escala'}), 500
 
 # ========================================
@@ -1664,9 +1664,9 @@ def confirmar_presenca(escala_id):
         
         escala = db.session.get(Escala, escala_id)
         if not escala:
-            return jsonify({'success': False, 'message': 'Escala não encontrada'}), 404
+            return jsonify({'success': False, 'message': 'Escala n�o encontrada'}), 404
         
-        # Verificar se é o membro da escala
+        # Verificar se � o membro da escala
         user = current_user
         if isinstance(user, User):
             member = Member.query.filter_by(email=user.email).first()
@@ -1674,7 +1674,7 @@ def confirmar_presenca(escala_id):
             member = user
         
         if not member or escala.member_id != member.id:
-            return jsonify({'success': False, 'message': 'Sem permissão para confirmar esta escala'}), 403
+            return jsonify({'success': False, 'message': 'Sem permiss�o para confirmar esta escala'}), 403
         
         # Atualizar status
         escala.status_confirmacao = 'confirmado'
@@ -1685,32 +1685,31 @@ def confirmar_presenca(escala_id):
         
         return jsonify({
             'success': True, 
-            'message': 'Presença confirmada com sucesso!',
+            'message': 'Presen�a confirmada com sucesso!',
             'status': 'confirmado'
         }), 200
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao confirmar presença: {str(e)}")
-        import traceback
+        logger.error(f"Erro ao confirmar presen�a: {str(e)}")
         traceback.print_exc()
-        return jsonify({'success': False, 'message': f'Erro ao confirmar presença: {str(e)}'}), 500
+        return jsonify({'success': False, 'message': f'Erro ao confirmar presen�a: {str(e)}'}), 500
 
 @app.route('/negar_presenca/<int:escala_id>', methods=['POST'])
 @login_required
 def negar_presenca(escala_id):
-    """Membro informa que não poderá comparecer."""
+    """Membro informa que n�o poder� comparecer."""
     try:
         data = request.json
         motivo = data.get('motivo', '') if data else ''
         
         if not motivo or not motivo.strip():
-            return jsonify({'success': False, 'message': 'Motivo é obrigatório'}), 400
+            return jsonify({'success': False, 'message': 'Motivo � obrigat�rio'}), 400
         
         escala = db.session.get(Escala, escala_id)
         if not escala:
-            return jsonify({'success': False, 'message': 'Escala não encontrada'}), 404
+            return jsonify({'success': False, 'message': 'Escala n�o encontrada'}), 404
         
-        # Verificar se é o membro da escala
+        # Verificar se � o membro da escala
         user = current_user
         if isinstance(user, User):
             member = Member.query.filter_by(email=user.email).first()
@@ -1718,7 +1717,7 @@ def negar_presenca(escala_id):
             member = user
         
         if not member or escala.member_id != member.id:
-            return jsonify({'success': False, 'message': 'Sem permissão para modificar esta escala'}), 403
+            return jsonify({'success': False, 'message': 'Sem permiss�o para modificar esta escala'}), 403
         
         # Atualizar status
         escala.status_confirmacao = 'negado'
@@ -1731,20 +1730,20 @@ def negar_presenca(escala_id):
             culto_info = f"{culto.description} - {culto.date.strftime('%d/%m/%Y')}" if culto else "Culto"
             
             aviso = Aviso(
-                title=f"⚠️ Ausência Confirmada - {member.name}",
-                message=f"{member.name} informou que não poderá estar presente no {culto_info} como {escala.role}.\n\nMotivo: {motivo}",
+                title=f"?? Aus�ncia Confirmada - {member.name}",
+                message=f"{member.name} informou que n�o poder� estar presente no {culto_info} como {escala.role}.\n\nMotivo: {motivo}",
                 priority='high',
                 created_by=None,  # Sistema
                 active=True
             )
             db.session.add(aviso)
         except Exception as notif_error:
-            # Não falhar a operação se a notificação falhar
-            print(f"Aviso: Não foi possível criar notificação: {notif_error}")
+            # N�o falhar a opera��o se a notifica��o falhar
+            logger.warning(f"Aviso: N�o foi poss�vel criar notifica��o: {notif_error}")
         
         db.session.commit()
         
-        # PUSH NOTIFICATION: Notificar administradores sobre ausência
+        # PUSH NOTIFICATION: Notificar administradores sobre aus�ncia
         try:
             culto = db.session.get(Culto, escala.culto_id)
             culto_info = f"{culto.description} em {culto.date.strftime('%d/%m/%Y')}" if culto else "Culto"
@@ -1764,8 +1763,8 @@ def negar_presenca(escala_id):
                 for sub in subscriptions:
                     send_push_notification(
                         sub,
-                        f'⚠️ Ausência Confirmada - {member.name}',
-                        f'{member.name} não poderá comparecer ao {culto_info} como {escala.role}',
+                        f'?? Aus�ncia Confirmada - {member.name}',
+                        f'{member.name} n�o poder� comparecer ao {culto_info} como {escala.role}',
                         {
                             'type': 'ausencia_confirmada',
                             'url': '/escalas',
@@ -1775,37 +1774,37 @@ def negar_presenca(escala_id):
                         }
                     )
         except Exception as e:
-            # Não falhar a operação se a notificação falhar
-            print(f"Erro ao enviar notificações push aos admins: {e}")
+            # N�o falhar a opera��o se a notifica��o falhar
+            logger.error(f"Erro ao enviar notifica��es push aos admins: {e}")
         
         return jsonify({
             'success': True, 
-            'message': 'Ausência registrada. O administrador foi notificado.',
+            'message': 'Aus�ncia registrada. O administrador foi notificado.',
             'status': 'negado'
         }), 200
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao negar presença: {str(e)}")
-        import traceback
+        logger.error(f"Erro ao negar presen�a: {str(e)}")
         traceback.print_exc()
-        return jsonify({'success': False, 'message': f'Erro ao registrar ausência: {str(e)}'}), 500
+        return jsonify({'success': False, 'message': f'Erro ao registrar aus�ncia: {str(e)}'}), 500
 
 @app.route('/get_status_confirmacoes/<int:culto_id>', methods=['GET'])
 @login_required
 @admin_required
 def get_status_confirmacoes(culto_id):
-    """Admin vê status de confirmações de um culto."""
+    """Admin v� status de confirma��es de um culto."""
     try:
-        escalas = Escala.query.filter_by(culto_id=culto_id).all()
+        # Corrigido N+1: carrega escalas com membros em uma única query usando join
+        escalas = db.session.query(Escala, Member).join(
+            Member, Escala.member_id == Member.id
+        ).filter(Escala.culto_id == culto_id).all()
         
         confirmados = 0
         pendentes = 0
         negados = 0
         
         result = []
-        for escala in escalas:
-            member = Member.query.get(escala.member_id)
-            
+        for escala, member in escalas:            
             result.append({
                 'escala_id': escala.id,
                 'member_name': member.name if member else 'Desconhecido',
@@ -1836,8 +1835,7 @@ def get_status_confirmacoes(culto_id):
             }
         }), 200
     except Exception as e:
-        print(f"Erro ao buscar status de confirmações: {str(e)}")
-        import traceback
+        logger.error(f"Erro ao buscar status de confirma��es: {str(e)}")
         traceback.print_exc()
         return jsonify({'escalas': [], 'resumo': {}}), 500
 
@@ -1845,7 +1843,7 @@ def get_status_confirmacoes(culto_id):
 @login_required
 @admin_required
 def resetar_confirmacoes(culto_id):
-    """Admin reseta confirmações após o culto (opcional)."""
+    """Admin reseta confirma��es ap�s o culto (opcional)."""
     try:
         escalas = Escala.query.filter_by(culto_id=culto_id).all()
         
@@ -1858,11 +1856,11 @@ def resetar_confirmacoes(culto_id):
         
         return jsonify({
             'success': True, 
-            'message': 'Confirmações resetadas com sucesso.'
+            'message': 'Confirma��es resetadas com sucesso.'
         }), 200
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao resetar confirmações: {str(e)}")
+        logger.error(f"Erro ao resetar confirma��es: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
 # ========================================
@@ -1871,26 +1869,26 @@ def resetar_confirmacoes(culto_id):
 
 def send_push_notification(subscription_info, title, body, data=None, icon='/static/icon-192x192.png', badge='/static/icon-72x72.png'):
     """
-    Envia uma notificação push para um dispositivo inscrito.
+    Envia uma notifica��o push para um dispositivo inscrito.
     
     Args:
         subscription_info: Objeto PushSubscription do banco ou dict com endpoint, keys
-        title: Título da notificação
-        body: Corpo da notificação
+        title: T�tulo da notifica��o
+        body: Corpo da notifica��o
         data: Dados adicionais (dict)
-        icon: Caminho do ícone
+        icon: Caminho do �cone
         badge: Caminho do badge
     """
-    print(f"\n🚀 [PUSH] Iniciando envio de notificação...")
-    print(f"   📌 Título: {title}")
-    print(f"   📌 Body: {body[:50]}...")
+    logger.debug(f"\n?? [PUSH] Iniciando envio de notifica��o...")
+    logger.debug(f"   ?? T�tulo: {title}")
+    logger.debug(f"   ?? Body: {body[:50]}...")
     
     if not VAPID_PRIVATE_KEY or not VAPID_PUBLIC_KEY:
-        print("⚠️  VAPID keys não configuradas. Execute: python gerar_vapid_keys.py")
+        logger.debug("??  VAPID keys n�o configuradas. Execute: python gerar_vapid_keys.py")
         return False
     
     try:
-        # Montar payload da notificação
+        # Montar payload da notifica��o
         payload = {
             'title': title,
             'body': body,
@@ -1905,18 +1903,18 @@ def send_push_notification(subscription_info, title, body, data=None, icon='/sta
         if data and 'type' in data:
             if data['type'] == 'nova_escala':
                 payload['actions'] = [
-                    {'action': 'view', 'title': '👁️ Ver Escala'},
-                    {'action': 'confirm', 'title': '✅ Confirmar Presença'}
+                    {'action': 'view', 'title': '??? Ver Escala'},
+                    {'action': 'confirm', 'title': '? Confirmar Presen�a'}
                 ]
             elif data['type'] == 'lembrete_confirmacao':
                 payload['actions'] = [
-                    {'action': 'confirm', 'title': '✅ Confirmar'},
-                    {'action': 'deny', 'title': '❌ Não Poderei'}
+                    {'action': 'confirm', 'title': '? Confirmar'},
+                    {'action': 'deny', 'title': '? N�o Poderei'}
                 ]
         
         # Preparar subscription dict
         if hasattr(subscription_info, 'endpoint'):
-            # É um objeto PushSubscription do banco
+            # � um objeto PushSubscription do banco
             subscription = {
                 'endpoint': subscription_info.endpoint,
                 'keys': {
@@ -1924,30 +1922,29 @@ def send_push_notification(subscription_info, title, body, data=None, icon='/sta
                     'auth': subscription_info.auth_key
                 }
             }
-            print(f"   🔑 Endpoint: {subscription_info.endpoint[:60]}...")
+            logger.debug(f"   ?? Endpoint: {subscription_info.endpoint[:60]}...")
         else:
-            # Já é um dict
+            # J� � um dict
             subscription = subscription_info
-            print(f"   🔑 Endpoint (dict): {subscription_info.get('endpoint', 'N/A')[:60]}...")
+            logger.debug(f"   ?? Endpoint (dict): {subscription_info.get('endpoint', 'N/A')[:60]}...")
         
-        print(f"   📡 Enviando via webpush...")
+        logger.debug(f"   ?? Enviando via webpush...")
         
-        # Carregar chave VAPID usando from_file (mais confiável que conversão PEM→DER)
+        # Carregar chave VAPID usando from_file (mais confi�vel que convers�o PEM?DER)
         vapid_obj = None
         if VAPID_PRIVATE_KEY and os.path.exists(VAPID_PRIVATE_KEY):
             try:
                 # Criar objeto Vapid diretamente do arquivo PEM
                 vapid_obj = Vapid.from_file(VAPID_PRIVATE_KEY)
-                print(f"   ✅ Objeto Vapid criado de {VAPID_PRIVATE_KEY}")
+                logger.debug(f"   ? Objeto Vapid criado de {VAPID_PRIVATE_KEY}")
             except Exception as e:
-                print(f"   ❌ Erro ao criar Vapid object: {e}")
+                logger.debug(f"   ? Erro ao criar Vapid object: {e}")
                 return False
         else:
-            print(f"   ❌ VAPID key file não encontrado: {VAPID_PRIVATE_KEY}")
+            logger.debug(f"   ? VAPID key file n�o encontrado: {VAPID_PRIVATE_KEY}")
             return False
         
         # Extrair audience (scheme + host + port) do endpoint
-        from urllib.parse import urlparse
         parsed_endpoint = urlparse(subscription['endpoint'])
         audience = f"{parsed_endpoint.scheme}://{parsed_endpoint.netloc}"
         
@@ -1956,13 +1953,13 @@ def send_push_notification(subscription_info, title, body, data=None, icon='/sta
             "sub": VAPID_CLAIMS_EMAIL,
             "aud": audience
         }
-        print(f"   🎯 Audience: {audience}")
+        logger.debug(f"   ?? Audience: {audience}")
         
         # Gerar headers VAPID manualmente
         vapid_headers = vapid_obj.sign(vapid_claims)
-        print(f"   ✅ VAPID headers gerados: {list(vapid_headers.keys())}")
+        logger.debug(f"   ? VAPID headers gerados: {list(vapid_headers.keys())}")
         
-        # Enviar notificação com headers VAPID pré-gerados
+        # Enviar notifica��o com headers VAPID pr�-gerados
         response = webpush(
             subscription_info=subscription,
             data=json.dumps(payload),
@@ -1970,11 +1967,11 @@ def send_push_notification(subscription_info, title, body, data=None, icon='/sta
             vapid_private_key=vapid_obj  # Passar objeto Vapid
         )
         
-        print(f"   ✅ Resposta: Status {response.status_code}")
+        logger.debug(f"   ? Resposta: Status {response.status_code}")
         return True
         
     except WebPushException as e:
-        print(f"❌ Erro ao enviar push notification: {e}")
+        logger.error(f"Erro ao enviar push notification: {e}")
         # Se o endpoint retornou 410 (Gone), a subscription expirou
         if e.response and e.response.status_code == 410:
             try:
@@ -1984,32 +1981,31 @@ def send_push_notification(subscription_info, title, body, data=None, icon='/sta
                     if sub:
                         sub.is_active = False
                         db.session.commit()
-                        print(f"⚠️  Subscription desativada (endpoint expirado): {subscription_info.endpoint[:50]}...")
+                        logger.warning(f"Subscription desativada (endpoint expirado): {subscription_info.endpoint[:50]}...")
             except Exception as db_error:
-                print(f"Erro ao desativar subscription: {db_error}")
+                logger.error(f"Erro ao desativar subscription: {db_error}")
         return False
     except Exception as e:
-        print(f"❌ Erro inesperado ao enviar notificação: {e}")
-        import traceback
+        logger.error(f"Erro inesperado ao enviar notifica��o: {e}")
         traceback.print_exc()
         return False
 
 @app.route('/get_vapid_public_key', methods=['GET'])
 def get_vapid_public_key():
-    """Retorna a chave pública VAPID para o frontend."""
+    """Retorna a chave p�blica VAPID para o frontend."""
     if not VAPID_PUBLIC_KEY:
-        return jsonify({'error': 'VAPID keys não configuradas'}), 500
+        return jsonify({'error': 'VAPID keys n�o configuradas'}), 500
     return jsonify({'publicKey': VAPID_PUBLIC_KEY}), 200
 
 @app.route('/push_subscribe', methods=['POST'])
 @login_required
 def push_subscribe():
-    """Salva uma inscrição de push notification."""
+    """Salva uma inscri��o de push notification."""
     try:
         data = request.get_json()
         
         if not data or 'subscription' not in data:
-            return jsonify({'success': False, 'message': 'Dados de inscrição inválidos'}), 400
+            return jsonify({'success': False, 'message': 'Dados de inscri��o inv�lidos'}), 400
         
         subscription = data['subscription']
         endpoint = subscription.get('endpoint')
@@ -2018,7 +2014,7 @@ def push_subscribe():
         if not endpoint or not keys.get('p256dh') or not keys.get('auth'):
             return jsonify({'success': False, 'message': 'Subscription incompleta'}), 400
         
-        # Identificar usuário
+        # Identificar usu�rio
         user = current_user
         user_id = user.id if isinstance(user, User) else None
         member_id = None
@@ -2029,7 +2025,7 @@ def push_subscribe():
         else:
             member_id = user.id
         
-        # Verificar se já existe
+        # Verificar se j� existe
         existing = PushSubscription.query.filter_by(endpoint=endpoint).first()
         
         if existing:
@@ -2053,61 +2049,60 @@ def push_subscribe():
         
         db.session.commit()
         
-        # Enviar notificação de boas-vindas
+        # Enviar notifica��o de boas-vindas
         send_push_notification(
             subscription,
-            '🔔 Notificações Ativadas!',
-            'Você receberá alertas sobre escalas, avisos e confirmações.',
+            '?? Notifica��es Ativadas!',
+            'Voc� receber� alertas sobre escalas, avisos e confirma��es.',
             {'type': 'welcome', 'url': '/'}
         )
         
         return jsonify({
             'success': True,
-            'message': 'Inscrição salva com sucesso!'
+            'message': 'Inscri��o salva com sucesso!'
         }), 200
         
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao salvar subscription: {str(e)}")
-        import traceback
+        logger.error(f"Erro ao salvar subscription: {str(e)}")
         traceback.print_exc()
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
 @app.route('/push_unsubscribe', methods=['POST'])
 @login_required
 def push_unsubscribe():
-    """Remove uma inscrição de push notification."""
+    """Remove uma inscri��o de push notification."""
     try:
         data = request.get_json()
         endpoint = data.get('endpoint')
         
         if not endpoint:
-            return jsonify({'success': False, 'message': 'Endpoint não fornecido'}), 400
+            return jsonify({'success': False, 'message': 'Endpoint n�o fornecido'}), 400
         
         subscription = PushSubscription.query.filter_by(endpoint=endpoint).first()
         
         if subscription:
             db.session.delete(subscription)
             db.session.commit()
-            return jsonify({'success': True, 'message': 'Inscrição removida!'}), 200
+            return jsonify({'success': True, 'message': 'Inscri��o removida!'}), 200
         else:
-            return jsonify({'success': False, 'message': 'Inscrição não encontrada'}), 404
+            return jsonify({'success': False, 'message': 'Inscri��o n�o encontrada'}), 404
             
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao remover subscription: {str(e)}")
+        logger.error(f"Erro ao remover subscription: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
 @app.route('/push_test', methods=['POST'])
 @login_required
 def push_test():
-    """Envia uma notificação de teste (apenas para usuário atual)."""
+    """Envia uma notifica��o de teste (apenas para usu�rio atual)."""
     try:
         user = current_user
         user_id = user.id if isinstance(user, User) else None
         member_id = None
         
-        # Usar MESMA lógica de detecção do push_subscribe
+        # Usar MESMA l�gica de detec��o do push_subscribe
         if isinstance(user, User):
             member = Member.query.filter_by(email=user.email).first()
             member_id = member.id if member else None
@@ -2115,14 +2110,13 @@ def push_test():
             member_id = user.id
         
         # DEBUG: Mostrar IDs detectados
-        print(f"\n🔍 DEBUG push_test:")
-        print(f"   current_user type: {type(user).__name__}")
-        print(f"   user_id: {user_id}")
-        print(f"   member_id: {member_id}")
+        logger.debug(f"\n?? DEBUG push_test:")
+        logger.debug(f"   current_user type: {type(user).__name__}")
+        logger.debug(f"   user_id: {user_id}")
+        logger.debug(f"   member_id: {member_id}")
         
-        # Buscar subscriptions que correspondam a este usuário
+        # Buscar subscriptions que correspondam a este usu�rio
         # Busca por user_id OU member_id para cobrir ambos os casos
-        from sqlalchemy import or_
         
         query_filters = [PushSubscription.is_active == True]
         user_filters = []
@@ -2139,20 +2133,20 @@ def push_test():
             subscriptions = []
         
         # DEBUG: Mostrar resultado da query
-        print(f"   Subscriptions encontradas: {len(subscriptions)}")
+        logger.debug(f"   Subscriptions encontradas: {len(subscriptions)}")
         for sub in subscriptions:
-            print(f"   - Sub ID {sub.id}: user_id={sub.user_id}, member_id={sub.member_id}")
+            logger.debug(f"   - Sub ID {sub.id}: user_id={sub.user_id}, member_id={sub.member_id}")
         
         if not subscriptions:
-            return jsonify({'success': False, 'message': 'Nenhuma inscrição ativa encontrada'}), 404
+            return jsonify({'success': False, 'message': 'Nenhuma inscri��o ativa encontrada'}), 404
         
         # Enviar para todas as subscriptions
         sent_count = 0
         for sub in subscriptions:
             success = send_push_notification(
                 sub,
-                '🧪 Notificação de Teste',
-                'Se você está vendo isso, as notificações estão funcionando perfeitamente!',
+                '?? Notifica��o de Teste',
+                'Se voc� est� vendo isso, as notifica��es est�o funcionando perfeitamente!',
                 {'type': 'test', 'timestamp': datetime.utcnow().isoformat()}
             )
             if success:
@@ -2160,11 +2154,11 @@ def push_test():
         
         return jsonify({
             'success': True,
-            'message': f'Notificação de teste enviada para {sent_count} dispositivo(s)!'
+            'message': f'Notifica��o de teste enviada para {sent_count} dispositivo(s)!'
         }), 200
         
     except Exception as e:
-        print(f"Erro ao enviar notificação de teste: {str(e)}")
+        logger.error(f"Erro ao enviar notifica��o de teste: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
 # ========================================
@@ -2200,7 +2194,7 @@ def get_culto_musicas(culto_id):
         
         return jsonify({'musicas': musicas}), 200
     except Exception as e:
-        print(f"Erro ao buscar musicas do culto: {str(e)}")
+        logger.error(f"Erro ao buscar musicas do culto: {str(e)}")
         return jsonify({'error': 'Erro ao buscar musicas'}), 500
 
 @app.route('/add_musica_culto', methods=['POST'])
@@ -2251,7 +2245,7 @@ def add_musica_culto():
         return jsonify({'success': True, 'message': 'musica adicionada ao culto!'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao adicionar musica ao culto: {str(e)}")
+        logger.error(f"Erro ao adicionar musica ao culto: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
 @app.route('/remove_musica_culto', methods=['POST'])
@@ -2282,7 +2276,7 @@ def remove_musica_culto():
         return jsonify({'success': True, 'message': 'musica removida do culto!'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao remover musica do culto: {str(e)}")
+        logger.error(f"Erro ao remover musica do culto: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
 @app.route('/get_estatisticas_musicas', methods=['GET'])
@@ -2360,7 +2354,7 @@ def get_estatisticas_musicas():
             'musica_mais_popular': musica_mais_popular
         }), 200
     except Exception as e:
-        print(f"Erro ao buscar estatesticas: {str(e)}")
+        logger.error(f"Erro ao buscar estatesticas: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
 @app.route('/reorder_musicas_culto', methods=['POST'])
@@ -2389,7 +2383,7 @@ def reorder_musicas_culto():
         return jsonify({'success': True, 'message': 'Ordem das musicas atualizada!'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao reordenar musicas: {str(e)}")
+        logger.error(f"Erro ao reordenar musicas: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
 # Rotas para carregar dados dinemicos
@@ -2413,7 +2407,7 @@ def get_user_data():
         name = user.name
         role = user.role if hasattr(user, 'role') else ROLE_MEMBRO
     
-    print(f"User data: {name}, role: {role}, is_admin: {isinstance(user, User)}")  # Depuraeeo
+    logger.debug(f"User data: {name}, role: {role}, is_admin: {isinstance(user, User)}")  # Depuraeeo
     
     # Obter avatar
     avatar = getattr(user, 'avatar', 'default-avatar.png') or 'default-avatar.png'
@@ -2487,7 +2481,7 @@ def get_membros():
     """Carrega a lista de membros."""
     with db.session.no_autoflush:
         membros = Member.query.all()
-    print(f"Retornando {len(membros)} membros")  # Depuraeeo
+    logger.debug(f"Retornando {len(membros)} membros")  # Depuraeeo
     return jsonify([{
         'id': member.id,
         'name': member.name,
@@ -2520,11 +2514,11 @@ def submit_feedback():
             )
             db.session.add(novo_feedback)
             db.session.commit()
-            print(f"Feedback recebido de {user_email}: {feedback_text}")
+            logger.debug(f"Feedback recebido de {user_email}: {feedback_text}")
             return jsonify({'success': True, 'message': 'Feedback enviado com sucesso!'}), 200
         except Exception as e:
             db.session.rollback()
-            print(f"Erro ao salvar feedback: {str(e)}")
+            logger.error(f"Erro ao salvar feedback: {str(e)}")
             return jsonify({'success': False, 'message': f'Erro ao enviar feedback: {str(e)}'}), 500
     return jsonify({'success': False, 'message': 'Erro ao enviar feedback. Tente novamente.'}), 400
 
@@ -2563,7 +2557,7 @@ def get_feedbacks():
         
         return jsonify({'feedbacks': feedbacks_list}), 200
     except Exception as e:
-        print(f"Erro ao buscar feedbacks: {str(e)}")
+        logger.error(f"Erro ao buscar feedbacks: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/get_my_feedbacks', methods=['GET'])
@@ -2591,7 +2585,7 @@ def get_my_feedbacks():
         
         return jsonify({'feedbacks': feedbacks_list}), 200
     except Exception as e:
-        print(f"Erro ao buscar meus feedbacks: {str(e)}")
+        logger.error(f"Erro ao buscar meus feedbacks: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/respond_feedback/<int:feedback_id>', methods=['POST'])
@@ -2628,7 +2622,7 @@ def respond_feedback(feedback_id):
         return jsonify({'success': True, 'message': 'Resposta enviada com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao responder feedback: {str(e)}")
+        logger.error(f"Erro ao responder feedback: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
 @app.route('/update_feedback_status/<int:feedback_id>', methods=['POST'])
@@ -2655,11 +2649,11 @@ def update_feedback_status(feedback_id):
         feedback.status = new_status
         db.session.commit()
         
-        print(f"? Status do feedback {feedback_id} atualizado para: {new_status}")
+        logger.debug(f"? Status do feedback {feedback_id} atualizado para: {new_status}")
         return jsonify({'success': True, 'message': 'Status atualizado com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"? Erro ao atualizar status: {str(e)}")
+        logger.debug(f"? Erro ao atualizar status: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
 @app.route('/edit_feedback/<int:feedback_id>', methods=['POST'])
@@ -2692,11 +2686,11 @@ def edit_feedback(feedback_id):
         
         db.session.commit()
         
-        print(f"?? Feedback {feedback_id} editado por admin {user.email}")
+        logger.debug(f"?? Feedback {feedback_id} editado por admin {user.email}")
         return jsonify({'success': True, 'message': 'Feedback editado com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"? Erro ao editar feedback: {str(e)}")
+        logger.debug(f"? Erro ao editar feedback: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
 @app.route('/delete_feedback/<int:feedback_id>', methods=['DELETE', 'POST'])
@@ -2717,11 +2711,11 @@ def delete_feedback(feedback_id):
         db.session.delete(feedback)
         db.session.commit()
         
-        print(f"??? Feedback {feedback_id} deletado por admin {user.email}")
+        logger.debug(f"??? Feedback {feedback_id} deletado por admin {user.email}")
         return jsonify({'success': True, 'message': 'Feedback deletado com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"? Erro ao deletar feedback: {str(e)}")
+        logger.debug(f"? Erro ao deletar feedback: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
 # ========================================
@@ -2785,7 +2779,7 @@ def get_minhas_escalas_substituiveis():
         
         return jsonify(escalas_list), 200
     except Exception as e:
-        print(f"? Erro ao buscar escalas substitueveis: {str(e)}")
+        logger.debug(f"? Erro ao buscar escalas substitueveis: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/get_membros_mesma_funcao/<int:escala_id>', methods=['GET'])
@@ -2818,7 +2812,7 @@ def get_membros_mesma_funcao(escala_id):
         
         return jsonify(membros_list), 200
     except Exception as e:
-        print(f"? Erro ao buscar membros: {str(e)}")
+        logger.debug(f"? Erro ao buscar membros: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/solicitar_substituicao', methods=['POST'])
@@ -2871,9 +2865,9 @@ def solicitar_substituicao():
         db.session.add(substituicao)
         db.session.commit()
         
-        print(f"✅ substituicao solicitada: Escala {escala_id}, Substituto {membro_substituto_id}")
+        logger.info(f"substituicao solicitada: Escala {escala_id}, Substituto {membro_substituto_id}")
         
-        # Enviar notificação push para o membro substituto
+        # Enviar notifica��o push para o membro substituto
         try:
             substituto = db.session.get(Member, membro_substituto_id)
             culto = db.session.get(Culto, escala.culto_id)
@@ -2886,16 +2880,15 @@ def solicitar_substituicao():
                 ).all()
                 
                 if subscriptions:
-                    from datetime import datetime as dt
-                    culto_datetime = dt.combine(culto.date, culto.time)
+                    culto_datetime = datetime.combine(culto.date, culto.time)
                     culto_data = culto_datetime.strftime("%d/%m/%Y")
                     culto_hora = culto_datetime.strftime("%H:%M").replace(":", "h") + "min"
                     
                     for sub in subscriptions:
                         send_push_notification(
                             sub,
-                            '🔄 Solicitação de Substituição',
-                            f'{solicitante.name} solicitou que você o substitua como {escala.role} no culto do dia {culto_data}, às {culto_hora}.',
+                            '?? Solicita��o de Substitui��o',
+                            f'{solicitante.name} solicitou que voc� o substitua como {escala.role} no culto do dia {culto_data}, �s {culto_hora}.',
                             {
                                 'type': 'substituicao_solicitada',
                                 'url': '/substituicoes',
@@ -2904,12 +2897,12 @@ def solicitar_substituicao():
                             }
                         )
         except Exception as e:
-            print(f"⚠️ Erro ao enviar notificação de substituição: {e}")
+            logger.warning(f"Erro ao enviar notifica��o de substitui��o: {e}")
         
         return jsonify({'success': True, 'message': 'Solicitacao enviada com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"? Erro ao solicitar substituicao: {str(e)}")
+        logger.debug(f"? Erro ao solicitar substituicao: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
 @app.route('/get_substituicoes_pendentes', methods=['GET'])
@@ -2958,7 +2951,7 @@ def get_substituicoes_pendentes():
         
         return jsonify(subs_list), 200
     except Exception as e:
-        print(f"? Erro ao buscar substituieees pendentes: {str(e)}")
+        logger.debug(f"? Erro ao buscar substituieees pendentes: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/responder_substituicao/<int:sub_id>', methods=['POST'])
@@ -3005,9 +2998,9 @@ def responder_substituicao(sub_id):
         db.session.commit()
         
         member_name = member.name if isinstance(user, User) else user.name
-        print(f"✅ substituicao {sub_id} {acao}(a) por {member_name}")
+        logger.info(f"substituicao {sub_id} {acao}(a) por {member_name}")
         
-        # Enviar notificação push para o solicitante
+        # Enviar notifica��o push para o solicitante
         try:
             solicitante_id = substituicao.membro_solicitante_id
             escala = db.session.get(Escala, substituicao.escala_id)
@@ -3021,17 +3014,16 @@ def responder_substituicao(sub_id):
                 ).all()
                 
                 if subscriptions:
-                    from datetime import datetime as dt
-                    culto_datetime = dt.combine(culto.date, culto.time)
+                    culto_datetime = datetime.combine(culto.date, culto.time)
                     culto_data = culto_datetime.strftime("%d/%m/%Y")
                     culto_hora = culto_datetime.strftime("%H:%M").replace(":", "h") + "min"
                     
                     if acao == 'aceitar':
-                        titulo = '✅ Substituição Aceita'
-                        mensagem = f'{substituto.name} aceitou substituir você como {escala.role} no culto do dia {culto_data}, às {culto_hora}.'
+                        titulo = '? Substitui��o Aceita'
+                        mensagem = f'{substituto.name} aceitou substituir voc� como {escala.role} no culto do dia {culto_data}, �s {culto_hora}.'
                     else:
-                        titulo = '❌ Substituição Recusada'
-                        mensagem = f'{substituto.name} recusou substituir você como {escala.role} no culto do dia {culto_data}, às {culto_hora}.'
+                        titulo = '? Substitui��o Recusada'
+                        mensagem = f'{substituto.name} recusou substituir voc� como {escala.role} no culto do dia {culto_data}, �s {culto_hora}.'
                     
                     for sub in subscriptions:
                         send_push_notification(
@@ -3047,12 +3039,12 @@ def responder_substituicao(sub_id):
                             }
                         )
         except Exception as e:
-            print(f"⚠️ Erro ao enviar notificação de resposta: {e}")
+            logger.warning(f"Erro ao enviar notifica��o de resposta: {e}")
         
         return jsonify({'success': True, 'message': f'Substituicao {acao}(a) com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"? Erro ao responder substituicao: {str(e)}")
+        logger.debug(f"? Erro ao responder substituicao: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
 @app.route('/get_todas_substituicoes_admin', methods=['GET'])
@@ -3065,7 +3057,7 @@ def get_todas_substituicoes_admin():
         Solicitante = aliased(Member)
         Substituto = aliased(Member)
         
-        # Query com aliases explícitos
+        # Query com aliases expl�citos
         substituicoes = db.session.query(
             Substituicao, Escala, Culto, Solicitante, Substituto
         ).join(
@@ -3097,8 +3089,7 @@ def get_todas_substituicoes_admin():
         
         return jsonify(subs_list), 200
     except Exception as e:
-        print(f"❌ Erro ao buscar substituieees admin: {str(e)}")
-        import traceback
+        logger.error(f"Erro ao buscar substituieees admin: {str(e)}")
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
@@ -3131,36 +3122,36 @@ def cancelar_substituicao(sub_id):
         db.session.commit()
         
         member_name = member.name if isinstance(user, User) else user.name
-        print(f"? substituicao {sub_id} cancelada por {member_name}")
+        logger.debug(f"? substituicao {sub_id} cancelada por {member_name}")
         return jsonify({'success': True, 'message': 'Substituicao cancelada com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"? Erro ao cancelar substituicao: {str(e)}")
+        logger.debug(f"? Erro ao cancelar substituicao: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
 # ========================================
-# ROTAS ADMIN - GERENCIAMENTO DE SUBSTITUIÇÕES
+# ROTAS ADMIN - GERENCIAMENTO DE SUBSTITUI��ES
 # ========================================
 
 @app.route('/admin_forcar_substituicao/<int:sub_id>', methods=['POST'])
 @login_required
 @admin_required
 def admin_forcar_substituicao(sub_id):
-    """Admin força aceitar ou recusar uma substituição pendente."""
+    """Admin for�a aceitar ou recusar uma substitui��o pendente."""
     try:
         data = request.get_json()
         acao = data.get('acao')  # 'aceitar' ou 'recusar'
         resposta_texto = data.get('resposta', '')
         
         if acao not in ['aceitar', 'recusar']:
-            return jsonify({'success': False, 'message': 'Ação inválida'}), 400
+            return jsonify({'success': False, 'message': 'A��o inv�lida'}), 400
         
         substituicao = db.session.get(Substituicao, sub_id)
         if not substituicao:
-            return jsonify({'success': False, 'message': 'Substituição não encontrada'}), 404
+            return jsonify({'success': False, 'message': 'Substitui��o n�o encontrada'}), 404
         
         if substituicao.status != 'pendente':
-            return jsonify({'success': False, 'message': 'Apenas substituições pendentes podem ser forçadas'}), 400
+            return jsonify({'success': False, 'message': 'Apenas substitui��es pendentes podem ser for�adas'}), 400
         
         # Buscar escala, culto e membros
         escala = db.session.get(Escala, substituicao.escala_id)
@@ -3182,8 +3173,8 @@ def admin_forcar_substituicao(sub_id):
                 culto_hora = culto.time.strftime('%Hh%Mmin')
                 send_push_notification(
                     solicitante_subscription.subscription,
-                    '✅ Substituição Aceita (Admin)',
-                    f'O administrador aceitou a substituição. {substituto.name} irá substituir você como {escala.role} no culto do dia {culto_data}, às {culto_hora}.',
+                    '? Substitui��o Aceita (Admin)',
+                    f'O administrador aceitou a substitui��o. {substituto.name} ir� substituir voc� como {escala.role} no culto do dia {culto_data}, �s {culto_hora}.',
                     {'type': 'substituicao_respondida', 'url': '/minhas_escalas', 'status': 'aceito'}
                 )
             
@@ -3194,12 +3185,12 @@ def admin_forcar_substituicao(sub_id):
                 culto_hora = culto.time.strftime('%Hh%Mmin')
                 send_push_notification(
                     substituto_subscription.subscription,
-                    '✅ Substituição Confirmada (Admin)',
-                    f'O administrador confirmou você como {escala.role} no culto do dia {culto_data}, às {culto_hora}, substituindo {solicitante.name}.',
+                    '? Substitui��o Confirmada (Admin)',
+                    f'O administrador confirmou voc� como {escala.role} no culto do dia {culto_data}, �s {culto_hora}, substituindo {solicitante.name}.',
                     {'type': 'substituicao_aceita', 'url': '/minhas_escalas'}
                 )
             
-            mensagem_retorno = 'Substituição aceita com sucesso! A escala foi atualizada.'
+            mensagem_retorno = 'Substitui��o aceita com sucesso! A escala foi atualizada.'
         else:  # recusar
             substituicao.status = 'recusado'
             substituicao.resposta = resposta_texto or 'Recusado pelo administrador'
@@ -3210,35 +3201,35 @@ def admin_forcar_substituicao(sub_id):
                 culto_data = culto.date.strftime('%d/%m/%Y')
                 send_push_notification(
                     solicitante_subscription.subscription,
-                    '❌ Substituição Recusada (Admin)',
-                    f'O administrador recusou a solicitação de substituição para o culto do dia {culto_data}.',
+                    '? Substitui��o Recusada (Admin)',
+                    f'O administrador recusou a solicita��o de substitui��o para o culto do dia {culto_data}.',
                     {'type': 'substituicao_respondida', 'url': '/minhas_escalas', 'status': 'recusado'}
                 )
             
-            mensagem_retorno = 'Substituição recusada pelo administrador.'
+            mensagem_retorno = 'Substitui��o recusada pelo administrador.'
         
         substituicao.respondido_em = datetime.now()
         db.session.commit()
         
-        print(f"✅ Admin forçou {acao} substituição ID {sub_id}")
+        logger.info(f"Admin for�ou {acao} substitui��o ID {sub_id}")
         return jsonify({'success': True, 'message': mensagem_retorno}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"❌ Erro ao forçar substituição: {str(e)}")
+        logger.error(f"Erro ao for�ar substitui��o: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
 @app.route('/admin_cancelar_substituicao/<int:sub_id>', methods=['POST'])
 @login_required
 @admin_required
 def admin_cancelar_substituicao(sub_id):
-    """Admin cancela uma substituição pendente."""
+    """Admin cancela uma substitui��o pendente."""
     try:
         substituicao = db.session.get(Substituicao, sub_id)
         if not substituicao:
-            return jsonify({'success': False, 'message': 'Substituição não encontrada'}), 404
+            return jsonify({'success': False, 'message': 'Substitui��o n�o encontrada'}), 404
         
         if substituicao.status != 'pendente':
-            return jsonify({'success': False, 'message': 'Apenas substituições pendentes podem ser canceladas'}), 400
+            return jsonify({'success': False, 'message': 'Apenas substitui��es pendentes podem ser canceladas'}), 400
         
         substituicao.status = 'cancelado'
         substituicao.resposta = 'Cancelado pelo administrador'
@@ -3253,40 +3244,40 @@ def admin_cancelar_substituicao(sub_id):
             if subscription:
                 send_push_notification(
                     subscription.subscription,
-                    '🚫 Substituição Cancelada (Admin)',
-                    'O administrador cancelou uma solicitação de substituição.',
+                    '?? Substitui��o Cancelada (Admin)',
+                    'O administrador cancelou uma solicita��o de substitui��o.',
                     {'type': 'substituicao_cancelada', 'url': '/minhas_escalas'}
                 )
         
-        print(f"✅ Admin cancelou substituição ID {sub_id}")
-        return jsonify({'success': True, 'message': 'Substituição cancelada pelo administrador'}), 200
+        logger.info(f"Admin cancelou substitui��o ID {sub_id}")
+        return jsonify({'success': True, 'message': 'Substitui��o cancelada pelo administrador'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"❌ Erro ao cancelar substituição (admin): {str(e)}")
+        logger.error(f"Erro ao cancelar substitui��o (admin): {str(e)}")
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
 @app.route('/admin_excluir_substituicao/<int:sub_id>', methods=['DELETE'])
 @login_required
 @admin_required
 def admin_excluir_substituicao(sub_id):
-    """Admin exclui permanentemente um registro de substituição."""
+    """Admin exclui permanentemente um registro de substitui��o."""
     try:
         substituicao = db.session.get(Substituicao, sub_id)
         if not substituicao:
-            return jsonify({'success': False, 'message': 'Substituição não encontrada'}), 404
+            return jsonify({'success': False, 'message': 'Substitui��o n�o encontrada'}), 404
         
-        # Verificar se não está pendente
+        # Verificar se n�o est� pendente
         if substituicao.status == 'pendente':
-            return jsonify({'success': False, 'message': 'Cancele a substituição antes de excluir'}), 400
+            return jsonify({'success': False, 'message': 'Cancele a substitui��o antes de excluir'}), 400
         
         db.session.delete(substituicao)
         db.session.commit()
         
-        print(f"✅ Admin excluiu substituição ID {sub_id}")
-        return jsonify({'success': True, 'message': 'Registro excluído permanentemente'}), 200
+        logger.info(f"Admin excluiu substitui��o ID {sub_id}")
+        return jsonify({'success': True, 'message': 'Registro exclu�do permanentemente'}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"❌ Erro ao excluir substituição: {str(e)}")
+        logger.error(f"Erro ao excluir substitui��o: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
 
 @app.route('/get_historico_substituicoes', methods=['GET'])
@@ -3350,7 +3341,7 @@ def get_historico_substituicoes():
         
         return jsonify(historico), 200
     except Exception as e:
-        print(f"? Erro ao buscar historico de substituieees: {str(e)}")
+        logger.debug(f"? Erro ao buscar historico de substituieees: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 # ========================================
@@ -3383,25 +3374,25 @@ def get_avisos():
 @admin_required
 def add_aviso():
     """Adiciona um novo aviso (apenas admins)."""
-    print("\n" + "="*60)
-    print("🔔 [ADD_AVISO] Função chamada!")
-    print("="*60)
+    logger.debug("="*60)
+    logger.debug("?? [ADD_AVISO] Fun��o chamada!")
+    logger.debug("="*60)
     
     data = request.json
     title = data.get('title')
     message = data.get('message')
     priority = data.get('priority', 'normal')
     
-    print(f"📝 Dados recebidos:")
-    print(f"   Título: {title}")
-    print(f"   Mensagem: {message[:50]}...")
-    print(f"   Prioridade: {priority}")
+    logger.debug(f"Dados recebidos:")
+    logger.debug(f"   T�tulo: {title}")
+    logger.debug(f"   Mensagem: {message[:50]}...")
+    logger.debug(f"   Prioridade: {priority}")
     
     if not all([title, message]):
         return jsonify({'success': False, 'message': 'Tetulo e mensagem seo obrigaterios.'}), 400
     
     try:
-        print(f"\n💾 Criando aviso no banco...")
+        logger.debug(f"\n?? Criando aviso no banco...")
         novo_aviso = Aviso(
             title=title,
             message=message,
@@ -3410,33 +3401,33 @@ def add_aviso():
         )
         db.session.add(novo_aviso)
         db.session.commit()
-        print(f"✅ Aviso criado com ID: {novo_aviso.id}")
+        logger.info(f"Aviso criado com ID: {novo_aviso.id}")
         
-        # PUSH NOTIFICATION: Notificar todos os usuários sobre novo aviso
+        # PUSH NOTIFICATION: Notificar todos os usu�rios sobre novo aviso
         try:
-            print(f"\n🔔 [AVISO] Tentando enviar notificações push...")
+            logger.debug(f"\n?? [AVISO] Tentando enviar notifica��es push...")
             
             # Buscar todas as subscricoes ativas
             subscriptions = PushSubscription.query.filter_by(is_active=True).all()
-            print(f"   📊 Subscriptions ativas encontradas: {len(subscriptions)}")
+            logger.debug(f"   ?? Subscriptions ativas encontradas: {len(subscriptions)}")
             
             if subscriptions:
                 # Determinar emoji baseado na prioridade
-                emoji = '📢'
+                emoji = '??'
                 if priority == 'high':
-                    emoji = '⚠️'
+                    emoji = '??'
                 elif priority == 'urgent':
-                    emoji = '🚨'
+                    emoji = '??'
                 
                 # Truncar mensagem para preview
                 message_preview = message[:100] + ('...' if len(message) > 100 else '')
                 
-                print(f"   📝 Título: {emoji} {title}")
-                print(f"   📝 Preview: {message_preview[:50]}...")
+                logger.debug(f"   ?? T�tulo: {emoji} {title}")
+                logger.debug(f"   ?? Preview: {message_preview[:50]}...")
                 
                 sent_count = 0
                 for idx, sub in enumerate(subscriptions, 1):
-                    print(f"   📤 Enviando para subscription #{idx} (ID: {sub.id})...")
+                    logger.debug(f"   ?? Enviando para subscription #{idx} (ID: {sub.id})...")
                     try:
                         success = send_push_notification(
                             sub,
@@ -3452,19 +3443,18 @@ def add_aviso():
                         )
                         if success:
                             sent_count += 1
-                            print(f"      ✅ Enviada com sucesso!")
+                            logger.debug(f"      ? Enviada com sucesso!")
                         else:
-                            print(f"      ❌ Falhou (send_push_notification retornou False)")
+                            logger.debug(f"      ? Falhou (send_push_notification retornou False)")
                     except Exception as sub_error:
-                        print(f"      ❌ Erro: {sub_error}")
+                        logger.debug(f"      ? Erro: {sub_error}")
                 
-                print(f"   ✅ Total enviadas: {sent_count}/{len(subscriptions)}\n")
+                logger.debug(f"   ? Total enviadas: {sent_count}/{len(subscriptions)}\n")
             else:
-                print(f"   ⚠️ Nenhuma subscription ativa encontrada!\n")
+                logger.debug(f"   ?? Nenhuma subscription ativa encontrada!\n")
         except Exception as e:
-            # Não falhar a criação do aviso se a notificação falhar
-            print(f"❌ Erro ao enviar notificações push: {e}")
-            import traceback
+            # N�o falhar a cria��o do aviso se a notifica��o falhar
+            logger.error(f"Erro ao enviar notifica��es push: {e}")
             traceback.print_exc()
         
         return jsonify({'success': True, 'message': 'Aviso criado com sucesso!'}), 200
@@ -3699,16 +3689,16 @@ def uploaded_file(filename):
     Funciona tanto com pasta local (static/uploads) quanto com pasta persistente (Render Disk).
     """
     try:
-        # Verifica segurança: impede acesso a diretórios superiores
+        # Verifica seguran�a: impede acesso a diret�rios superiores
         if '..' in filename or filename.startswith('/'):
-            return jsonify({'error': 'Filename inválido'}), 400
+            return jsonify({'error': 'Filename inv�lido'}), 400
         
-        # Tenta servir o arquivo do diretório configurado
+        # Tenta servir o arquivo do diret�rio configurado
         return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
     except FileNotFoundError:
-        return jsonify({'error': 'Arquivo não encontrado'}), 404
+        return jsonify({'error': 'Arquivo n�o encontrado'}), 404
     except Exception as e:
-        print(f"Erro ao servir arquivo {filename}: {str(e)}")
+        logger.error(f"Erro ao servir arquivo {filename}: {str(e)}")
         return jsonify({'error': 'Erro ao acessar arquivo'}), 500
 
 # ========================================
@@ -3751,7 +3741,7 @@ def get_periodo_indisponibilidade():
             'atualizado_em': config.atualizado_em.strftime('%d/%m/%Y %H:%M') if config.atualizado_em else None
         }), 200
     except Exception as e:
-        print(f"Erro ao verificar pereodo de indisponibilidade: {str(e)}")
+        logger.error(f"Erro ao verificar pereodo de indisponibilidade: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/toggle_periodo_indisponibilidade', methods=['POST'])
@@ -3759,14 +3749,14 @@ def get_periodo_indisponibilidade():
 @admin_required
 def toggle_periodo_indisponibilidade():
     """Abre ou fecha o pereodo de registro de indisponibilidades (apenas admin)."""
-    print("[DEBUG] funcao toggle_periodo_indisponibilidade chamada!")
+    logger.debug("[DEBUG] funcao toggle_periodo_indisponibilidade chamada!")
     try:
         # Buscar ou criar configuracao
         config = Configuracao.query.filter_by(chave='indisponibilidade_aberta').first()
-        print(f"[DEBUG] Config encontrada: {config}")
+        logger.debug(f"Config encontrada: {config}")
         
         if not config:
-            print("[DEBUG] Config nao existe, criando nova...")
+            logger.debug("[DEBUG] Config nao existe, criando nova...")
             config = Configuracao(
                 chave='indisponibilidade_aberta',
                 valor='false',
@@ -3777,13 +3767,13 @@ def toggle_periodo_indisponibilidade():
         # Alternar valor
         valor_atual = config.valor.lower()
         novo_valor = 'false' if valor_atual == 'true' else 'true'
-        print(f"[DEBUG] Alterando de '{valor_atual}' para '{novo_valor}'")
+        logger.debug(f"Alterando de '{valor_atual}' para '{novo_valor}'")
         
         config.valor = novo_valor
         config.atualizado_em = datetime.utcnow()
         
         db.session.commit()
-        print("[DEBUG] Commit realizado com sucesso!")
+        logger.debug("[DEBUG] Commit realizado com sucesso!")
         
         status = "ABERTO" if novo_valor == 'true' else "FECHADO"
         
@@ -3793,13 +3783,12 @@ def toggle_periodo_indisponibilidade():
             'status': status,
             'mensagem': f'Pereodo de indisponibilidade agora esta {status}.'
         }
-        print(f"[DEBUG] Retornando: {resultado}")
+        logger.debug(f"Retornando: {resultado}")
         
         return jsonify(resultado), 200
     except Exception as e:
         db.session.rollback()
-        print(f"[ERROR] Erro ao alternar pereodo: {str(e)}")
-        import traceback
+        logger.error(f"Erro ao alternar pereodo: {str(e)}")
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -3853,15 +3842,14 @@ def get_todas_indisponibilidades_admin():
                     'created_at_formatted': ind.created_at.strftime('%d/%m/%Y %H:%M')
                 })
             except Exception as e:
-                print(f"Erro ao processar indisponibilidade {ind.id}: {str(e)}")
+                logger.error(f"Erro ao processar indisponibilidade {ind.id}: {str(e)}")
                 continue
         
         return jsonify({
             'indisponibilidades': result
         }), 200
     except Exception as e:
-        print(f"Erro ao buscar todas as indisponibilidades: {str(e)}")
-        import traceback
+        logger.error(f"Erro ao buscar todas as indisponibilidades: {str(e)}")
         traceback.print_exc()
         return jsonify({'error': str(e), 'indisponibilidades': []}), 500
 
@@ -3880,7 +3868,7 @@ def delete_indisponibilidade_admin(indisp_id):
         db.session.delete(indisponibilidade)
         db.session.commit()
         
-        print(f"[ADMIN] Indisponibilidade exclueda: {member_name} - {date_str}")
+        logger.debug(f"[ADMIN] Indisponibilidade exclueda: {member_name} - {date_str}")
         
         return jsonify({
             'success': True,
@@ -3888,7 +3876,7 @@ def delete_indisponibilidade_admin(indisp_id):
         }), 200
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao excluir indisponibilidade: {str(e)}")
+        logger.error(f"Erro ao excluir indisponibilidade: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/get_cultos_disponiveis', methods=['GET'])
@@ -3967,9 +3955,9 @@ def add_indisponibilidade():
             }), 403
         
         data = request.json
-        cultos_ids = data.get('cultos_ids', [])  # Lista de IDs de cultos (modo cultos específicos)
-        data_inicio = data.get('data_inicio')  # Data início (modo período)
-        data_fim = data.get('data_fim')  # Data fim (modo período)
+        cultos_ids = data.get('cultos_ids', [])  # Lista de IDs de cultos (modo cultos espec�ficos)
+        data_inicio = data.get('data_inicio')  # Data in�cio (modo per�odo)
+        data_fim = data.get('data_fim')  # Data fim (modo per�odo)
         reason = data.get('motivo')
         
         if not reason or reason.strip() == '':
@@ -3983,7 +3971,7 @@ def add_indisponibilidade():
         
         indisponibilidades_criadas = 0
         
-        # MODO 1: Cultos específicos
+        # MODO 1: Cultos espec�ficos
         if cultos_ids and len(cultos_ids) > 0:
             # Criar uma indisponibilidade para cada culto selecionado
             for culto_id in cultos_ids:
@@ -4013,9 +4001,8 @@ def add_indisponibilidade():
                 db.session.add(nova_indisponibilidade)
                 indisponibilidades_criadas += 1
         
-        # MODO 2: Período de datas
+        # MODO 2: Per�odo de datas
         elif data_inicio and data_fim:
-            from datetime import datetime
             try:
                 dt_inicio = datetime.strptime(data_inicio, '%Y-%m-%d').date()
                 dt_fim = datetime.strptime(data_fim, '%Y-%m-%d').date()
@@ -4023,9 +4010,9 @@ def add_indisponibilidade():
                 return jsonify({'success': False, 'message': 'Formato de data invalido.'}), 400
             
             if dt_fim < dt_inicio:
-                return jsonify({'success': False, 'message': 'Data fim deve ser maior ou igual à data início.'}), 400
+                return jsonify({'success': False, 'message': 'Data fim deve ser maior ou igual � data in�cio.'}), 400
             
-            # Buscar todos os cultos neste período
+            # Buscar todos os cultos neste per�odo
             cultos_no_periodo = Culto.query.filter(
                 Culto.date >= dt_inicio,
                 Culto.date <= dt_fim
@@ -4034,10 +4021,10 @@ def add_indisponibilidade():
             if len(cultos_no_periodo) == 0:
                 return jsonify({
                     'success': False, 
-                    'message': f'Nenhum culto encontrado no período de {dt_inicio.strftime("%d/%m/%Y")} a {dt_fim.strftime("%d/%m/%Y")}.'
+                    'message': f'Nenhum culto encontrado no per�odo de {dt_inicio.strftime("%d/%m/%Y")} a {dt_fim.strftime("%d/%m/%Y")}.'
                 }), 400
             
-            # Criar indisponibilidade para cada culto no período
+            # Criar indisponibilidade para cada culto no per�odo
             for culto in cultos_no_periodo:
                 # Verificar se je existe indisponibilidade para este culto
                 existe = Indisponibilidade.query.filter_by(
@@ -4061,7 +4048,7 @@ def add_indisponibilidade():
                 indisponibilidades_criadas += 1
         
         else:
-            return jsonify({'success': False, 'message': 'Selecione cultos ou informe um período de datas.'}), 400
+            return jsonify({'success': False, 'message': 'Selecione cultos ou informe um per�odo de datas.'}), 400
         
         db.session.commit()
         
@@ -4077,7 +4064,7 @@ def add_indisponibilidade():
         }), 200
     except Exception as e:
         db.session.rollback()
-        print(f"[ERROR] Erro ao registrar indisponibilidade: {str(e)}")
+        logger.error(f"Erro ao registrar indisponibilidade: {str(e)}")
         return jsonify({'success': False, 'message': f'Erro ao registrar indisponibilidade: {str(e)}'}), 500
 
 @app.route('/delete_indisponibilidade/<int:ind_id>', methods=['DELETE'])
@@ -4148,12 +4135,12 @@ def solicitar_excecao():
         
         return jsonify({
             'success': True, 
-            'message': 'Solicitacao enviada! O membro receberá a notificacao.'
+            'message': 'Solicitacao enviada! O membro receber� a notificacao.'
         }), 200
         
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao solicitar excecao: {str(e)}")
+        logger.error(f"Erro ao solicitar excecao: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/get_minhas_solicitacoes_excecao', methods=['GET'])
@@ -4167,15 +4154,17 @@ def get_minhas_solicitacoes_excecao():
         if not member:
             return jsonify([]), 200
         
-        solicitacoes = SolicitacaoExcecao.query.filter_by(
-            member_id=member.id
+        # Corrigido N+1: carrega solicitações com admin e culto em joins
+        solicitacoes = db.session.query(SolicitacaoExcecao, User, Culto).outerjoin(
+            User, SolicitacaoExcecao.admin_id == User.id
+        ).outerjoin(
+            Culto, SolicitacaoExcecao.culto_id == Culto.id
+        ).filter(
+            SolicitacaoExcecao.member_id == member.id
         ).order_by(SolicitacaoExcecao.created_at.desc()).all()
         
         result = []
-        for sol in solicitacoes:
-            admin = User.query.get(sol.admin_id)
-            culto = Culto.query.get(sol.culto_id)
-            
+        for sol, admin, culto in solicitacoes:           
             result.append({
                 'id': sol.id,
                 'admin_name': admin.username if admin else 'Administrador',
@@ -4192,7 +4181,7 @@ def get_minhas_solicitacoes_excecao():
         return jsonify(result), 200
         
     except Exception as e:
-        print(f"Erro ao buscar solicitacoes: {str(e)}")
+        logger.error(f"Erro ao buscar solicitacoes: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/responder_solicitacao_excecao/<int:sol_id>', methods=['POST'])
@@ -4251,7 +4240,7 @@ def responder_solicitacao_excecao(sol_id):
         
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao responder solicitacao: {str(e)}")
+        logger.error(f"Erro ao responder solicitacao: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/get_solicitacoes_excecao_admin', methods=['GET'])
@@ -4260,16 +4249,17 @@ def responder_solicitacao_excecao(sol_id):
 def get_solicitacoes_excecao_admin():
     """Admin visualiza todas as solicitacoes de excecao."""
     try:
-        solicitacoes = SolicitacaoExcecao.query.order_by(
-            SolicitacaoExcecao.created_at.desc()
-        ).all()
+        # Corrigido N+1: carrega solicitações com admin, member e culto em joins
+        solicitacoes = db.session.query(SolicitacaoExcecao, User, Member, Culto).outerjoin(
+            User, SolicitacaoExcecao.admin_id == User.id
+        ).outerjoin(
+            Member, SolicitacaoExcecao.member_id == Member.id
+        ).outerjoin(
+            Culto, SolicitacaoExcecao.culto_id == Culto.id
+        ).order_by(SolicitacaoExcecao.created_at.desc()).all()
         
         result = []
-        for sol in solicitacoes:
-            admin = User.query.get(sol.admin_id)
-            member = Member.query.get(sol.member_id)
-            culto = Culto.query.get(sol.culto_id)
-            
+        for sol, admin, member, culto in solicitacoes:            
             result.append({
                 'id': sol.id,
                 'admin_name': admin.username if admin else 'Admin',
@@ -4287,7 +4277,7 @@ def get_solicitacoes_excecao_admin():
         return jsonify(result), 200
         
     except Exception as e:
-        print(f"Erro ao buscar solicitacoes admin: {str(e)}")
+        logger.error(f"Erro ao buscar solicitacoes admin: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 # ========================================
@@ -4332,7 +4322,7 @@ def get_indisponibilidades_admin():
         
         return jsonify(result), 200
     except Exception as e:
-        print(f"[ERROR] Erro ao buscar indisponibilidades admin: {str(e)}")
+        logger.error(f"Erro ao buscar indisponibilidades admin: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 # ========================================
@@ -4364,27 +4354,26 @@ def get_dashboard_stats():
         total_cultos = Culto.query.count()
         
         # Contagem de escalas com tratamento robusto
-        # Contar apenas escalas com culto e membro válidos (mesma lógica de /get_escalas)
+        # Contar apenas escalas com culto e membro v�lidos (mesma l�gica de /get_escalas)
         try:
             # Primeiro, contar todas as escalas no banco
             total_escalas_raw = Escala.query.count()
             
-            # Depois, contar apenas as válidas (com JOIN)
+            # Depois, contar apenas as v�lidas (com JOIN)
             total_escalas = db.session.query(Escala).join(
                 Culto, Escala.culto_id == Culto.id
             ).join(
                 Member, Escala.member_id == Member.id
             ).count()
             
-            print(f"[DEBUG] Escalas no banco (total): {total_escalas_raw}")
-            print(f"[DEBUG] Escalas válidas (com JOIN): {total_escalas}")
+            logger.debug(f"Escalas no banco (total): {total_escalas_raw}")
+            logger.debug(f"Escalas v�lidas (com JOIN): {total_escalas}")
             
-            # Se houver diferença, há escalas órfãs
+            # Se houver diferen�a, h� escalas �rf�s
             if total_escalas_raw > total_escalas:
-                print(f"[WARNING] Há {total_escalas_raw - total_escalas} escala(s) órfã(s) no banco!")
+                logger.debug(f"[WARNING] H� {total_escalas_raw - total_escalas} escala(s) �rf�(s) no banco!")
         except Exception as escala_error:
-            print(f"[ERROR] Erro ao contar escalas: {str(escala_error)}")
-            import traceback
+            logger.error(f"Erro ao contar escalas: {str(escala_error)}")
             traceback.print_exc()
             total_escalas = 0
         
@@ -4416,7 +4405,7 @@ def get_dashboard_stats():
             Aviso.created_at.desc()
         ).limit(5).all()
         
-        print(f"[DEBUG] Dashboard Stats: Membros={total_membros}, Cultos={total_cultos}, Escalas={total_escalas}, musicas={total_musicas}")
+        logger.debug(f"Dashboard Stats: Membros={total_membros}, Cultos={total_cultos}, Escalas={total_escalas}, musicas={total_musicas}")
         
         response_data = {
             'total_membros': total_membros,
@@ -4445,16 +4434,15 @@ def get_dashboard_stats():
         }
         
         response = jsonify(response_data)
-        # Garantir que não seja cacheado
+        # Garantir que n�o seja cacheado
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
         return response, 200
     except Exception as e:
-        print(f"[ERROR] Dashboard stats error: {str(e)}")
-        import traceback
+        logger.error(f"Dashboard stats error: {str(e)}")
         traceback.print_exc()
-        # Retornar valores padrão em caso de erro
+        # Retornar valores padr�o em caso de erro
         return jsonify({
             'total_membros': 0,
             'membros_ativos': 0,
@@ -4535,7 +4523,7 @@ def get_ranking_escalas():
         }), 200
         
     except Exception as e:
-        print(f"[ERROR] Ranking escalas error: {str(e)}")
+        logger.error(f"Ranking escalas error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/get_ranking_indisponibilidades', methods=['GET'])
@@ -4600,7 +4588,7 @@ def get_ranking_indisponibilidades():
         }), 200
         
     except Exception as e:
-        print(f"[ERROR] Ranking indisponibilidades error: {str(e)}")
+        logger.error(f"Ranking indisponibilidades error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/get_all_feedbacks', methods=['GET'])
@@ -4644,10 +4632,9 @@ try:
     ensure_database_exists()
     with app.app_context():
         create_admin()  # Adiciona o administrador padrao
-    print("? Aplicaeeo inicializada com sucesso!")
+    logger.debug("? Aplicaeeo inicializada com sucesso!")
 except Exception as e:
-    print(f"? ERRO na inicializaeeo: {e}")
-    import traceback
+    logger.debug(f"? ERRO na inicializaeeo: {e}")
     traceback.print_exc()
 
 if __name__ == '__main__':
