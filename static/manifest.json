@@ -1,7 +1,7 @@
 {
-    "name": "",
-    "short_name": "",
-    "description": "",
+    "name": "Ministério de Louvor - IB Cristo Rei",
+    "short_name": "ML Cristo Rei",
+    "description": "Sistema de gerenciamento de escalas, repertório e avisos do Ministério de Louvor da Igreja Batista Cristo Rei",
     "start_url": "/",
     "scope": "/",
     "display": "standalone",

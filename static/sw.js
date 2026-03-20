@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ministry-v5.0.9-20260319';
+const CACHE_NAME = 'ministry-v5.1.0-20260320';
 const CACHE_ASSETS = [
     '/',
     '/static/styles.css',
