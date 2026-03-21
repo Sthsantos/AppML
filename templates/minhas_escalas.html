@@ -815,8 +815,7 @@ async function enviarSolicitacao() {
             body: JSON.stringify({
                 escala_id: escalaAtualSub,
                 membro_substituto_id: parseInt(substitutoId),
-                mensagem: mensagem
-            })
+                mensagem: me
         });
         
         if (!response.ok) {

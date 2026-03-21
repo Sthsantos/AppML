@@ -19,13 +19,697 @@
     {% endif %}
 </div>
 
-<!-- Calendar View -->
-<div class="grid grid-auto" id="cultosGrid">
+<!-- Estatísticas Rápidas -->
+<div class="cultos-stats" id="cultosStats">
+    <div class="stat-card">
+        <i class="fas fa-calendar-check"></i>
+        <div class="stat-content">
+            <div class="stat-value" id="statProximos">-</div>
+            <div class="stat-label">Próximos</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <i class="fas fa-check-circle"></i>
+        <div class="stat-content">
+            <div class="stat-value" id="statRealizados">-</div>
+            <div class="stat-label">Realizados</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <i class="fas fa-calendar-alt"></i>
+        <div class="stat-content">
+            <div class="stat-value" id="statMes">-</div>
+            <div class="stat-label">Este Mês</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <i class="fas fa-calendar-day"></i>
+        <div class="stat-content">
+            <div class="stat-value" id="statTotal">-</div>
+            <div class="stat-label">Total</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros e Busca -->
+<div class="cultos-filters">
+    <div class="filter-group">
+        <button class="filter-btn active" data-filter="all" onclick="filterCultos('all')">
+            <i class="fas fa-list"></i> Todos
+        </button>
+        <button class="filter-btn" data-filter="upcoming" onclick="filterCultos('upcoming')">
+            <i class="fas fa-calendar-check"></i> Próximos
+        </button>
+        <button class="filter-btn" data-filter="past" onclick="filterCultos('past')">
+            <i class="fas fa-history"></i> Realizados
+        </button>
+    </div>
+    
+    <div class="search-group">
+        <div class="search-input-wrapper">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchCulto" class="search-input" placeholder="Buscar por nome..." oninput="searchCultos()">
+        </div>
+        <div class="date-input-wrapper">
+            <i class="fas fa-calendar"></i>
+            <input type="date" id="filterDate" class="date-input" onchange="filterByDate()">
+        </div>
+        <button class="btn-clear" onclick="clearFilters()" title="Limpar filtros">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Contador e Ordenação -->
+<div class="cultos-controls">
+    <div class="results-counter" id="resultsCounter">
+        <i class="fas fa-info-circle"></i>
+        <span id="counterText">Carregando...</span>
+    </div>
+    <div class="sort-buttons">
+        <button class="sort-btn active" data-sort="date-desc" onclick="sortCultos('date-desc')" title="Mais recentes primeiro">
+            <i class="fas fa-arrow-down"></i> Mais Recentes
+        </button>
+        <button class="sort-btn" data-sort="date-asc" onclick="sortCultos('date-asc')" title="Mais antigos primeiro">
+            <i class="fas fa-arrow-up"></i> Mais Antigos
+        </button>
+        <button class="sort-btn" data-sort="name" onclick="sortCultos('name')" title="Ordenar alfabeticamente">
+            <i class="fas fa-sort-alpha-down"></i> A-Z
+        </button>
+    </div>
+</div>
+
+<!-- Cards Expansíveis -->
+<div class="cultos-list" id="cultosGrid">
     <div class="empty-state">
         <i class="fas fa-spinner fa-spin"></i>
         <h3>Carregando cultos...</h3>
     </div>
 </div>
+
+<style>
+/* Estatísticas Rápidas */
+.cultos-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow-sm);
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary);
+}
+
+.stat-card > i {
+    font-size: 2rem;
+    color: var(--primary);
+    opacity: 0.8;
+}
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Contador e Ordenação */
+.cultos-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.results-counter {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.results-counter i {
+    color: var(--primary);
+}
+
+.sort-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.sort-btn {
+    padding: 0.625rem 1rem;
+    border: 2px solid var(--border-color);
+    background: transparent;
+    color: var(--text-secondary);
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sort-btn:hover {
+    background: var(--hover-bg);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.sort-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+/* Filtros e Busca */
+.cultos-filters {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.filter-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    padding: 0.625rem 1.25rem;
+    border: 2px solid var(--border-color);
+    background: transparent;
+    color: var(--text-secondary);
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.filter-btn:hover {
+    background: var(--hover-bg);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.filter-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.search-group {
+    display: flex;
+    gap: 0.75rem;
+    flex: 1;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+.search-input-wrapper,
+.date-input-wrapper {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+    max-width: 280px;
+}
+
+.search-input-wrapper i,
+.date-input-wrapper i {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
+.search-input,
+.date-input {
+    width: 100%;
+    padding: 0.625rem 1rem 0.625rem 2.75rem;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--input-bg);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.search-input:focus,
+.date-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: var(--card-bg);
+}
+
+/* Color scheme para o date picker se adaptar ao tema */
+:root .date-input {
+    color-scheme: light;
+}
+
+[data-theme="dark"] .date-input {
+    color-scheme: dark;
+}
+
+.btn-clear {
+    padding: 0.625rem 1rem;
+    background: transparent;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-clear:hover {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: white;
+}
+
+/* Lista de Cards */
+.cultos-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.culto-card-accordion {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow-sm);
+}
+
+.culto-card-accordion:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    border-color: var(--primary-light);
+}
+
+.culto-card-accordion.past {
+    opacity: 0.7;
+    filter: grayscale(30%);
+}
+
+.culto-card-accordion.hidden {
+    display: none;
+}
+
+.culto-card-header {
+    padding: 1.25rem 1.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    transition: background-color 0.2s ease;
+    user-select: none;
+}
+
+.culto-card-header:hover {
+    background: var(--hover-bg);
+}
+
+.culto-card-accordion.expanded .culto-card-header {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(79, 70, 229, 0.1));
+    border-bottom: 1px solid var(--border-color);
+}
+
+.culto-date-badge {
+    flex-shrink: 0;
+    width: 70px;
+    height: 70px;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+}
+
+:root .culto-date-badge {
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+[data-theme="dark"] .culto-date-badge {
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.5);
+}
+
+.culto-date-badge.santa-ceia {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+}
+
+:root .culto-date-badge.santa-ceia {
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+}
+
+[data-theme="dark"] .culto-date-badge.santa-ceia {
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.5);
+}
+
+.culto-date-badge.past {
+    opacity: 0.6;
+    filter: grayscale(30%);
+}
+
+.culto-date-day {
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.culto-date-month {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    margin-top: 0.25rem;
+}
+
+.culto-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.culto-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 0.25rem 0;
+}
+
+.culto-subtitle {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.culto-badges {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+}
+
+.escalas-badge {
+    display: none;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 9999px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background-color: #10b981;
+    color: white;
+}
+
+.escalas-badge.empty {
+    background-color: #f59e0b;
+    display: flex;
+}
+
+.culto-expand-icon {
+    font-size: 1.25rem;
+    color: var(--text-muted);
+    transition: transform 0.3s ease;
+}
+
+.culto-card-accordion.expanded .culto-expand-icon {
+    transform: rotate(180deg);
+}
+
+.culto-card-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.culto-card-accordion.expanded .culto-card-body {
+    max-height: 1000px;
+}
+
+.culto-card-content {
+    padding: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    background: var(--card-bg-secondary);
+}
+
+.culto-description {
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.culto-times {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.culto-time-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--card-bg-secondary);
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-weight: 600;
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.culto-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.culto-action-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.culto-action-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.culto-action-time {
+    font-weight: 600;
+    color: var(--primary);
+    min-width: 60px;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    color: var(--text-muted);
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: var(--text-muted);
+}
+
+.empty-state h3 {
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+/* Responsividade Mobile */
+@media (max-width: 768px) {
+    .cultos-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .stat-card {
+        padding: 1rem;
+    }
+    
+    .stat-card > i {
+        font-size: 1.5rem;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+    }
+    
+    .stat-label {
+        font-size: 0.75rem;
+    }
+    
+    .cultos-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .results-counter {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .sort-buttons {
+        width: 100%;
+    }
+    
+    .sort-btn {
+        flex: 1;
+        justify-content: center;
+    }
+    
+    .cultos-filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-group {
+        width: 100%;
+    }
+    
+    .filter-btn {
+        flex: 1;
+        justify-content: center;
+    }
+    
+    .search-group {
+        width: 100%;
+        justify-content: stretch;
+    }
+    
+    .search-input-wrapper,
+    .date-input-wrapper {
+        max-width: none;
+    }
+    
+    .cultos-list {
+        gap: 0.75rem;
+    }
+    
+    .culto-card-header {
+        padding: 1rem;
+        gap: 1rem;
+    }
+    
+    .culto-date-badge {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .culto-date-day {
+        font-size: 1.75rem;
+    }
+    
+    .culto-title {
+        font-size: 1.1rem;
+    }
+    
+    .culto-subtitle {
+        font-size: 0.85rem;
+    }
+    
+    .culto-card-content {
+        padding: 1rem;
+    }
+    
+    .culto-actions {
+        flex-direction: column;
+    }
+    
+    .culto-action-item {
+        flex-wrap: wrap;
+    }
+}
+
+/* Animação de fade-in */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.culto-card-accordion {
+    animation: fadeIn 0.3s ease forwards;
+}
+
+.culto-card-accordion:nth-child(1) { animation-delay: 0.05s; }
+.culto-card-accordion:nth-child(2) { animation-delay: 0.1s; }
+.culto-card-accordion:nth-child(3) { animation-delay: 0.15s; }
+.culto-card-accordion:nth-child(4) { animation-delay: 0.2s; }
+.culto-card-accordion:nth-child(5) { animation-delay: 0.25s; }
+</style>
 
 <!-- Add Culto Modal -->
 {% if current_user.is_authenticated and current_user.is_admin %}
@@ -194,8 +878,113 @@ function showToast(message, type = 'info', duration = 4000) {
     }
 }
 
-let loadCultosAttempts = 0;
-const MAX_LOAD_ATTEMPTS = 10;
+// Variáveis globais para filtragem e ordenação
+let allCultosData = [];
+let currentFilter = 'all';
+let currentSort = 'date-desc';
+let escalasData = {}; // Cache de escalas por culto
+
+// Função para calcular e exibir estatísticas
+function updateStatistics(groups) {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    let proximos = 0;
+    let realizados = 0;
+    let esteMes = 0;
+    let total = groups.length;
+    
+    groups.forEach(group => {
+        const firstDate = new Date(group.cultos[0].date_time);
+        const isPast = firstDate < now;
+        
+        if (isPast) {
+            realizados++;
+        } else {
+            proximos++;
+        }
+        
+        if (firstDate.getMonth() === currentMonth && firstDate.getFullYear() === currentYear) {
+            esteMes++;
+        }
+    });
+    
+    document.getElementById('statProximos').textContent = proximos;
+    document.getElementById('statRealizados').textContent = realizados;
+    document.getElementById('statMes').textContent = esteMes;
+    document.getElementById('statTotal').textContent = total;
+}
+
+// Função para atualizar contador de resultados
+function updateResultsCounter() {
+    const visibleCards = document.querySelectorAll('.culto-card-accordion:not(.hidden)');
+    const totalCards = document.querySelectorAll('.culto-card-accordion').length;
+    const counterText = document.getElementById('counterText');
+    
+    if (visibleCards.length === 0) {
+        counterText.textContent = 'Nenhum culto encontrado';
+    } else if (visibleCards.length === totalCards) {
+        counterText.textContent = `${totalCards} ${totalCards === 1 ? 'culto' : 'cultos'}`;
+    } else {
+        counterText.textContent = `${visibleCards.length} de ${totalCards} cultos`;
+    }
+}
+
+// Função para buscar escalas de um culto
+async function fetchEscalasForCulto(cultoId) {
+    if (escalasData[cultoId] !== undefined) {
+        return escalasData[cultoId];
+    }
+    
+    try {
+        const response = await fetch(`/get_escalas_culto/${cultoId}`);
+        if (response.ok) {
+            const data = await response.json();
+            escalasData[cultoId] = data.escalas || [];
+            return escalasData[cultoId];
+        }
+    } catch (error) {
+        console.error('Erro ao buscar escalas:', error);
+    }
+    
+    escalasData[cultoId] = [];
+    return [];
+}
+
+// Função para ordenar cultos
+function sortCultos(sortType) {
+    currentSort = sortType;
+    
+    // Atualizar botões ativos
+    document.querySelectorAll('.sort-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.sort === sortType) {
+            btn.classList.add('active');
+        }
+    });
+    
+    // Ordenar os dados
+    allCultosData.sort((a, b) => {
+        const dateA = new Date(a.cultos[0].date_time);
+        const dateB = new Date(b.cultos[0].date_time);
+        
+        if (sortType === 'date-desc') {
+            return dateB - dateA; // Mais recentes primeiro
+        } else if (sortType === 'date-asc') {
+            return dateA - dateB; // Mais antigos primeiro
+        } else if (sortType === 'name') {
+            const nameA = a.cultos[0].name.toLowerCase();
+            const nameB = b.cultos[0].name.toLowerCase();
+            return nameA.localeCompare(nameB);
+        }
+        
+        return 0;
+    });
+    
+    // Reaplicar filtros com nova ordenação
+    applyFilters();
+}
 
 async function loadCultos() {
     // Aguardar App estar disponível (máximo 10 tentativas)
@@ -326,89 +1115,319 @@ async function loadCultos() {
                 }
             }
             
-            // Se há múltiplos horários, mostra todos
-            const timesHtml = group.cultos.length > 1
-                ? group.cultos.map(c => {
-                    const time = new Date(c.date_time);
-                    return `<i class="fas fa-clock"></i> ${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}h`;
-                }).join(' <span style="color: var(--text-muted); margin: 0 0.5rem;">•</span> ')
+            // ID único para cada card (para accordion)
+            const cardId = `culto-card-${group.cultos[0].id}`;
+            
+            // Se há múltiplos horários no grupo
+            const hasMultipleTimes = group.cultos.length > 1;
+            
+            // Badges de status
+            const statusBadge = isPast 
+                ? '<span class="badge" style="background-color: #10b981; color: white;"><i class="fas fa-check"></i> Realizado</span>'
+                : '<span class="badge" style="background-color: #f59e0b; color: white;"><i class="fas fa-calendar"></i> Programado</span>';
+            
+            const multipleTimesBadge = hasMultipleTimes 
+                ? `<span class="badge" style="background-color: #6366f1; color: white;"><i class="fas fa-layer-group"></i> ${group.cultos.length} horários</span>`
+                : '';
+            
+            // Horários para exibir no header (resumo)
+            const timesSummary = hasMultipleTimes
+                ? `${group.cultos.length} horários`
                 : `<i class="fas fa-clock"></i> ${group.cultos[0].time}`;
             
-            // Botões de edição/exclusão para admin
-            const actionButtons = {% if current_user.is_authenticated and current_user.is_admin %}
-                group.cultos.length === 1
-                    // Se há apenas 1 culto: 1 botão editar + 1 botão excluir
-                    ? `<button type="button" class="btn btn-sm btn-outline" onclick="openEditCultoModal(${group.cultos[0].id}, '${group.cultos[0].name.replace(/'/g, "\\'")}', '${group.cultos[0].date_time}', '${group.cultos[0].description ? group.cultos[0].description.replace(/'/g, "\\'"): ''}')" title="Editar culto">
-                            <i class="fas fa-edit"></i> Editar
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline" onclick="deleteCulto(${group.cultos[0].id}, '${group.cultos[0].name.replace(/'/g, "\\'")}', '${group.cultos[0].date_time}')" title="Excluir culto" style="color: #dc2626;">
-                            <i class="fas fa-trash"></i> Excluir
-                        </button>`
-                    // Se há múltiplos cultos: botões com horários
-                    : `<div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                        ${group.cultos.map(c => {
-                            const time = new Date(c.date_time);
-                            const timeStr = `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}h`;
-                            return `
-                                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                    <span style="font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); min-width: 45px;">${timeStr}</span>
-                                    <button type="button" class="btn btn-sm btn-outline" onclick="openEditCultoModal(${c.id}, '${c.name.replace(/'/g, "\\'")}', '${c.date_time}', '${c.description ? c.description.replace(/'/g, "\\'"): ''}')" title="Editar ${timeStr}">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline" onclick="deleteCulto(${c.id}, '${c.name.replace(/'/g, "\\'")}', '${c.date_time}')" title="Excluir ${timeStr}" style="color: #dc2626;">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>`
-            {% else %}
-                ''
-            {% endif %};
-
+            // Conteúdo expansível (detalhes)
+            let expandedContent = '';
             
-            return `
-                <div class="card fade-in">
-                    <div class="card-header" style="background: ${isPast ? 'var(--gray-100)' : 'var(--gradient-soft)'};">
-                        <div style="flex: 1;">
-                            <h3 class="card-title">${displayName}</h3>
-                            <p class="card-subtitle">${formatDate(group.cultos[0].date_time)}</p>
-                            <div style="margin-top: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">
-                                ${timesHtml}
-                            </div>
+            // Descrição
+            if (group.cultos[0].description) {
+                expandedContent += `
+                    <div class="culto-description">
+                        <p>${group.cultos[0].description}</p>
+                    </div>
+                `;
+            }
+            
+            // Lista de horários (se múltiplos)
+            if (hasMultipleTimes) {
+                const timesHtml = group.cultos.map(c => {
+                    const time = new Date(c.date_time);
+                    const timeStr = `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}h`;
+                    return `<div class="culto-time-item"><i class="fas fa-clock"></i> ${timeStr}</div>`;
+                }).join('');
+                
+                expandedContent += `
+                    <div class="culto-times">
+                        <strong style="width: 100%; color: var(--text-primary); margin-bottom: 0.5rem;">Horários:</strong>
+                        ${timesHtml}
+                    </div>
+                `;
+            }
+            
+            // Ações de admin (botões de editar/excluir)
+            {% if current_user.is_authenticated and current_user.is_admin %}
+            if (hasMultipleTimes) {
+                // Múltiplos horários: lista com botões para cada um
+                const actionsHtml = group.cultos.map(c => {
+                    const time = new Date(c.date_time);
+                    const timeStr = `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}h`;
+                    return `
+                        <div class="culto-action-item">
+                            <span class="culto-action-time">${timeStr}</span>
+                            <button type="button" class="btn btn-sm btn-outline" onclick="openEditCultoModal(${c.id}, '${c.name.replace(/'/g, "\\'")}', '${c.date_time}', '${c.description ? c.description.replace(/'/g, "\\'"): ''}')" title="Editar ${timeStr}">
+                                <i class="fas fa-edit"></i> Editar
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline" onclick="deleteCulto(${c.id}, '${c.name.replace(/'/g, "\\'")}', '${c.date_time}')" title="Excluir ${timeStr}" style="color: #dc2626;">
+                                <i class="fas fa-trash"></i> Excluir
+                            </button>
                         </div>
-                        <div style="text-align: right;">
-                            <div class="culto-date-box" style="width: 56px; height: 56px; background: ${isSantaCeia ? 'linear-gradient(135deg, #dc2626, #b91c1c)' : '#6366f1'}; color: white; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: ${isPast ? '0.5' : '1'};">
-                                <div class="culto-day" style="font-size: 1.5rem; font-weight: 700; line-height: 1;">${firstDate.getDate()}</div>
-                                <div class="culto-month" style="font-size: 0.75rem; text-transform: uppercase; font-weight: 600;">${formatMonthShort(group.cultos[0].date_time)}</div>
-                            </div>
+                    `;
+                }).join('');
+                
+                expandedContent += `
+                    <div class="culto-actions">
+                        <div class="culto-action-group">
+                            <strong style="color: var(--text-primary); margin-bottom: 0.5rem;">Ações:</strong>
+                            ${actionsHtml}
                         </div>
                     </div>
-                    <div class="card-body">
-                        ${group.cultos[0].description ? `<p style="color: var(--gray-700); margin-bottom: 1rem;">${group.cultos[0].description}</p>` : ''}
-                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-                            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-                                <span class="badge" style="background-color: ${isPast ? '#10b981' : '#f59e0b'}; color: white;">
-                                    <i class="fas fa-${isPast ? 'check' : 'calendar'}"></i>
-                                    ${isPast ? 'Realizado' : 'Programado'}
-                                </span>
-                                ${group.cultos.length > 1 ? `<span class="badge" style="background-color: #6366f1; color: white;"><i class="fas fa-layer-group"></i> ${group.cultos.length} horários</span>` : ''}
-                                <span style="color: var(--gray-500); font-size: 0.875rem;">
-                                    <i class="fas fa-calendar-day"></i>
-                                    ${formatRelativeDate(group.cultos[0].date_time)}
+                `;
+            } else {
+                // Horário único: botões simples
+                expandedContent += `
+                    <div class="culto-actions">
+                        <button type="button" class="btn btn-outline" onclick="openEditCultoModal(${group.cultos[0].id}, '${group.cultos[0].name.replace(/'/g, "\\'")}', '${group.cultos[0].date_time}', '${group.cultos[0].description ? group.cultos[0].description.replace(/'/g, "\\'"): ''}')" title="Editar culto">
+                            <i class="fas fa-edit"></i> Editar Culto
+                        </button>
+                        <button type="button" class="btn btn-outline" onclick="deleteCulto(${group.cultos[0].id}, '${group.cultos[0].name.replace(/'/g, "\\'")}', '${group.cultos[0].date_time}')" title="Excluir culto" style="color: #dc2626;">
+                            <i class="fas fa-trash"></i> Excluir Culto
+                        </button>
+                    </div>
+                `;
+            }
+            {% endif %}
+            
+            return `
+                <div class="culto-card-accordion ${isPast ? 'past' : ''}" id="${cardId}">
+                    <div class="culto-card-header" onclick="toggleCultoCard('${cardId}')">
+                        <div class="culto-date-badge ${isSantaCeia ? 'santa-ceia' : ''} ${isPast ? 'past' : ''}">
+                            <div class="culto-date-day">${firstDate.getDate()}</div>
+                            <div class="culto-date-month">${formatMonthShort(group.cultos[0].date_time)}</div>
+                        </div>
+                        
+                        <div class="culto-info">
+                            <h3 class="culto-title">${displayName}</h3>
+                            <div class="culto-subtitle">
+                                <span><i class="fas fa-calendar-day"></i> ${formatDate(group.cultos[0].date_time)}</span>
+                                <span>•</span>
+                                <span>${timesSummary}</span>
+                            </div>
+                            <div class="culto-badges">
+                                ${statusBadge}
+                                ${multipleTimesBadge}
+                                <span class="escalas-badge" id="escalas-badge-${group.cultos[0].id}">
+                                    <i class="fas fa-spinner fa-spin"></i> Carregando...
                                 </span>
                             </div>
-                            <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
-                                ${actionButtons}
-                            </div>
+                        </div>
+                        
+                        <i class="fas fa-chevron-down culto-expand-icon"></i>
+                    </div>
+                    
+                    <div class="culto-card-body">
+                        <div class="culto-card-content">
+                            ${expandedContent}
                         </div>
                     </div>
                 </div>
             `;
         }).join('');
+        
+        // Salvar dados para filtros
+        allCultosData = finalGroups;
+        
+        // Atualizar estatísticas
+        updateStatistics(finalGroups);
+        
+        // Atualizar contador inicial
+        updateResultsCounter();
+        
+        // Buscar escalas para cada culto (em background)
+        finalGroups.forEach(group => {
+            // Usar o primeiro culto do grupo para buscar escalas
+            const mainCultoId = group.cultos[0].id;
+            
+            fetchEscalasForCulto(mainCultoId).then(escalas => {
+                // Atualizar badge no card quando escalas forem carregadas
+                const badge = document.getElementById(`escalas-badge-${mainCultoId}`);
+                if (badge) {
+                    if (escalas.length > 0) {
+                        badge.innerHTML = `<i class="fas fa-users"></i> ${escalas.length} ${escalas.length === 1 ? 'membro' : 'membros'}`;
+                        badge.style.display = 'flex';
+                        badge.classList.remove('empty');
+                    } else {
+                        badge.innerHTML = `<i class="fas fa-user-slash"></i> Sem escalas`;
+                        badge.style.display = 'flex';
+                        badge.classList.add('empty');
+                    }
+                }
+            });
+        });
     } catch (error) {
         console.error('Erro ao carregar cultos:', error);
     }
+}
+
+// ====== FUNÇÕES DE FILTRO E BUSCA ======
+
+function filterCultos(filter) {
+    currentFilter = filter;
+    
+    // Atualizar botões ativos
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.filter === filter) {
+            btn.classList.add('active');
+        }
+    });
+    
+    applyFilters();
+}
+
+function searchCultos() {
+    applyFilters();
+}
+
+function filterByDate() {
+    applyFilters();
+}
+
+function applyFilters() {
+    const searchTerm = document.getElementById('searchCulto').value.toLowerCase();
+    const filterDate = document.getElementById('filterDate').value; // YYYY-MM-DD
+    const now = new Date();
+    
+    document.querySelectorAll('.culto-card-accordion').forEach(card => {
+        const cardId = card.id;
+        const group = allCultosData.find(g => `culto-card-${g.cultos[0].id}` === cardId);
+        
+        if (!group) {
+            card.classList.add('hidden');
+            return;
+        }
+        
+        const firstDate = new Date(group.cultos[0].date_time);
+        const isPast = firstDate < now;
+        
+        // Extrai nome do culto
+        let displayName = group.cultos[0].name;
+        if (group.cultos[0].description) {
+            const match = group.cultos[0].description.match(/^([^-]+)/);
+            if (match) {
+                displayName = match[1].trim();
+            }
+        }
+        
+        // Filtro por status (all/upcoming/past)
+        let showByStatus = true;
+        if (currentFilter === 'upcoming' && isPast) {
+            showByStatus = false;
+        } else if (currentFilter === 'past' && !isPast) {
+            showByStatus = false;
+        }
+        
+        // Filtro por busca de nome
+        let showBySearch = true;
+        if (searchTerm && !displayName.toLowerCase().includes(searchTerm)) {
+            showBySearch = false;
+        }
+        
+        // Filtro por data
+        let showByDate = true;
+        if (filterDate) {
+            const cardDate = firstDate.toISOString().split('T')[0]; // YYYY-MM-DD
+            if (cardDate !== filterDate) {
+                showByDate = false;
+            }
+        }
+        
+        // Mostrar/ocultar card baseado em todos os filtros
+        if (showByStatus && showBySearch && showByDate) {
+            card.classList.remove('hidden');
+        } else {
+            card.classList.add('hidden');
+        }
+    });
+    
+    // Verificar se há cards visíveis
+    const visibleCards = document.querySelectorAll('.culto-card-accordion:not(.hidden)');
+    const grid = document.getElementById('cultosGrid');
+    
+    if (visibleCards.length === 0) {
+        const emptyMessage = document.createElement('div');
+        emptyMessage.className = 'empty-state';
+        emptyMessage.id = 'no-results';
+        emptyMessage.innerHTML = `
+            <i class="fas fa-search"></i>
+            <h3>Nenhum culto encontrado</h3>
+            <p>Tente ajustar os filtros ou buscar por outro termo</p>
+        `;
+        
+        // Remove mensagem antiga se existir
+        const oldMessage = document.getElementById('no-results');
+        if (oldMessage) oldMessage.remove();
+        
+        grid.appendChild(emptyMessage);
+    } else {
+        // Remove mensagem de "não encontrado" se existir
+        const oldMessage = document.getElementById('no-results');
+        if (oldMessage) oldMessage.remove();
+    }
+    
+    // Atualizar contador de resultados
+    updateResultsCounter();
+}
+
+function clearFilters() {
+    // Limpar filtros
+    document.getElementById('searchCulto').value = '';
+    document.getElementById('filterDate').value = '';
+    currentFilter = 'all';
+    
+    // Resetar botões
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.filter === 'all') {
+            btn.classList.add('active');
+        }
+    });
+    
+    // Mostrar todos os cards
+    document.querySelectorAll('.culto-card-accordion').forEach(card => {
+        card.classList.remove('hidden');
+    });
+    
+    // Remover mensagem de "não encontrado"
+    const oldMessage = document.getElementById('no-results');
+    if (oldMessage) oldMessage.remove();
+}
+
+// Função para expandir/colapsar cards
+function toggleCultoCard(cardId) {
+    const card = document.getElementById(cardId);
+    if (!card) return;
+    
+    const isExpanded = card.classList.contains('expanded');
+    
+    // Opcional: fechar outros cards abertos (comportamento accordion)
+    // Comente as 3 linhas abaixo se quiser permitir múltiplos cards abertos
+    document.querySelectorAll('.culto-card-accordion.expanded').forEach(otherCard => {
+        if (otherCard.id !== cardId) {
+            otherCard.classList.remove('expanded');
+        }
+    });
+    
+    // Toggle do card atual
+    card.classList.toggle('expanded');
 }
 
 async function saveCulto() {

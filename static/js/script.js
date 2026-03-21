@@ -13,6 +13,36 @@ const App = {
         apiTimeout: 10000
     },
 
+    // Utilitários CSRF para requisições POST
+    getCSRFToken() {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? meta.getAttribute('content') : '';
+    },
+
+    // Headers padrão para requisições fetch POST
+    getHeaders(additionalHeaders = {}) {
+        return {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': this.getCSRFToken(),
+            ...additionalHeaders
+        };
+    },
+
+    // Wrapper para fetch que adiciona CSRF automaticamente em requisições POST
+    async fetch(url, options = {}) {
+        // Se for POST/PUT/DELETE/PATCH, adiciona CSRF token automaticamente
+        if (options.method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method.toUpperCase())) {
+            options.headers = options.headers || {};
+            
+            // Adiciona CSRF token se ainda não existe
+            if (!options.headers['X-CSRFToken'] && !options.headers['x-csrf-token']) {
+                options.headers['X-CSRFToken'] = this.getCSRFToken();
+            }
+        }
+        
+        return fetch(url, options);
+    },
+
     // Sistema de Tema Dark/Light
     theme: {
         current: 'light',
@@ -946,6 +976,44 @@ console.log('✅ toggleTheme() disponível globalmente');
 // ========================================
 document.addEventListener('DOMContentLoaded', () => {
     console.log('✅ Script carregado - Ministério de Louvor v1.4.0');
+    
+    // ========================================
+    // INTERCEPTOR GLOBAL DE FETCH PARA CSRF
+    // ========================================
+    const originalFetch = window.fetch;
+    window.fetch = function(...args) {
+        let [url, options = {}] = args;
+        
+        // Se for requisição POST/PUT/DELETE/PATCH, adiciona CSRF token automaticamente
+        if (options.method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method.toUpperCase())) {
+            options.headers = options.headers || {};
+            
+            // Converte Headers object para objeto simples se necessário
+            if (options.headers instanceof Headers) {
+                const headersObj = {};
+                for (let [key, value] of options.headers.entries()) {
+                    headersObj[key] = value;
+                }
+                options.headers = headersObj;
+            }
+            
+            // Adiciona CSRF token se ainda não existe (case-insensitive check)
+            const hasCSRF = Object.keys(options.headers).some(
+                key => key.toLowerCase() === 'x-csrftoken'
+            );
+            
+            if (!hasCSRF) {
+                const csrfToken = App.getCSRFToken();
+                if (csrfToken) {
+                    options.headers['X-CSRFToken'] = csrfToken;
+                    console.log('🔒 CSRF token adicionado automaticamente para:', options.method, url);
+                }
+            }
+        }
+        
+        return originalFetch.call(this, url, options);
+    };
+    console.log('✅ Interceptor CSRF configurado');
     
     // Inicializar tema (PRIMEIRO)
     App.theme.init();

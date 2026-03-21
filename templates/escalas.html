@@ -1738,7 +1738,12 @@ async function mostrarConfirmacaoExclusaoCultoComSubstituicoes(cultoIds, cultoNa
         try {
             // Fazer requisição com force=true para confirmar exclusão
             const deletePromises = idsArray.map(id => 
-                fetch(`/delete_escalas_culto/${id}?force=true`, { method: 'POST' })
+                fetch(`/delete_escalas_culto/${id}?force=true`, { 
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': App.getCSRFToken()
+                    }
+                })
             );
             
             const responses = await Promise.all(deletePromises);
@@ -1781,7 +1786,12 @@ async function deleteEscalaCompletaConfirm(cultoIds, cultoName) {
         try {
             // Deletar escalas de todos os cultos do grupo
             const deletePromises = idsArray.map(id => 
-                fetch(`/delete_escalas_culto/${id}`, { method: 'POST' })
+                fetch(`/delete_escalas_culto/${id}`, { 
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': App.getCSRFToken()
+                    }
+                })
             );
             
             const responses = await Promise.all(deletePromises);

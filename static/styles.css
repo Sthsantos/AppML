@@ -27,10 +27,15 @@
     --bg-secondary: #ffffff;
     --bg-hover: #e5e5e5;
     --text-color: #111827;
+    --text-primary: #111827;
     --text-secondary: #6b7280;
     --text-muted: #9ca3af;
     --border-color: #d1d5db;
     --card-bg: #ffffff;
+    --card-bg-secondary: #f9fafb;
+    --hover-bg: #f3f4f6;
+    --input-bg: #ffffff;
+    --primary-light: #fca5a5;
     --navbar-bg: rgba(255, 255, 255, 0.95);
     --sidebar-bg: #ffffff;
     
@@ -108,10 +113,15 @@
     --bg-secondary: #1e1e1e;
     --bg-hover: #2a2a2a;
     --text-color: #f1f5f9;
+    --text-primary: #f1f5f9;
     --text-secondary: #d1d5db;
     --text-muted: #a8a8a8;
     --border-color: #2a2a2a;
     --card-bg: #1e1e1e;
+    --card-bg-secondary: #252525;
+    --hover-bg: #2a2a2a;
+    --input-bg: #252525;
+    --primary-light: #fca5a5;
     --navbar-bg: rgba(30, 30, 30, 0.95);
     --sidebar-bg: #1e1e1e;
     

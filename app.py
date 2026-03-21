@@ -1244,6 +1244,34 @@ def get_escalas():
         logger.error(f"Erro ao buscar escalas: {str(e)}")
         return jsonify({'escalas': []}), 500
 
+@app.route('/get_escalas_culto/<int:culto_id>', methods=['GET'])
+@login_required
+def get_escalas_culto(culto_id):
+    """Retorna as escalas de um culto específico."""
+    try:
+        # Buscar escalas do culto específico
+        escalas = db.session.query(Escala, Member).join(
+            Member, Escala.member_id == Member.id
+        ).filter(
+            Escala.culto_id == culto_id
+        ).all()
+        
+        escalas_list = []
+        for escala, membro in escalas:
+            escalas_list.append({
+                'escala_id': escala.id,
+                'member_id': membro.id,
+                'member_name': membro.name,
+                'role': escala.role,
+                'instrument': membro.instrument,
+                'status_confirmacao': escala.status_confirmacao
+            })
+        
+        return jsonify({'escalas': escalas_list}), 200
+    except Exception as e:
+        logger.error(f"Erro ao buscar escalas do culto {culto_id}: {str(e)}")
+        return jsonify({'escalas': []}), 500
+
 @app.route('/get_minhas_escalas', methods=['GET'])
 @login_required
 def get_minhas_escalas():

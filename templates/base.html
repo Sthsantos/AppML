@@ -14,6 +14,9 @@
     <meta name="apple-mobile-web-app-title" content="ML Cristo Rei">
     <meta name="mobile-web-app-capable" content="yes">
     
+    <!-- CSRF Token para requisições AJAX -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    
     <!-- iOS Meta Tags - PNG obrigatório (iOS não suporta SVG) -->
     <meta name="apple-itunes-app" content="app-id=none">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon-192x192.png') }}?v=5.0&t=20260316">
