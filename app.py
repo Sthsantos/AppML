@@ -387,11 +387,12 @@ app.config['REMEMBER_COOKIE_SAMESITE'] = 'Lax'
 limiter = Limiter(
     app=app,
     key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"],
+    default_limits=[],  # Sem limites padrão - aplicar apenas em rotas específicas
     storage_uri="memory://",  # Em producao, considere redis:// para persistencia
     headers_enabled=True,  # Adiciona headers X-RateLimit-* nas respostas
 )
-logger.info("Rate limiter configurado: 200/dia, 50/hora (default)")
+
+logger.info("Rate limiter configurado: Limites apenas em rotas POST/PUT/DELETE específicas")
 
 # ========================================
 # CONFIGURACAO DE CACHE

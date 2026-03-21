@@ -65,6 +65,270 @@
     box-shadow: 0 4px 8px rgba(139, 92, 246, 0.4);
 }
 
+/* Cards Accordion Expansíveis */
+.escala-card-accordion {
+    background: var(--card-bg);
+    border-radius: 12px;
+    margin-bottom: 1.25rem;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.escala-card-accordion:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.escala-card-header {
+    padding: 1.5rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    border-bottom: 1px solid var(--border-color);
+    transition: background 0.2s;
+}
+
+.escala-card-header:hover {
+    background: var(--hover-bg);
+}
+
+.escala-card-header-content {
+    flex: 1;
+}
+
+.escala-card-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 0.5rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.escala-card-subtitle {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.escala-expand-icon {
+    font-size: 1.25rem;
+    color: var(--text-secondary);
+    transition: transform 0.3s ease;
+    flex-shrink: 0;
+}
+
+.escala-card-accordion.expanded .escala-expand-icon {
+    transform: rotate(180deg);
+}
+
+.escala-card-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease;
+}
+
+.escala-card-accordion.expanded .escala-card-body {
+    max-height: 5000px;
+}
+
+.escala-card-section {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.escala-card-section:last-child {
+    border-bottom: none;
+}
+
+.escala-section-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0 0 1rem 0;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.escala-members-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.escala-member-card {
+    padding: 1rem;
+    background: var(--card-bg-secondary);
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.2s;
+}
+
+.escala-member-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.escala-member-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.4rem;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.escala-member-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.escala-member-name {
+    font-weight: 700;
+    color: var(--text-primary);
+    font-size: 1rem;
+    margin: 0 0 0.25rem 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.escala-member-role {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.escala-repertorio-list {
+    display: grid;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.escala-musica-item {
+    padding: 1.25rem;
+    background: var(--card-bg-secondary);
+    border-radius: 10px;
+    border-left: 4px solid var(--primary-color);
+    transition: all 0.2s;
+}
+
+.escala-musica-item:hover {
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.escala-musica-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.escala-musica-number {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    flex-shrink: 0;
+    font-size: 1rem;
+}
+
+.escala-musica-title {
+    font-weight: 700;
+    color: var(--text-primary);
+    font-size: 1.05rem;
+    margin: 0 0 0.5rem 0;
+}
+
+.escala-musica-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.escala-musica-links {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.escala-empty-state {
+    text-align: center;
+    padding: 2.5rem 1.5rem;
+    background: var(--card-bg-secondary);
+    border-radius: 10px;
+    border: 2px dashed var(--border-color);
+    margin-top: 1rem;
+}
+
+.escala-empty-state i {
+    font-size: 2.5rem;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.escala-empty-state p {
+    color: var(--text-secondary);
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.escala-actions-bar {
+    padding: 1rem 1.5rem;
+    background: var(--card-bg-secondary);
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+@media (max-width: 768px) {
+    .escala-members-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .escala-actions-bar {
+        flex-direction: column;
+    }
+    
+    .escala-actions-bar .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
 </style>
 
 <div class="page-header">
@@ -999,18 +1263,48 @@ async function saveEscalaCompleta(cultoId) {
                     member_id: membro.member_id,
                     role: membro.instrument
                 })
+            }).then(async response => {
+                const data = await response.json();
+                return { success: response.ok, data, membro };
             })
         );
         
         const results = await Promise.all(promises);
-        const allSuccess = results.every(r => r.ok);
+        const successCount = results.filter(r => r.success).length;
+        const failedResults = results.filter(r => !r.success);
         
-        if (allSuccess) {
+        if (successCount === results.length) {
             showToast('Escala completa criada com sucesso!', 'success');
             loadCultosPendentes(); // Recarregar cultos pendentes
             loadEscalas(); // Atualizar escalas criadas
+        } else if (successCount > 0) {
+            // Sucesso parcial
+            let errorMessages = failedResults.map(r => {
+                // Usar o nome do membro retornado pelo backend
+                const memberName = r.data.member_name || 'Membro';
+                if (r.data.indisponivel) {
+                    return `${memberName}: Indisponível (${r.data.motivo_indisponibilidade || 'sem motivo'})`;
+                } else {
+                    return `${memberName}: ${r.data.message || 'Erro desconhecido'}`;
+                }
+            }).join('\n');
+            
+            showToast(`${successCount} de ${results.length} escalas criadas. Erros:\n${errorMessages}`, 'warning');
+            loadCultosPendentes();
+            loadEscalas();
         } else {
-            showToast('Erro ao criar algumas escalas', 'error');
+            // Falha total
+            let errorMessages = failedResults.map(r => {
+                // Usar o nome do membro retornado pelo backend
+                const memberName = r.data.member_name || 'Membro';
+                if (r.data.indisponivel) {
+                    return `${memberName}: INDISPONÍVEL - ${r.data.motivo_indisponibilidade || 'sem motivo'}`;
+                } else {
+                    return `${memberName}: ${r.data.message || 'Erro desconhecido'}`;
+                }
+            }).join('\n');
+            
+            showToast(`Não foi possível criar nenhuma escala:\n${errorMessages}`, 'error');
         }
     } catch (error) {
         console.error('Erro:', error);
@@ -1040,13 +1334,23 @@ async function loadEscalas() {
         };
         
         const [escalasResponse, repertorioResponse] = await Promise.all([
-            fetchWithTimeout('/get_escalas'),
-            fetchWithTimeout('/get_repertorio')
+            fetchWithTimeout('/get_escalas', 10000),
+            fetchWithTimeout('/get_repertorio', 10000)
         ]);
         console.log('✓ Respostas recebidas');
+        console.log('Status escalas:', escalasResponse.status);
+        console.log('Status repertorio:', repertorioResponse.status);
         
-        if (!escalasResponse.ok || !repertorioResponse.ok) {
-            throw new Error('Erro ao buscar dados do servidor');
+        if (!escalasResponse.ok) {
+            const errorText = await escalasResponse.text();
+            console.error('Erro em /get_escalas:', errorText);
+            throw new Error(`Erro ao buscar escalas: ${escalasResponse.status}`);
+        }
+        
+        if (!repertorioResponse.ok) {
+            const errorText = await repertorioResponse.text();
+            console.error('Erro em /get_repertorio:', errorText);
+            throw new Error(`Erro ao buscar repertório: ${repertorioResponse.status}`);
         }
         
         const data = await escalasResponse.json();
@@ -1146,223 +1450,261 @@ async function loadEscalas() {
             }
         });
         
-        // Buscar músicas para todos os cultos
+        // Buscar músicas para todos os cultos (de forma mais segura)
         const musicasPorCulto = {};
         const cultoIds = [...new Set(escalas.map(e => e.culto_id))];
         
         console.log(`🎵 Buscando músicas para ${cultoIds.length} cultos...`);
-        await Promise.all(cultoIds.map(async (cultoId) => {
+        
+        // Buscar músicas de forma sequencial com limite de tentativas
+        for (const cultoId of cultoIds.slice(0, 20)) { // Limitar a 20 cultos para evitar travamento
             try {
-                const response = await fetchWithTimeout(`/get_culto_musicas/${cultoId}`, 10000);
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
+                const response = await fetchWithTimeout(`/get_culto_musicas/${cultoId}`, 5000);
+                if (response.ok) {
+                    const data = await response.json();
+                    musicasPorCulto[cultoId] = data.musicas || [];
+                    console.log(`  ✓ Culto ${cultoId}: ${data.musicas ? data.musicas.length : 0} músicas`);
+                } else {
+                    musicasPorCulto[cultoId] = [];
                 }
-                const data = await response.json();
-                musicasPorCulto[cultoId] = data.musicas || [];
-                console.log(`  Culto ${cultoId}: ${data.musicas ? data.musicas.length : 0} músicas`);
             } catch (error) {
-                console.error(`Erro ao buscar músicas do culto ${cultoId}:`, error);
+                console.warn(`Timeout ou erro ao buscar músicas do culto ${cultoId}:`, error.message);
                 musicasPorCulto[cultoId] = [];
             }
-        }));
+        }
+        
+        // Para cultos não buscados, inicializar array vazio
+        cultoIds.forEach(id => {
+            if (!musicasPorCulto[id]) {
+                musicasPorCulto[id] = [];
+            }
+        });
+        
         console.log('✓ Músicas carregadas');
         
         console.log(`🎨 Renderizando ${finalGroups.length} grupos de escalas...`);
-        container.innerHTML = finalGroups.map(group => {
+        
+        // Mapear instrumentos para ícones e cores
+        const instrumentIcons = {
+            'Ministro': 'fa-microphone',
+            'Back Vocal': 'fa-microphone-alt',
+            'Guitarrista': 'fa-guitar',
+            'Violonista': 'fa-guitar',
+            'Baterista': 'fa-drum',
+            'Tecladista': 'fa-keyboard',
+            'Baixista': 'fa-guitar'
+        };
+        
+        const instrumentColors = {
+            'Ministro': 'linear-gradient(135deg, #ec4899, #db2777)',
+            'Back Vocal': 'linear-gradient(135deg, #a855f7, #9333ea)',
+            'Guitarrista': 'linear-gradient(135deg, #f59e0b, #d97706)',
+            'Violonista': 'linear-gradient(135deg, #84cc16, #65a30d)',
+            'Baterista': 'linear-gradient(135deg, #ef4444, #dc2626)',
+            'Tecladista': 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+            'Baixista': 'linear-gradient(135deg, #06b6d4, #0891b2)'
+        };
+        
+        container.innerHTML = finalGroups.map((group, index) => {
             const timeStr = group.times.length > 1 
                 ? `${formatDate(group.date)}, ${group.times.join(' e ')}`
                 : formatDatetime(group.date);
             
             // Detecta Santa Ceia pelo nome do culto
             const isSantaCeia = group.name.toLowerCase().includes('santa ceia');
-            const badgeColor = isSantaCeia ? '#dc2626' : '#6366f1';
-            const iconEmoji = isSantaCeia ? '🍷' : '📋';
+            const cardId = `escala-card-${group.culto_ids[0]}-${index}`;
             
-            // Passar todos os culto_ids para deletar (quando há agrupamento)
+            // Separar membros em Vocal e Banda
+            const vocais = group.escalas.filter(e => e.role === 'Ministro' || e.role === 'Back Vocal');
+            const banda = group.escalas.filter(e => e.role !== 'Ministro' && e.role !== 'Back Vocal');
+            
+            // Buscar músicas
+            const musicas = musicasPorCulto[group.culto_ids[0]] || [];
+            
+            // Passar todos os culto_ids para deletar
             const cultoIdsStr = JSON.stringify(group.culto_ids);
             
-            return `
-                <div class="card mb-3 fade-in" style="border-left: 4px solid ${badgeColor}; ${group.ja_passou ? 'opacity: 0.6; background: var(--bg-secondary);' : ''}">
-                    <div class="card-header">
-                        <div>
-                            <h3 class="card-title">
-                                ${iconEmoji} ${group.name}
-                                ${isSantaCeia ? '<span class="badge" style="background: #dc2626; color: white; margin-left: 0.5rem;">SANTA CEIA</span>' : ''}
-                                ${group.ja_passou ? '<span style="margin-left: 0.5rem; font-size: 0.85rem; color: #6b7280; font-weight: 500;">(CULTO REALIZADO)</span>' : ''}
-                            </h3>
-                            <p class="card-subtitle">${timeStr}</p>
+            const renderMembro = (e) => {
+                const icon = instrumentIcons[e.role] || 'fa-user';
+                const gradient = instrumentColors[e.role] || 'var(--gradient-primary)';
+                
+                return `
+                    <div class="escala-member-card">
+                        <div class="escala-member-avatar" style="background: ${gradient};">
+                            <i class="fas ${icon}"></i>
+                        </div>
+                        <div class="escala-member-info">
+                            <div class="escala-member-name">${e.member_name}</div>
+                            <div class="escala-member-role">
+                                <i class="fas fa-music"></i>
+                                ${e.role}
+                            </div>
                         </div>
                         ${IS_ADMIN ? `
-                        <div style="display: flex; gap: 0.75rem;">
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button class="btn-icon" onclick="openEditEscala(${e.escala_id})" title="Editar membro" style="color: var(--primary-color); background: rgba(99, 102, 241, 0.1);">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-icon" onclick="deleteEscalaConfirm(${e.escala_id})" title="Remover membro" style="color: #dc2626; background: rgba(220, 38, 38, 0.1);">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+            };
+            
+            return `
+                <div class="escala-card-accordion ${index === 0 ? 'expanded' : ''}" id="${cardId}" style="${group.ja_passou ? 'opacity: 0.7;' : ''}">
+                    <div class="escala-card-header" onclick="toggleEscalaCard('${cardId}')">
+                        <div class="escala-card-header-content">
+                            <h3 class="escala-card-title">
+                                ${isSantaCeia ? '🍷' : '📋'} ${group.name}
+                                ${isSantaCeia ? '<span class="badge" style="background: #dc2626; color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem;">SANTA CEIA</span>' : ''}
+                                ${group.ja_passou ? '<span class="badge" style="background: #6b7280; color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem;">REALIZADO</span>' : ''}
+                            </h3>
+                            <p class="escala-card-subtitle">
+                                <i class="fas fa-calendar-alt"></i>
+                                ${timeStr}
+                                <span style="margin-left: 1rem;">
+                                    <i class="fas fa-users"></i>
+                                    ${group.escalas.length} ${group.escalas.length === 1 ? 'membro' : 'membros'}
+                                </span>
+                            </p>
+                        </div>
+                        <i class="fas fa-chevron-down escala-expand-icon"></i>
+                    </div>
+                    
+                    <div class="escala-card-body">
+                        <!-- Compartimento VOCAL -->
+                        ${vocais.length > 0 ? `
+                        <div class="escala-card-section">
+                            <h4 class="escala-section-title">
+                                <i class="fas fa-microphone" style="color: #ec4899;"></i>
+                                Vocal
+                                <span style="background: linear-gradient(135deg, #ec4899, #db2777); color: white; padding: 0.125rem 0.625rem; border-radius: 12px; font-size: 0.875rem; margin-left: 0.5rem;">
+                                    ${vocais.length}
+                                </span>
+                            </h4>
+                            <div class="escala-members-grid">
+                                ${vocais.map(e => renderMembro(e)).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        <!-- Compartimento BANDA -->
+                        ${banda.length > 0 ? `
+                        <div class="escala-card-section">
+                            <h4 class="escala-section-title">
+                                <i class="fas fa-guitar" style="color: #f59e0b;"></i>
+                                Músicos / Banda
+                                <span style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 0.125rem 0.625rem; border-radius: 12px; font-size: 0.875rem; margin-left: 0.5rem;">
+                                    ${banda.length}
+                                </span>
+                            </h4>
+                            <div class="escala-members-grid">
+                                ${banda.map(e => renderMembro(e)).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        <!-- Compartimento REPERTÓRIO -->
+                        <div class="escala-card-section">
+                            <h4 class="escala-section-title">
+                                <i class="fas fa-music" style="color: #10b981;"></i>
+                                Repertório
+                                <span style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 0.125rem 0.625rem; border-radius: 12px; font-size: 0.875rem; margin-left: 0.5rem;">
+                                    ${musicas.length}
+                                </span>
+                            </h4>
+                            
+                            ${musicas.length > 0 ? `
+                            <div class="escala-repertorio-list">
+                                ${musicas.map((m, idx) => `
+                                    <div class="escala-musica-item">
+                                        <div class="escala-musica-header">
+                                            <div class="escala-musica-number">${idx + 1}</div>
+                                            <div style="flex: 1;">
+                                                <h5 class="escala-musica-title">${m.title}</h5>
+                                                <div class="escala-musica-meta">
+                                                    ${m.artist ? `<span><i class="fas fa-user"></i> ${m.artist}</span>` : ''}
+                                                    ${m.key_tone ? `<span><i class="fas fa-music"></i> Tom: <strong style="color: var(--primary-color);">${m.key_tone}</strong></span>` : ''}
+                                                    ${m.tempo ? `<span><i class="fas fa-drum"></i> ${m.tempo}</span>` : ''}
+                                                    ${m.category ? `<span style="background: var(--card-bg-secondary); padding: 0.25rem 0.625rem; border-radius: 12px; border: 1px solid var(--border-color);"><i class="fas fa-tag"></i> ${m.category}</span>` : ''}
+                                                </div>
+                                                ${(m.link_video || m.link_audio || m.audio_file) ? `
+                                                <div class="escala-musica-links">
+                                                    ${m.link_video ? `
+                                                        <a href="${m.link_video}" target="_blank" class="btn btn-sm" style="background: #ff0000; color: white; text-decoration: none;">
+                                                            <i class="fab fa-youtube"></i>
+                                                            YouTube
+                                                        </a>
+                                                    ` : ''}
+                                                    ${m.link_audio ? `
+                                                        <a href="${m.link_audio}" target="_blank" class="btn btn-sm btn-outline" style="text-decoration: none;">
+                                                            <i class="fas fa-link"></i>
+                                                            Áudio Online
+                                                        </a>
+                                                    ` : ''}
+                                                    ${m.audio_file ? `
+                                                        <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(16, 185, 129, 0.1); padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.3);">
+                                                            <i class="fas fa-headphones" style="color: #10b981;"></i>
+                                                            <span style="font-size: 0.875rem; font-weight: 600; color: #10b981;">VS:</span>
+                                                            <audio controls style="height: 32px; max-width: 250px;">
+                                                                <source src="/uploads/${m.audio_file}" type="audio/mpeg">
+                                                                Seu navegador não suporta o player de áudio.
+                                                            </audio>
+                                                        </div>
+                                                    ` : ''}
+                                                </div>
+                                                ` : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            ` : `
+                            <div class="escala-empty-state">
+                                <i class="fas fa-music"></i>
+                                <p>Nenhuma música selecionada para este culto</p>
+                                ${IS_ADMIN ? `
+                                <button class="btn btn-sm btn-success" onclick='openMusicasModal(${group.culto_ids[0]}, "${group.name}")' style="margin-top: 1rem;">
+                                    <i class="fas fa-plus"></i>
+                                    Adicionar Músicas
+                                </button>
+                                ` : ''}
+                            </div>
+                            `}
+                        </div>
+                        
+                        <!-- Barra de Ações Admin -->
+                        ${IS_ADMIN ? `
+                        <div class="escala-actions-bar">
                             ${group.ja_passou ? `
-                                <div style="padding: 0.75rem 1.25rem; background: #6b7280; color: white; border-radius: 8px; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; cursor: not-allowed;">
+                                <div style="padding: 0.75rem 1.25rem; background: #6b7280; color: white; border-radius: 8px; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; cursor: not-allowed; flex: 1; justify-content: center;">
                                     <i class="fas fa-check-circle"></i>
                                     <span>Culto Realizado</span>
                                 </div>
                             ` : `
-                                <button class="btn btn-purple" onclick='verStatusConfirmacoes(${group.culto_ids[0]}, "${group.name}")' title="Ver status de confirmações de presença">
+                                <button class="btn btn-purple" onclick='verStatusConfirmacoes(${group.culto_ids[0]}, "${group.name}")'>
                                     <i class="fas fa-user-check"></i>
                                     Status
                                 </button>
-                                <button class="btn btn-success" onclick='openMusicasModal(${group.culto_ids[0]}, "${group.name}")' title="Gerenciar músicas do culto">
+                                <button class="btn btn-success" onclick='openMusicasModal(${group.culto_ids[0]}, "${group.name}")'>
                                     <i class="fas fa-music"></i>
                                     Músicas
                                 </button>
-                                <button class="btn btn-blue" onclick='openAddSingleMember(${group.culto_ids[0]}, "${group.name}")' title="Adicionar membro à escala">
+                                <button class="btn btn-blue" onclick='openAddSingleMember(${group.culto_ids[0]}, "${group.name}")'>
                                     <i class="fas fa-user-plus"></i>
                                     Adicionar Membro
                                 </button>
-                                <button class="btn btn-danger" onclick='deleteEscalaCompletaConfirm(${cultoIdsStr}, "${group.name}")' title="Excluir escala completa">
+                                <button class="btn btn-danger" onclick='deleteEscalaCompletaConfirm(${cultoIdsStr}, "${group.name}")'>
                                     <i class="fas fa-trash"></i>
                                     Excluir Escala
                                 </button>
                             `}
                         </div>
                         ` : ''}
-                    </div>
-                    <div class="card-body">
-                        <div class="grid grid-2">
-                            ${group.escalas.map(e => {
-                                // Mapear instrumento para ícone
-                                const instrumentIcons = {
-                                    'Ministro': 'fa-microphone',
-                                    'Back Vocal': 'fa-microphone-alt',
-                                    'Guitarrista': 'fa-guitar',
-                                    'Violonista': 'fa-guitar',
-                                    'Baterista': 'fa-drum',
-                                    'Tecladista': 'fa-keyboard',
-                                    'Baixista': 'fa-guitar'
-                                };
-                                
-                                const instrumentColors = {
-                                    'Ministro': 'linear-gradient(135deg, #ec4899, #db2777)',
-                                    'Back Vocal': 'linear-gradient(135deg, #a855f7, #9333ea)',
-                                    'Guitarrista': 'linear-gradient(135deg, #f59e0b, #d97706)',
-                                    'Violonista': 'linear-gradient(135deg, #84cc16, #65a30d)',
-                                    'Baterista': 'linear-gradient(135deg, #ef4444, #dc2626)',
-                                    'Tecladista': 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-                                    'Baixista': 'linear-gradient(135deg, #06b6d4, #0891b2)'
-                                };
-                                
-                                const icon = instrumentIcons[e.role] || 'fa-user';
-                                const gradient = instrumentColors[e.role] || 'var(--gradient-primary)';
-                                
-                                return `
-                                <div style="padding: 1rem; background: var(--gray-50); border-radius: var(--radius-lg); position: relative;">
-                                    <div class="flex items-center gap-2">
-                                        <div style="width: 40px; height: 40px; border-radius: var(--radius-md); background: ${gradient}; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);">
-                                            <i class="fas ${icon}"></i>
-                                        </div>
-                                        <div style="flex: 1;">
-                                            <div style="font-weight: 600; color: var(--gray-900);">${e.member_name}</div>
-                                            <div style="font-size: 0.875rem; color: var(--gray-600);">
-                                                <i class="fas fa-music"></i>
-                                                ${e.role}
-                                            </div>
-                                        </div>
-                                        ${IS_ADMIN ? `
-                                        <div style="display: flex; gap: 0.5rem;">
-                                            <button class="btn-icon" onclick="openEditEscala(${e.escala_id})" title="Editar membro da escala" style="color: var(--primary-500); background: rgba(220, 38, 38, 0.1);">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button class="btn-icon btn-danger" onclick="deleteEscalaConfirm(${e.escala_id})" title="Remover membro da escala">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                        ` : ''}
-                                    </div>
-                                </div>
-                            `}).join('')}
-                        </div>
-                        
-                        <!-- Músicas do Culto -->
-                        ${(() => {
-                            const musicas = musicasPorCulto[group.culto_ids[0]] || [];
-                            
-                            if (musicas.length === 0) {
-                                return `
-                                    <div style="margin-top: 1.5rem; padding: 1.5rem; background: linear-gradient(135deg, rgba(239, 68, 68, 0.05), rgba(220, 38, 38, 0.02)); border-radius: var(--radius-lg); border: 1px dashed rgba(239, 68, 68, 0.3);">
-                                        <div style="text-align: center;">
-                                            <i class="fas fa-music" style="font-size: 2rem; color: var(--gray-400); margin-bottom: 0.5rem;"></i>
-                                            <p style="color: var(--gray-600); margin: 0; font-size: 0.95rem;">
-                                                Nenhuma música selecionada para este culto
-                                            </p>
-                                            ${IS_ADMIN ? `
-                                            <button class="btn btn-sm btn-success" onclick='openMusicasModal(${group.culto_ids[0]}, "${group.name}")' style="margin-top: 0.75rem;">
-                                                <i class="fas fa-plus"></i>
-                                                Adicionar Músicas
-                                            </button>
-                                            ` : ''}
-                                        </div>
-                                    </div>
-                                `;
-                            }
-                            
-                            return `
-                                <div style="margin-top: 1.5rem;">
-                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
-                                        <h4 style="font-size: 1.1rem; font-weight: 600; color: var(--gray-900); margin: 0;">
-                                            <i class="fas fa-music" style="color: var(--accent-success);"></i>
-                                            Repertório do Culto
-                                            <span style="background: var(--accent-success); color: white; padding: 0.125rem 0.5rem; border-radius: 1rem; font-size: 0.875rem; margin-left: 0.5rem;">${musicas.length}</span>
-                                        </h4>
-                                        ${IS_ADMIN ? `
-                                        <button class="btn-icon" onclick='openMusicasModal(${group.culto_ids[0]}, "${group.name}")' title="Editar músicas" style="color: var(--accent-success);">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        ` : ''}
-                                    </div>
-                                    <div style="display: grid; gap: 0.75rem;">
-                                        ${musicas.map((m, index) => `
-                                            <div style="padding: 1rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(5, 150, 105, 0.02)); border-radius: var(--radius-lg); border-left: 3px solid var(--accent-success);">
-                                                <div style="display: flex; align-items: flex-start; gap: 1rem;">
-                                                    <div style="width: 32px; height: 32px; background: var(--gradient-success); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0;">
-                                                        ${index + 1}
-                                                    </div>
-                                                    <div style="flex: 1;">
-                                                        <div style="font-weight: 600; color: var(--gray-900); font-size: 1rem; margin-bottom: 0.25rem;">
-                                                            ${m.title}
-                                                        </div>
-                                                        <div style="display: flex; flex-wrap: wrap; gap: 1rem; font-size: 0.875rem; color: var(--gray-600);">
-                                                            ${m.artist ? `<span><i class="fas fa-user"></i> ${m.artist}</span>` : ''}
-                                                            ${m.key_tone ? `<span><i class="fas fa-music"></i> Tom: <strong style="color: var(--accent-success);">${m.key_tone}</strong></span>` : ''}
-                                                            ${m.tempo ? `<span><i class="fas fa-drum"></i> ${m.tempo}</span>` : ''}
-                                                            ${m.category ? `<span style="background: var(--gray-100); padding: 0.125rem 0.5rem; border-radius: 0.25rem;"><i class="fas fa-tag"></i> ${m.category}</span>` : ''}
-                                                        </div>
-                                                        ${(m.link_video || m.link_audio || m.audio_file) ? `
-                                                            <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap;">
-                                                                ${m.link_video ? `
-                                                                    <a href="${m.link_video}" target="_blank" class="btn btn-sm" style="background: #ff0000; color: white; padding: 0.375rem 0.75rem; font-size: 0.875rem; text-decoration: none;">
-                                                                        <i class="fab fa-youtube"></i>
-                                                                        YouTube
-                                                                    </a>
-                                                                ` : ''}
-                                                                ${m.link_audio ? `
-                                                                    <a href="${m.link_audio}" target="_blank" class="btn btn-sm btn-outline" style="padding: 0.375rem 0.75rem; font-size: 0.875rem; text-decoration: none;">
-                                                                        <i class="fas fa-link"></i>
-                                                                        Áudio Online
-                                                                    </a>
-                                                                ` : ''}
-                                                                ${m.audio_file ? `
-                                                                    <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(16, 185, 129, 0.1); padding: 0.5rem; border-radius: 0.5rem;">
-                                                                        <i class="fas fa-headphones" style="color: var(--accent-success);"></i>
-                                                                        <span style="font-size: 0.875rem; font-weight: 500; color: var(--accent-success);">VS:</span>
-                                                                        <audio controls style="height: 32px; max-width: 250px;">
-                                                                            <source src="/uploads/${m.audio_file}" type="audio/mpeg">
-                                                                            Seu navegador não suporta o player de áudio.
-                                                                        </audio>
-                                                                    </div>
-                                                                ` : ''}
-                                                            </div>
-                                                        ` : ''}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                </div>
-                            `;
-                        })()}
                     </div>
                 </div>
             `;
@@ -2695,6 +3037,14 @@ async function adminExcluirSubstituicao(subId) {
     };
     
     openModal('deleteConfirmModal');
+}
+
+// Função para expandir/colapsar cards de escalas
+function toggleEscalaCard(cardId) {
+    const card = document.getElementById(cardId);
+    if (!card) return;
+    
+    card.classList.toggle('expanded');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
