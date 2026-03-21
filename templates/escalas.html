@@ -490,16 +490,19 @@
         </div>
         <form id="addEscalaForm" class="modal-body">
             <div class="form-group">
-                <label class="form-label">Culto</label>
+                <label class="form-label">Selecione o Dia/Culto</label>
                 <select name="culto_id" class="form-control" required id="selectCulto" onchange="filterMembersByInstrument(); checkDomingoEscala()">
                     <option value="">Carregando...</option>
                 </select>
+                <small class="form-text" style="color: var(--text-secondary); font-size: 0.875rem; margin-top: 0.5rem; display: block;">
+                    💡 <strong>Domingos:</strong> A escala é criada automaticamente para ambos os cultos (09:00 e 18:00)
+                </small>
             </div>
             
-            <div class="alert alert-warning" style="margin-top: 1rem; display: none;" id="domingoAlert">
-                <i class="fas fa-info-circle"></i>
-                <strong>Atenção - Culto de Domingo!</strong><br>
-                <span style="font-size: 0.9rem;">As escalas de domingo são compartilhadas entre os dois cultos (09:00 e 18:00). Ao criar/editar/remover uma escala, a alteração será aplicada automaticamente em ambos os cultos do dia.</span>
+            <div class="alert alert-success" style="margin-top: 1rem; display: none; background: rgba(16, 185, 129, 0.1); border-color: #10b981;" id="domingoAlert">
+                <i class="fas fa-check-circle" style="color: #10b981;"></i>
+                <strong style="color: #10b981;">Escala de Domingo Selecionada!</strong><br>
+                <span style="font-size: 0.9rem; color: var(--text-primary);">Esta escala será aplicada automaticamente para <strong>ambos os cultos</strong> deste domingo (09:00 e 18:00). Você não precisa criar separadamente! 🎉</span>
             </div>
             
             <div class="alert alert-info" style="margin-top: 1rem;" id="indisponibilidadeInfo" hidden>
@@ -1185,6 +1188,10 @@ async function loadCultosPendentes() {
             const badgeColor = isSantaCeia ? '#dc2626' : '#6366f1';
             const iconEmoji = isSantaCeia ? '🍷' : '📅';
             
+            // Detectar se é domingo
+            const cultoDate = new Date(culto.date_time);
+            const isDomingo = cultoDate.getDay() === 0;
+            
             // Texto do botão
             const btnText = count === 0 
                 ? '<i class="fas fa-plus"></i> Criar Escala'
@@ -1197,6 +1204,7 @@ async function loadCultosPendentes() {
                             <h3 class="card-title">
                                 ${iconEmoji} ${culto.name}
                                 ${isSantaCeia ? '<span class="badge" style="background: #dc2626; color: white; margin-left: 0.5rem;">SANTA CEIA</span>' : ''}
+                                ${isDomingo ? '<span class="badge" style="background: #10b981; color: white; margin-left: 0.5rem;">DOMINGO - AMBOS CULTOS</span>' : ''}
                                 ${culto.ja_passou ? '<span style="margin-left: 0.5rem; font-size: 0.85rem; color: #6b7280; font-weight: 500;">(CULTO REALIZADO)</span>' : ''}
                             </h3>
                             <p class="card-subtitle">${formatDatetime(culto.date_time)}</p>
@@ -1213,6 +1221,13 @@ async function loadCultosPendentes() {
                         `}
                     </div>
                     <div class="card-body" id="createEscalaForm${culto.id}" style="display: none; background: var(--gradient-soft); border-top: 1px solid var(--border-color);">
+                        ${isDomingo ? `
+                            <div class="alert alert-success" style="margin-bottom: 1.5rem; background: rgba(16, 185, 129, 0.1); border-color: #10b981;">
+                                <i class="fas fa-info-circle" style="color: #10b981;"></i>
+                                <strong style="color: #10b981;">Escala de Domingo Compartilhada! 🎉</strong><br>
+                                <span style="font-size: 0.9rem; color: var(--text-primary);">Esta escala será automaticamente aplicada para <strong>ambos os cultos de domingo</strong> (09:00 e 18:00). Não é necessário criar separadamente!</span>
+                            </div>
+                        ` : ''}
                         <h4 style="margin-bottom: 1.5rem; color: var(--primary-color);">
                             <i class="fas fa-users"></i>
                             Selecione os membros da escala
@@ -1820,12 +1835,53 @@ async function loadModalData() {
         
         console.log('allMembers populado com', allMembers.length, 'membros');
         
-        document.getElementById('selectCulto').innerHTML = 
-            cultosData.cultos.map(c => {
-                const isSantaCeia = c.description && c.description.toLowerCase().includes('santa ceia');
-                const prefix = isSantaCeia ? '🍷 ' : '';
-                return `<option value="${c.id}">${prefix}${c.name} - ${formatDate(c.date_time)}</option>`;
-            }).join('');
+        // Agrupar cultos por data para domingos
+        const cultosAgrupados = {};
+        const cultosNaoDomingo = [];
+        
+        cultosData.cultos.forEach(c => {
+            const date = new Date(c.date_time);
+            const dayOfWeek = date.getDay();
+            
+            if (dayOfWeek === 0) { // Domingo
+                const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+                if (!cultosAgrupados[dateKey]) {
+                    cultosAgrupados[dateKey] = {
+                        date: date,
+                        cultos: [],
+                        description: c.description,
+                        formatted: formatDate(c.date_time).split(' às ')[0] // Apenas a data
+                    };
+                }
+                cultosAgrupados[dateKey].cultos.push(c);
+            } else {
+                cultosNaoDomingo.push(c);
+            }
+        });
+        
+        // Montar o select com domingos agrupados
+        let optionsHTML = '<option value="">Selecione...</option>';
+        
+        // Adicionar domingos agrupados (usar ID do primeiro culto como representante)
+        Object.keys(cultosAgrupados).sort().forEach(dateKey => {
+            const grupo = cultosAgrupados[dateKey];
+            const primeiroId = grupo.cultos[0].id;
+            const isSantaCeia = grupo.description && grupo.description.toLowerCase().includes('santa ceia');
+            const icon = isSantaCeia ? '🍷' : '📅';
+            const label = isSantaCeia ? 'Santa Ceia' : 'Culto Dominical';
+            
+            optionsHTML += `<option value="${primeiroId}" data-is-domingo="true">${icon} ${label} - ${grupo.formatted} (Ambos cultos)</option>`;
+        });
+        
+        // Adicionar outros dias normalmente
+        cultosNaoDomingo.forEach(c => {
+            const isTerca = c.description && c.description.toLowerCase().includes('escola bíblica');
+            const isQuinta = c.description && c.description.toLowerCase().includes('cura');
+            const icon = isTerca ? '📖' : (isQuinta ? '🙏' : '📅');
+            optionsHTML += `<option value="${c.id}" data-is-domingo="false">${icon} ${c.name} - ${formatDate(c.date_time)}</option>`;
+        });
+        
+        document.getElementById('selectCulto').innerHTML = optionsHTML;
     } catch (error) {
         console.error('Erro ao carregar dados:', error);
     }
@@ -1843,22 +1899,11 @@ function checkDomingoEscala() {
         return;
     }
     
-    // Extrair a data do texto da opção (formato: "Nome - DD/MM/YYYY às HH:MM")
-    const optionText = selectedOption.text;
-    const dateMatch = optionText.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+    // Verificar se é domingo através do atributo data-is-domingo
+    const isDomingo = selectedOption.getAttribute('data-is-domingo') === 'true';
     
-    if (dateMatch) {
-        const day = parseInt(dateMatch[1]);
-        const month = parseInt(dateMatch[2]) - 1; // JS usa mês 0-11
-        const year = parseInt(dateMatch[3]);
-        const date = new Date(year, month, day);
-        
-        // Verificar se é domingo (0 = domingo)
-        if (date.getDay() === 0) {
-            domingoAlert.style.display = 'block';
-        } else {
-            domingoAlert.style.display = 'none';
-        }
+    if (isDomingo) {
+        domingoAlert.style.display = 'block';
     } else {
         domingoAlert.style.display = 'none';
     }
