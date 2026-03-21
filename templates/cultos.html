@@ -1610,8 +1610,8 @@ async function saveCulto() {
         cultoTime = parts[1];
     }
     
-    // Combinar data + hora no formato datetime-local
-    const dateTimeValue = `${dateInput.value}T${cultoTime}:00`;
+    // Combinar data + hora no formato datetime-local (sem segundos)
+    const dateTimeValue = `${dateInput.value}T${cultoTime}`;
     
     const data = {
         name: cultoName,

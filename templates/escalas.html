@@ -491,10 +491,17 @@
         <form id="addEscalaForm" class="modal-body">
             <div class="form-group">
                 <label class="form-label">Culto</label>
-                <select name="culto_id" class="form-control" required id="selectCulto" onchange="filterMembersByInstrument()">
+                <select name="culto_id" class="form-control" required id="selectCulto" onchange="filterMembersByInstrument(); checkDomingoEscala()">
                     <option value="">Carregando...</option>
                 </select>
             </div>
+            
+            <div class="alert alert-warning" style="margin-top: 1rem; display: none;" id="domingoAlert">
+                <i class="fas fa-info-circle"></i>
+                <strong>Atenção - Culto de Domingo!</strong><br>
+                <span style="font-size: 0.9rem;">As escalas de domingo são compartilhadas entre os dois cultos (09:00 e 18:00). Ao criar/editar/remover uma escala, a alteração será aplicada automaticamente em ambos os cultos do dia.</span>
+            </div>
+            
             <div class="alert alert-info" style="margin-top: 1rem;" id="indisponibilidadeInfo" hidden>
                 <i class="fas fa-info-circle"></i>
                 <span>Membros marcados com ⚠️ estão indisponíveis para este culto e não podem ser selecionados.</span>
@@ -1821,6 +1828,39 @@ async function loadModalData() {
             }).join('');
     } catch (error) {
         console.error('Erro ao carregar dados:', error);
+    }
+}
+
+function checkDomingoEscala() {
+    const cultoSelect = document.getElementById('selectCulto');
+    const domingoAlert = document.getElementById('domingoAlert');
+    
+    if (!cultoSelect || !domingoAlert) return;
+    
+    const selectedOption = cultoSelect.options[cultoSelect.selectedIndex];
+    if (!selectedOption || !selectedOption.value) {
+        domingoAlert.style.display = 'none';
+        return;
+    }
+    
+    // Extrair a data do texto da opção (formato: "Nome - DD/MM/YYYY às HH:MM")
+    const optionText = selectedOption.text;
+    const dateMatch = optionText.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+    
+    if (dateMatch) {
+        const day = parseInt(dateMatch[1]);
+        const month = parseInt(dateMatch[2]) - 1; // JS usa mês 0-11
+        const year = parseInt(dateMatch[3]);
+        const date = new Date(year, month, day);
+        
+        // Verificar se é domingo (0 = domingo)
+        if (date.getDay() === 0) {
+            domingoAlert.style.display = 'block';
+        } else {
+            domingoAlert.style.display = 'none';
+        }
+    } else {
+        domingoAlert.style.display = 'none';
     }
 }
 

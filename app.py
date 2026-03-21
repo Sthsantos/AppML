@@ -1745,6 +1745,45 @@ def add_escala():
         db.session.add(nova_escala)
         db.session.commit()
         
+        # REPLICAR ESCALA PARA OUTROS CULTOS DE DOMINGO (mesma data)
+        culto_principal = db.session.get(Culto, culto_id)
+        if culto_principal and culto_principal.date:
+            # Verificar se é domingo (0 = domingo)
+            if culto_principal.date.weekday() == 6:  # weekday() retorna 6 para domingo
+                # Buscar outros cultos no mesmo dia
+                outros_cultos = Culto.query.filter(
+                    Culto.date == culto_principal.date,
+                    Culto.id != culto_id
+                ).all()
+                
+                # Replicar escala para cada culto adicional do mesmo domingo
+                for outro_culto in outros_cultos:
+                    # Verificar se já existe escala para este membro neste culto
+                    escala_existente = Escala.query.filter_by(
+                        member_id=member_id, 
+                        culto_id=outro_culto.id
+                    ).first()
+                    
+                    if not escala_existente:
+                        # Verificar se o membro está indisponível para este culto também
+                        indisponibilidade = Indisponibilidade.query.filter_by(
+                            member_id=member_id,
+                            culto_id=outro_culto.id
+                        ).filter(Indisponibilidade.status.in_(['approved', 'pending'])).first()
+                        
+                        if not indisponibilidade:
+                            # Criar escala replicada
+                            escala_replicada = Escala(
+                                member_id=member_id, 
+                                culto_id=outro_culto.id, 
+                                role=role
+                            )
+                            db.session.add(escala_replicada)
+                            logger.info(f"Escala replicada automaticamente: Membro {member_id} para culto {outro_culto.id} (Domingo)")
+                
+                # Commit das escalas replicadas
+                db.session.commit()
+        
         # PUSH NOTIFICATION: Notificar membro sobre nova escala
         try:
             member = db.session.get(Member, member_id)
@@ -1809,12 +1848,46 @@ def edit_escala(escala_id):
                 return jsonify({'success': False, 'message': 'Escala nao encontrada'}), 404
             
             # Atualizar campos fornecidos
+            old_member_id = escala.member_id
+            culto_id_escala = escala.culto_id
+            
             if member_id:
                 escala.member_id = member_id
             if role:
                 escala.role = role
                 
             db.session.commit()
+            
+            # REPLICAR EDIÇÃO PARA OUTROS CULTOS DE DOMINGO (mesma data)
+            culto_principal = db.session.get(Culto, culto_id_escala)
+            if culto_principal and culto_principal.date:
+                # Verificar se é domingo (6 = domingo no weekday())
+                if culto_principal.date.weekday() == 6:
+                    # Buscar outros cultos no mesmo dia
+                    outros_cultos = Culto.query.filter(
+                        Culto.date == culto_principal.date,
+                        Culto.id != culto_id_escala
+                    ).all()
+                    
+                    # Atualizar escalas nos outros cultos do domingo
+                    for outro_culto in outros_cultos:
+                        # Buscar escala do membro antigo (antes da edição)
+                        escala_replicada = Escala.query.filter_by(
+                            member_id=old_member_id,
+                            culto_id=outro_culto.id
+                        ).first()
+                        
+                        if escala_replicada:
+                            # Atualizar com os mesmos valores
+                            if member_id:
+                                escala_replicada.member_id = member_id
+                            if role:
+                                escala_replicada.role = role
+                            logger.info(f"Escala replicada atualizada automaticamente: Culto {outro_culto.id} (Domingo)")
+                    
+                    # Commit das atualizações replicadas
+                    db.session.commit()
+        
         return jsonify({'success': True, 'message': 'Escala atualizada com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
@@ -1860,8 +1933,45 @@ def delete_escala(escala_id):
                 for sub in substituicoes:
                     db.session.delete(sub)
         
+        # Guardar informações da escala antes de deletar (para replicação em domingo)
+        member_id_escala = escala.member_id
+        culto_id_escala = escala.culto_id
+        
         db.session.delete(escala)
         db.session.commit()
+        
+        # REPLICAR EXCLUSÃO PARA OUTROS CULTOS DE DOMINGO (mesma data)
+        culto_principal = db.session.get(Culto, culto_id_escala)
+        if culto_principal and culto_principal.date:
+            # Verificar se é domingo (6 = domingo no weekday())
+            if culto_principal.date.weekday() == 6:
+                # Buscar outros cultos no mesmo dia
+                outros_cultos = Culto.query.filter(
+                    Culto.date == culto_principal.date,
+                    Culto.id != culto_id_escala
+                ).all()
+                
+                # Remover escalas do mesmo membro nos outros cultos do domingo
+                for outro_culto in outros_cultos:
+                    escala_replicada = Escala.query.filter_by(
+                        member_id=member_id_escala,
+                        culto_id=outro_culto.id
+                    ).first()
+                    
+                    if escala_replicada:
+                        # Deletar substituições vinculadas também
+                        substituicoes_replicadas = Substituicao.query.filter_by(
+                            escala_id=escala_replicada.id
+                        ).all()
+                        for sub in substituicoes_replicadas:
+                            db.session.delete(sub)
+                        
+                        db.session.delete(escala_replicada)
+                        logger.info(f"Escala replicada removida automaticamente: Membro {member_id_escala} do culto {outro_culto.id} (Domingo)")
+                
+                # Commit das exclusões replicadas
+                db.session.commit()
+        
         return jsonify({'success': True, 'message': 'Escala removida com sucesso!'}), 200
     except Exception as e:
         db.session.rollback()
