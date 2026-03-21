@@ -739,8 +739,8 @@
             </div>
             
             <div class="form-group">
-                <label class="form-label">Data e Hora</label>
-                <input type="datetime-local" name="date_time" id="cultoDateTime" class="form-control" required onchange="updateCultoSuggestions()">
+                <label class="form-label">Data do Culto</label>
+                <input type="date" id="cultoDate" class="form-control" required onchange="updateCultoSuggestions()">
             </div>
             
             <div class="form-group" id="cultoSuggestionsGroup" style="display: none;">
@@ -754,7 +754,7 @@
             </div>
             
             <div class="form-group">
-                <label class="form-label">Nome do Culto</label>
+                <label class="form-label">Selecione o Culto</label>
                 <select name="culto_type" id="cultoType" class="form-control" required onchange="toggleCustomCultoName()">
                     <option value="">Primeiro selecione a data...</option>
                 </select>
@@ -763,6 +763,11 @@
             <div class="form-group" id="customCultoNameGroup" style="display: none;">
                 <label class="form-label">Nome Personalizado</label>
                 <input type="text" id="customCultoName" class="form-control" placeholder="Digite o nome do culto">
+            </div>
+            
+            <div class="form-group" id="customCultoTimeGroup" style="display: none;">
+                <label class="form-label">Horário</label>
+                <input type="time" id="customCultoTime" class="form-control" placeholder="Ex: 19:30">
             </div>
             
             <div class="form-group">
@@ -1466,23 +1471,20 @@ function toggleCultoCard(cardId) {
 }
 
 function updateCultoSuggestions() {
-    const dateTimeInput = document.getElementById('cultoDateTime');
+    const dateInput = document.getElementById('cultoDate');
     const cultoTypeSelect = document.getElementById('cultoType');
     const suggestionsGroup = document.getElementById('cultoSuggestionsGroup');
     const suggestionsDiv = document.getElementById('cultoSuggestions');
     
-    if (!dateTimeInput.value) {
+    if (!dateInput.value) {
         cultoTypeSelect.innerHTML = '<option value="">Primeiro selecione a data...</option>';
         suggestionsGroup.style.display = 'none';
         return;
     }
     
-    const selectedDate = new Date(dateTimeInput.value);
+    const selectedDate = new Date(dateInput.value + 'T00:00:00');
     const dayOfWeek = selectedDate.getDay(); // 0 = Domingo, 2 = Terça, 4 = Quinta
     const dayOfMonth = selectedDate.getDate();
-    const hours = selectedDate.getHours();
-    const minutes = selectedDate.getMinutes();
-    const timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
     
     let suggestions = [];
     
@@ -1492,24 +1494,24 @@ function updateCultoSuggestions() {
     // Cultos fixos baseados no dia da semana
     if (dayOfWeek === 2) { // Terça-feira
         suggestions = [
-            { name: 'Escola Bíblica', time: '19:30', recommended: timeStr === '19:30' }
+            { name: 'Escola Bíblica', time: '19:30' }
         ];
     } else if (dayOfWeek === 4) { // Quinta-feira
         suggestions = [
-            { name: 'Cura e Libertação', time: '09:00', recommended: timeStr === '09:00' },
-            { name: 'Cura e Libertação', time: '17:30', recommended: timeStr === '17:30' },
-            { name: 'Cura e Libertação', time: '19:30', recommended: timeStr === '19:30' }
+            { name: 'Cura e Libertação', time: '09:00' },
+            { name: 'Cura e Libertação', time: '17:30' },
+            { name: 'Cura e Libertação', time: '19:30' }
         ];
     } else if (dayOfWeek === 0) { // Domingo
         if (isFirstSunday) {
             suggestions = [
-                { name: 'Santa Ceia', time: '09:00', recommended: timeStr === '09:00' },
-                { name: 'Santa Ceia', time: '18:00', recommended: timeStr === '18:00' }
+                { name: 'Santa Ceia', time: '09:00' },
+                { name: 'Santa Ceia', time: '18:00' }
             ];
         } else {
             suggestions = [
-                { name: 'Culto Dominical', time: '09:00', recommended: timeStr === '09:00' },
-                { name: 'Culto Dominical', time: '18:00', recommended: timeStr === '18:00' }
+                { name: 'Culto Dominical', time: '09:00' },
+                { name: 'Culto Dominical', time: '18:00' }
             ];
         }
     }
@@ -1518,17 +1520,13 @@ function updateCultoSuggestions() {
     if (suggestions.length > 0) {
         suggestionsGroup.style.display = 'block';
         suggestionsDiv.innerHTML = suggestions.map(s => {
-            const badge = s.recommended 
-                ? '<span style="background: #10b981; color: white; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-left: 0.5rem;">Horário Sugerido</span>'
-                : '';
             return `
-                <div style="padding: 0.75rem; background: ${s.recommended ? 'rgba(16, 185, 129, 0.1)' : 'var(--gray-50)'}; border-radius: 8px; border: 1px solid ${s.recommended ? '#10b981' : 'var(--border-color)'}; display: flex; align-items: center; justify-content: space-between;">
+                <div style="padding: 0.75rem; background: var(--gray-50); border-radius: 8px; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;">
                     <div>
                         <strong style="color: var(--text-primary);">${s.name}</strong>
-                        <span style="color: var(--text-secondary); margin-left: 0.5rem;">${s.time}</span>
-                        ${badge}
+                        <span style="color: var(--text-secondary); margin-left: 0.5rem;">às ${s.time}</span>
                     </div>
-                    ${s.recommended ? '<i class="fas fa-check-circle" style="color: #10b981;"></i>' : ''}
+                    <i class="fas fa-clock" style="color: var(--primary);"></i>
                 </div>
             `;
         }).join('');
@@ -1536,66 +1534,89 @@ function updateCultoSuggestions() {
         suggestionsGroup.style.display = 'none';
     }
     
-    // Preencher select com opções
+    // Preencher select com opções (guardando name|time para depois extrair)
     let options = '<option value="">Selecione o culto...</option>';
     
     suggestions.forEach(s => {
         const fullName = `${s.name} - ${s.time}`;
-        options += `<option value="${s.name}">${fullName}${s.recommended ? ' ⭐' : ''}</option>`;
+        // Armazenar como "nome|hora" no value para poder separar depois
+        options += `<option value="${s.name}|${s.time}">${fullName}</option>`;
     });
     
     // Sempre adicionar opção "Outro"
     options += '<option value="CUSTOM">✏️ Outro (personalizado)</option>';
     
     cultoTypeSelect.innerHTML = options;
-    
-    // Se houver uma sugestão recomendada, selecionar automaticamente
-    const recommended = suggestions.find(s => s.recommended);
-    if (recommended) {
-        cultoTypeSelect.value = recommended.name;
-    }
 }
 
 function toggleCustomCultoName() {
     const cultoType = document.getElementById('cultoType').value;
-    const customGroup = document.getElementById('customCultoNameGroup');
-    const customInput = document.getElementById('customCultoName');
+    const customNameGroup = document.getElementById('customCultoNameGroup');
+    const customTimeGroup = document.getElementById('customCultoTimeGroup');
+    const customNameInput = document.getElementById('customCultoName');
+    const customTimeInput = document.getElementById('customCultoTime');
     
     if (cultoType === 'CUSTOM') {
-        customGroup.style.display = 'block';
-        customInput.required = true;
+        customNameGroup.style.display = 'block';
+        customTimeGroup.style.display = 'block';
+        customNameInput.required = true;
+        customTimeInput.required = true;
     } else {
-        customGroup.style.display = 'none';
-        customInput.required = false;
-        customInput.value = '';
+        customNameGroup.style.display = 'none';
+        customTimeGroup.style.display = 'none';
+        customNameInput.required = false;
+        customTimeInput.required = false;
+        customNameInput.value = '';
+        customTimeInput.value = '';
     }
 }
 
 async function saveCulto() {
     const form = document.getElementById('addCultoForm');
-    const formData = new FormData(form);
-    const cultoType = document.getElementById('cultoType').value;
+    const dateInput = document.getElementById('cultoDate');
+    const cultoTypeSelect = document.getElementById('cultoType');
     const customName = document.getElementById('customCultoName').value;
+    const customTime = document.getElementById('customCultoTime').value;
+    const description = document.querySelector('textarea[name="description"]').value;
     
-    // Determinar o nome do culto
-    let cultoName;
-    if (cultoType === 'CUSTOM') {
+    if (!dateInput.value) {
+        showToast('Por favor, selecione a data do culto', 'error');
+        return;
+    }
+    
+    if (!cultoTypeSelect.value) {
+        showToast('Por favor, selecione o culto', 'error');
+        return;
+    }
+    
+    // Determinar o nome do culto e horário
+    let cultoName, cultoTime;
+    
+    if (cultoTypeSelect.value === 'CUSTOM') {
         if (!customName.trim()) {
             showToast('Por favor, digite o nome do culto personalizado', 'error');
             return;
         }
+        if (!customTime) {
+            showToast('Por favor, selecione o horário do culto', 'error');
+            return;
+        }
         cultoName = customName.trim();
-    } else if (cultoType) {
-        cultoName = cultoType;
+        cultoTime = customTime;
     } else {
-        showToast('Por favor, selecione ou digite o nome do culto', 'error');
-        return;
+        // Separar nome|hora
+        const parts = cultoTypeSelect.value.split('|');
+        cultoName = parts[0];
+        cultoTime = parts[1];
     }
+    
+    // Combinar data + hora no formato datetime-local
+    const dateTimeValue = `${dateInput.value}T${cultoTime}:00`;
     
     const data = {
         name: cultoName,
-        date_time: formData.get('date_time'),
-        description: formData.get('description')
+        date_time: dateTimeValue,
+        description: description
     };
     
     try {
