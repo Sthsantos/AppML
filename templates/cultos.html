@@ -722,14 +722,49 @@
             </button>
         </div>
         <form id="addCultoForm" class="modal-body">
-            <div class="form-group">
-                <label class="form-label">Nome do Culto</label>
-                <input type="text" name="name" class="form-control" required>
+            <div class="alert alert-info" style="margin-bottom: 1.5rem;">
+                <i class="fas fa-info-circle"></i>
+                <div style="flex: 1;">
+                    <strong>Cultos Fixos da Igreja:</strong>
+                    <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem; font-size: 0.9rem;">
+                        <li><strong>Terça</strong> - 19:30 (Escola Bíblica)</li>
+                        <li><strong>Quinta</strong> - 09:00, 17:30, 19:30 (Cura e Libertação)</li>
+                        <li><strong>Domingo</strong> - 09:00, 18:00 (Culto Dominical)</li>
+                        <li><strong>1º Domingo do mês</strong> - 09:00, 18:00 (Santa Ceia)</li>
+                    </ul>
+                    <p style="margin: 0.5rem 0 0 0; font-size: 0.875rem; color: var(--text-secondary);">
+                        💡 Selecione a data e o sistema sugerirá automaticamente o culto correto!
+                    </p>
+                </div>
             </div>
+            
             <div class="form-group">
                 <label class="form-label">Data e Hora</label>
-                <input type="datetime-local" name="date_time" class="form-control" required>
+                <input type="datetime-local" name="date_time" id="cultoDateTime" class="form-control" required onchange="updateCultoSuggestions()">
             </div>
+            
+            <div class="form-group" id="cultoSuggestionsGroup" style="display: none;">
+                <label class="form-label">
+                    <i class="fas fa-lightbulb" style="color: #f59e0b;"></i>
+                    Cultos Disponíveis neste Dia
+                </label>
+                <div id="cultoSuggestions" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <!-- Sugestões serão inseridas aqui -->
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Nome do Culto</label>
+                <select name="culto_type" id="cultoType" class="form-control" required onchange="toggleCustomCultoName()">
+                    <option value="">Primeiro selecione a data...</option>
+                </select>
+            </div>
+            
+            <div class="form-group" id="customCultoNameGroup" style="display: none;">
+                <label class="form-label">Nome Personalizado</label>
+                <input type="text" id="customCultoName" class="form-control" placeholder="Digite o nome do culto">
+            </div>
+            
             <div class="form-group">
                 <label class="form-label">Descrição</label>
                 <textarea name="description" class="form-control" rows="3"></textarea>
@@ -1430,12 +1465,135 @@ function toggleCultoCard(cardId) {
     card.classList.toggle('expanded');
 }
 
+function updateCultoSuggestions() {
+    const dateTimeInput = document.getElementById('cultoDateTime');
+    const cultoTypeSelect = document.getElementById('cultoType');
+    const suggestionsGroup = document.getElementById('cultoSuggestionsGroup');
+    const suggestionsDiv = document.getElementById('cultoSuggestions');
+    
+    if (!dateTimeInput.value) {
+        cultoTypeSelect.innerHTML = '<option value="">Primeiro selecione a data...</option>';
+        suggestionsGroup.style.display = 'none';
+        return;
+    }
+    
+    const selectedDate = new Date(dateTimeInput.value);
+    const dayOfWeek = selectedDate.getDay(); // 0 = Domingo, 2 = Terça, 4 = Quinta
+    const dayOfMonth = selectedDate.getDate();
+    const hours = selectedDate.getHours();
+    const minutes = selectedDate.getMinutes();
+    const timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    
+    let suggestions = [];
+    
+    // Verificar se é primeiro domingo do mês (Santa Ceia)
+    const isFirstSunday = dayOfWeek === 0 && dayOfMonth <= 7;
+    
+    // Cultos fixos baseados no dia da semana
+    if (dayOfWeek === 2) { // Terça-feira
+        suggestions = [
+            { name: 'Escola Bíblica', time: '19:30', recommended: timeStr === '19:30' }
+        ];
+    } else if (dayOfWeek === 4) { // Quinta-feira
+        suggestions = [
+            { name: 'Cura e Libertação', time: '09:00', recommended: timeStr === '09:00' },
+            { name: 'Cura e Libertação', time: '17:30', recommended: timeStr === '17:30' },
+            { name: 'Cura e Libertação', time: '19:30', recommended: timeStr === '19:30' }
+        ];
+    } else if (dayOfWeek === 0) { // Domingo
+        if (isFirstSunday) {
+            suggestions = [
+                { name: 'Santa Ceia', time: '09:00', recommended: timeStr === '09:00' },
+                { name: 'Santa Ceia', time: '18:00', recommended: timeStr === '18:00' }
+            ];
+        } else {
+            suggestions = [
+                { name: 'Culto Dominical', time: '09:00', recommended: timeStr === '09:00' },
+                { name: 'Culto Dominical', time: '18:00', recommended: timeStr === '18:00' }
+            ];
+        }
+    }
+    
+    // Mostrar sugestões visuais
+    if (suggestions.length > 0) {
+        suggestionsGroup.style.display = 'block';
+        suggestionsDiv.innerHTML = suggestions.map(s => {
+            const badge = s.recommended 
+                ? '<span style="background: #10b981; color: white; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-left: 0.5rem;">Horário Sugerido</span>'
+                : '';
+            return `
+                <div style="padding: 0.75rem; background: ${s.recommended ? 'rgba(16, 185, 129, 0.1)' : 'var(--gray-50)'}; border-radius: 8px; border: 1px solid ${s.recommended ? '#10b981' : 'var(--border-color)'}; display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                        <strong style="color: var(--text-primary);">${s.name}</strong>
+                        <span style="color: var(--text-secondary); margin-left: 0.5rem;">${s.time}</span>
+                        ${badge}
+                    </div>
+                    ${s.recommended ? '<i class="fas fa-check-circle" style="color: #10b981;"></i>' : ''}
+                </div>
+            `;
+        }).join('');
+    } else {
+        suggestionsGroup.style.display = 'none';
+    }
+    
+    // Preencher select com opções
+    let options = '<option value="">Selecione o culto...</option>';
+    
+    suggestions.forEach(s => {
+        const fullName = `${s.name} - ${s.time}`;
+        options += `<option value="${s.name}">${fullName}${s.recommended ? ' ⭐' : ''}</option>`;
+    });
+    
+    // Sempre adicionar opção "Outro"
+    options += '<option value="CUSTOM">✏️ Outro (personalizado)</option>';
+    
+    cultoTypeSelect.innerHTML = options;
+    
+    // Se houver uma sugestão recomendada, selecionar automaticamente
+    const recommended = suggestions.find(s => s.recommended);
+    if (recommended) {
+        cultoTypeSelect.value = recommended.name;
+    }
+}
+
+function toggleCustomCultoName() {
+    const cultoType = document.getElementById('cultoType').value;
+    const customGroup = document.getElementById('customCultoNameGroup');
+    const customInput = document.getElementById('customCultoName');
+    
+    if (cultoType === 'CUSTOM') {
+        customGroup.style.display = 'block';
+        customInput.required = true;
+    } else {
+        customGroup.style.display = 'none';
+        customInput.required = false;
+        customInput.value = '';
+    }
+}
+
 async function saveCulto() {
     const form = document.getElementById('addCultoForm');
     const formData = new FormData(form);
+    const cultoType = document.getElementById('cultoType').value;
+    const customName = document.getElementById('customCultoName').value;
+    
+    // Determinar o nome do culto
+    let cultoName;
+    if (cultoType === 'CUSTOM') {
+        if (!customName.trim()) {
+            showToast('Por favor, digite o nome do culto personalizado', 'error');
+            return;
+        }
+        cultoName = customName.trim();
+    } else if (cultoType) {
+        cultoName = cultoType;
+    } else {
+        showToast('Por favor, selecione ou digite o nome do culto', 'error');
+        return;
+    }
     
     const data = {
-        name: formData.get('name'),
+        name: cultoName,
         date_time: formData.get('date_time'),
         description: formData.get('description')
     };
